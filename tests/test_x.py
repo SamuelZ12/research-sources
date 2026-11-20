@@ -541,3 +541,11 @@ def test_fallback_401_is_auth_failed_with_both_attempts(run, environ):
     code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
     assert code == 1 and env["error"]["code"] == "auth_failed" and env["backend"] == "x-graphql"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3), ("x-graphql", "auth_failed", 1)]
+
+
+def test_fxtwitter_404_cut_short_by_the_cap_is_upstream_error(run):
+    # The 404 retry hitting --max-requests must not turn the outage into an empty ok result.
+    fake = FakeTransport(fx=[(404, b"")] * 3)
+    code, env, _ = run(["search", "q", "--max-requests", "1"], fake)
+    assert code == 1 and env["ok"] is False and env["error"]["code"] == "upstream_error"
+    assert attempts(env) == [("fxtwitter", "upstream_error", 1)] and len(fake.urls) == 1

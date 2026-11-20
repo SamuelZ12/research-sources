@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
 from rsrc.channels.x.search import check_status
-from rsrc.http import HttpError, NetworkError, NotFound
+from rsrc.http import CapReached, HttpError, NetworkError, NotFound
 
 FX_API = "https://api.fxtwitter.com/2"
 SYNDICATION = "https://cdn.syndication.twimg.com/tweet-result?id={id}&token=a"
@@ -120,12 +120,19 @@ class Searcher:
 
         429 raises RateLimited. 404 is retried like a 5xx: no results is a 200 with `results: []`
         (probed 2026-11-11), so a lasting 404 is an outage, not an empty search. Any other 4xx
-        (rejected query, 401/403) fails at once.
+        (rejected query, 401/403) fails at once. A retry the request cap cuts off raises the
+        failure it was retrying, so the outage never reads as an empty, capped search.
         """
         params = {"q": query, "feed": FEEDS[product], "count": count} | ({"cursor": cursor} if cursor else {})
         url = f"{FX_API}/search?{urlencode(params)}"
+        failure = None
         for _ in range(FX_TRIES):
-            data, failure = get_json(self.client, url)
+            try:
+                data, failure = get_json(self.client, url)
+            except CapReached:
+                if failure is None:
+                    raise
+                break
             if data and isinstance(data.get("results"), list):
                 records = [status_record(s) for s in data["results"] if isinstance(s, dict)]
                 return records, (data.get("cursor") or {}).get("bottom")
