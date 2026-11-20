@@ -1,0 +1,105 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/dartnixtrix360/status/2114300044249890906",
+  "id": "2114300044249890906",
+  "text": "@Da7_Tech Letta Code harness is the best way tbh, their harness and ubiquitous cloud compute per thread, seemless teleport from any computer/server gives you great workflows and compute utilisation that most providers haven't got right.",
+  "raw_text": {
+   "text": "@Da7_Tech Letta Code harness is the best way tbh, their harness and ubiquitous cloud compute per thread, seemless teleport from any computer/server gives you great workflows and compute utilisation that most providers haven't got right.",
+   "display_text_range": [
+    10,
+    236
+   ],
+   "facets": [
+    {
+     "type": "mention",
+     "indices": [
+      0,
+      9
+     ],
+     "original": "Da7_Tech",
+     "id": "1981270038817693696"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "dartnixtrix360",
+   "url": "https://x.com/dartnixtrix360",
+   "id": "1763785482096594944",
+   "followers": 15,
+   "following": 170,
+   "likes": 132,
+   "media_count": 6,
+   "statuses": 209,
+   "name": "Dartnixtrix",
+   "description": "",
+   "raw_description": {
+    "text": "",
+    "facets": []
+   },
+   "location": "",
+   "banner_url": "",
+   "avatar_url": "https://pbs.twimg.com/profile_images/1763785607128780800/lxwEoIwv_200x200.jpg",
+   "joined": "Sat Mar 02 04:37:12 +0000 2024",
+   "protected": false,
+   "website": null,
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 2,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Sun Oct 25 10:16:27 +0000 2026",
+  "created_timestamp": 1792923387,
+  "views": 173,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": {
+   "screen_name": "Da7_Tech",
+   "status": "2114277761355305339",
+   "url": "https://x.com/Da7_Tech/status/2114277761355305339",
+   "profile_url": "https://x.com/Da7_Tech"
+  },
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "dartnixtrix360",
+  "url": "https://x.com/dartnixtrix360",
+  "id": "1763785482096594944",
+  "followers": 15,
+  "following": 170,
+  "likes": 132,
+  "media_count": 6,
+  "statuses": 209,
+  "name": "Dartnixtrix",
+  "description": "",
+  "raw_description": {
+   "text": "",
+   "facets": []
+  },
+  "location": "",
+  "banner_url": "",
+  "avatar_url": "https://pbs.twimg.com/profile_images/1763785607128780800/lxwEoIwv_200x200.jpg",
+  "joined": "Sat Mar 02 04:37:12 +0000 2024",
+  "protected": false,
+  "website": null,
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}

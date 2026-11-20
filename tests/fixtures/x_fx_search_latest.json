@@ -1,0 +1,1538 @@
+{
+ "code": 200,
+ "results": [
+  {
+   "type": "status",
+   "url": "https://x.com/kylelittle/status/2118111770803884396",
+   "id": "2118111770803884396",
+   "text": "@stolinski @Letta_AI  Letta Code",
+   "raw_text": {
+    "text": "@stolinski @Letta_AI  Letta Code",
+    "display_text_range": [
+     11,
+     32
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "stolinski",
+      "id": "18727585"
+     },
+     {
+      "type": "mention",
+      "indices": [
+       11,
+       20
+      ],
+      "original": "Letta_AI",
+      "id": "1821252546469752832"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "kylelittle",
+    "url": "https://x.com/kylelittle",
+    "id": "15004010",
+    "followers": 228,
+    "following": 1277,
+    "likes": 1560,
+    "media_count": 11,
+    "statuses": 584,
+    "name": "Kyle Little",
+    "description": "I forgot my mantra",
+    "raw_description": {
+     "text": "I forgot my mantra",
+     "facets": []
+    },
+    "location": "Charlotte",
+    "banner_url": "https://pbs.twimg.com/profile_banners/15004010/1723591324",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1823500248422989824/hxmBwuaE_200x200.jpg",
+    "joined": "Wed Jun 04 11:54:27 +0000 2008",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 4,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 22:42:53 +0000 2026",
+   "created_timestamp": 1793832173,
+   "views": 153,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "it",
+   "replying_to": {
+    "screen_name": "stolinski",
+    "status": "2118062327308374069",
+    "url": "https://x.com/stolinski/status/2118062327308374069",
+    "profile_url": "https://x.com/stolinski"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/RizeOnline/status/2117937562283028982",
+   "id": "2117937562283028982",
+   "text": "Letta is a practical open-source framework for assistants that need persistent, structured memory across sessions. It is useful for long-running tasks where the agent must remember approved facts, retrieve older context, and respect clear boundaries for retention, deletion, and access.\n\n🧭 Overview\nA normal chat request can forget everything when the session ends. Letta gives the assistant an explicit memory layer: read relevant state, reason over the current task, write only validated updates, and carry selected context into the next session. This makes memory inspectable and testable instead of hiding it in an ever-growing prompt.\n\n🛠️ What it does\n• Separates durable core memory from searchable archival and recall context.\n• Lets an agent read and write structured memory through bounded operations and tools.\n• Supports long-running assistants whose behavior evolves across conversations.\n• Makes retention, deletion, permissions, and memory inspection part of the system design.\n\n✅ Practical uses\n1) Build a personal research assistant that remembers project preferences, approved terminology, and recurring goals without replaying every old transcript.\n2) Create a support assistant that keeps a controlled customer profile while retrieving only the records allowed for the current tenant and case.\n3) Run a multi-session coding or writing workflow that stores decisions, open questions, and accepted constraints for the next session.\n4) Compare memory policies, retrieval limits, and write rules on a fixed task set to learn whether persistence improves completion or only adds stale context.\n\n⚙️ Getting started\nStart with one small memory schema and define what belongs in core memory, what belongs in archival storage, and what should never be persisted. Give every memory item an owner, type, timestamp, source, confidence, and access scope. Make writes explicit: an agent should propose a memory update, validate it, then store it through a controlled operation.\n\nLog memory reads, selected items, writes, deletions, retrieval scores, prompt size, latency, and final status. Test conflicting memories, stale preferences, duplicate facts, malformed records, empty recall, a user asking to forget something, and prompt injection inside an archived document. Keep a clear fallback when evidence conflicts: ask the user, prefer the latest approved source, or do not use the memory.\n\nFor production prototypes, separate read and write permissions. Add retention rules and a deletion path that covers primary storage, indexes, caches, and backups. Encrypt sensitive memory, redact logs, isolate tenants, and require human approval before a memory update can change a business or safety decision.\n\n⚠️ License & security\nReview the current Letta code, dependencies, connector licenses, model terms, and deployment obligations before redistribution or commercial use. Treat user input, stored memories, retrieved documents, tool responses, and model output as untrusted data: validate schemas, enforce access filters, protect credentials, and keep an audit trail of why each memory was read or changed.\n\n🔗 Read on SpyTechAi: https://spytechai.com/?ai_download=letta\n\n#Letta #AIEngineering #Agents",
+   "raw_text": {
+    "text": "Letta is a practical open-source framework for assistants that need persistent, structured memory across sessions. It is useful for long-running tasks where the agent must remember approved facts, retrieve older context, and respect clear boundaries for retention, deletion, and access.\n\n🧭 Overview\nA normal chat request can forget everything when the session ends. Letta gives the assistant an explicit memory layer: read relevant state, reason over the current task, write only validated updates, and carry selected context into the next session. This makes memory inspectable and testable instead of hiding it in an ever-growing prompt.\n\n🛠️ What it does\n• Separates durable core memory from searchable archival and recall context.\n• Lets an agent read and write structured memory through bounded operations and tools.\n• Supports long-running assistants whose behavior evolves across conversations.\n• Makes retention, deletion, permissions, and memory inspection part of the system design.\n\n✅ Practical uses\n1) Build a personal research assistant that remembers project preferences, approved terminology, and recurring goals without replaying every old transcript.\n2) Create a support assistant that keeps a controlled customer profile while retrieving only the records allowed for the current tenant and case.\n3) Run a multi-session coding or writing workflow that stores decisions, open questions, and accepted constraints for the next session.\n4) Compare memory policies, retrieval limits, and write rules on a fixed task set to learn whether persistence improves completion or only adds stale context.\n\n⚙️ Getting started\nStart with one small memory schema and define what belongs in core memory, what belongs in archival storage, and what should never be persisted. Give every memory item an owner, type, timestamp, source, confidence, and access scope. Make writes explicit: an agent should propose a memory update, validate it, then store it through a controlled operation.\n\nLog memory reads, selected items, writes, deletions, retrieval scores, prompt size, latency, and final status. Test conflicting memories, stale preferences, duplicate facts, malformed records, empty recall, a user asking to forget something, and prompt injection inside an archived document. Keep a clear fallback when evidence conflicts: ask the user, prefer the latest approved source, or do not use the memory.\n\nFor production prototypes, separate read and write permissions. Add retention rules and a deletion path that covers primary storage, indexes, caches, and backups. Encrypt sensitive memory, redact logs, isolate tenants, and require human approval before a memory update can change a business or safety decision.\n\n⚠️ License & security\nReview the current Letta code, dependencies, connector licenses, model terms, and deployment obligations before redistribution or commercial use. Treat user input, stored memories, retrieved documents, tool responses, and model output as untrusted data: validate schemas, enforce access filters, protect credentials, and keep an audit trail of why each memory was read or changed.\n\n🔗 Read on SpyTechAi: https://t.co/fwanvrZlHn\n\n#Letta #AIEngineering #Agents",
+    "display_text_range": [
+     0,
+     3193
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       279,
+       302
+      ],
+      "id": "2117937523078881280",
+      "display": "pic.x.com/TRswCYIEa5",
+      "original": "https://t.co/TRswCYIEa5",
+      "replacement": "https://x.com/RizeOnline/status/2117937562283028982/photo/1"
+     },
+     {
+      "type": "url",
+      "indices": [
+       3136,
+       3159
+      ],
+      "original": "https://t.co/fwanvrZlHn",
+      "replacement": "https://spytechai.com/?ai_download=letta",
+      "display": "spytechai.com/?ai_download=l…"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       3161,
+       3167
+      ],
+      "original": "Letta"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       3168,
+       3182
+      ],
+      "original": "AIEngineering"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       3183,
+       3190
+      ],
+      "original": "Agents"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "RizeOnline",
+    "url": "https://x.com/RizeOnline",
+    "id": "85244302",
+    "followers": 104,
+    "following": 94,
+    "likes": 183,
+    "media_count": 605,
+    "statuses": 2280,
+    "name": "SpyTech Ai",
+    "description": "Practical AI guides, open-source tools, and reliable engineering workflows from SpyTechAi. Explore hands-on tutorials, model notes, and useful automation ideas.",
+    "raw_description": {
+     "text": "Practical AI guides, open-source tools, and reliable engineering workflows from SpyTechAi. Explore hands-on tutorials, model notes, and useful automation ideas.",
+     "facets": []
+    },
+    "location": "Turkey",
+    "banner_url": "https://pbs.twimg.com/profile_banners/85244302/1791622320",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2108842971319717888/YYp3gHDq_200x200.jpg",
+    "joined": "Mon Oct 26 05:17:02 +0000 2009",
+    "protected": false,
+    "website": {
+     "url": "https://spytechai.com",
+     "display_url": "spytechai.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 1,
+   "reposts": 0,
+   "likes": 1,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "summary_large_image",
+   "created_at": "Wed Nov 04 11:10:38 +0000 2026",
+   "created_timestamp": 1793790638,
+   "possibly_sensitive": false,
+   "views": 78,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2117937523078881280",
+      "url": "https://pbs.twimg.com/media/HWRs9LeWYAA5aN-.jpg?name=orig",
+      "width": 1254,
+      "height": 1254
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2117937523078881280",
+      "url": "https://pbs.twimg.com/media/HWRs9LeWYAA5aN-.jpg?name=orig",
+      "width": 1254,
+      "height": 1254
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+   "id": "2117770299454177696",
+   "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://github.com/mem0ai/mem0\nHindsight：保留、回忆，再反思\n🔗 https://github.com/vectorize-io/hindsight\n\nmemU：智能体长期记忆基础设施\n🔗 https://github.com/NevaMind-AI/memU\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://github.com/topoteretes/cognee\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://github.com/getzep/graphiti\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://github.com/volcengine/OpenViking\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://github.com/letta-ai/letta\n\nLetta Code：编程智能体的持久记忆\n🔗 https://github.com/letta-ai/letta-code\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://github.com/mem0ai/openmemory\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://github.com/vectorize-io/agent-memory-benchmark\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+   "raw_text": {
+    "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://t.co/FmVPuuMtf8\nHindsight：保留、回忆，再反思\n🔗 https://t.co/TBAoh9JuGB\n\nmemU：智能体长期记忆基础设施\n🔗 https://t.co/in8kSuw3EH\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://t.co/TRVXg0MuRF\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://t.co/QBpFIjljh1\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://t.co/l4dg6rTDvO\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://t.co/R1Ah10ZFjL\n\nLetta Code：编程智能体的持久记忆\n🔗 https://t.co/2W9rysxFWE\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://t.co/gUoBMq4jkv\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://t.co/u7kwDlPl6V\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+    "display_text_range": [
+     0,
+     737
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       147,
+       170
+      ],
+      "id": "2117572319254286336",
+      "display": "pic.x.com/klNefwolrr",
+      "original": "https://t.co/klNefwolrr",
+      "replacement": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1"
+     },
+     {
+      "type": "url",
+      "indices": [
+       172,
+       195
+      ],
+      "original": "https://t.co/FmVPuuMtf8",
+      "replacement": "https://github.com/mem0ai/mem0",
+      "display": "github.com/mem0ai/mem0"
+     },
+     {
+      "type": "url",
+      "indices": [
+       218,
+       241
+      ],
+      "original": "https://t.co/TBAoh9JuGB",
+      "replacement": "https://github.com/vectorize-io/hindsight",
+      "display": "github.com/vectorize-io/h…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       262,
+       285
+      ],
+      "original": "https://t.co/in8kSuw3EH",
+      "replacement": "https://github.com/NevaMind-AI/memU",
+      "display": "github.com/NevaMind-AI/me…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       321,
+       344
+      ],
+      "original": "https://t.co/TRVXg0MuRF",
+      "replacement": "https://github.com/topoteretes/cognee",
+      "display": "github.com/topoteretes/co…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       374,
+       397
+      ],
+      "original": "https://t.co/QBpFIjljh1",
+      "replacement": "https://github.com/getzep/graphiti",
+      "display": "github.com/getzep/graphiti"
+     },
+     {
+      "type": "url",
+      "indices": [
+       427,
+       450
+      ],
+      "original": "https://t.co/l4dg6rTDvO",
+      "replacement": "https://github.com/volcengine/OpenViking",
+      "display": "github.com/volcengine/Ope…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       479,
+       502
+      ],
+      "original": "https://t.co/R1Ah10ZFjL",
+      "replacement": "https://github.com/letta-ai/letta",
+      "display": "github.com/letta-ai/letta"
+     },
+     {
+      "type": "url",
+      "indices": [
+       528,
+       551
+      ],
+      "original": "https://t.co/2W9rysxFWE",
+      "replacement": "https://github.com/letta-ai/letta-code",
+      "display": "github.com/letta-ai/letta…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       592,
+       615
+      ],
+      "original": "https://t.co/gUoBMq4jkv",
+      "replacement": "https://github.com/mem0ai/openmemory",
+      "display": "github.com/mem0ai/openmem…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       658,
+       681
+      ],
+      "original": "https://t.co/u7kwDlPl6V",
+      "replacement": "https://github.com/vectorize-io/agent-memory-benchmark",
+      "display": "github.com/vectorize-io/a…"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "bkdgiffug",
+    "url": "https://x.com/bkdgiffug",
+    "id": "1865771438671810560",
+    "followers": 35137,
+    "following": 7107,
+    "likes": 5,
+    "media_count": 2783,
+    "statuses": 3007,
+    "name": "lumxss",
+    "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+    "raw_description": {
+     "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+    "joined": "Sun Dec 08 14:52:37 +0000 2024",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 14,
+   "reposts": 3,
+   "likes": 10,
+   "bookmarks": 5,
+   "quotes": 0,
+   "embed_card": "summary_large_image",
+   "created_at": "Wed Nov 04 00:06:00 +0000 2026",
+   "created_timestamp": 1793750760,
+   "possibly_sensitive": false,
+   "views": 1229,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2117572319254286336",
+      "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+      "width": 855,
+      "height": 882
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2117572319254286336",
+      "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+      "width": 855,
+      "height": 882
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/Ldataengineer/status/2117744398658052278",
+   "id": "2117744398658052278",
+   "text": "𝗖𝗹𝗮𝘂𝗱𝗲-𝗠𝗲𝗺: 𝗜 𝗧𝗵𝗼𝘂𝗴𝗵𝘁 𝗜𝘁 𝗪𝗮𝘀 𝗝𝘂𝘀𝘁 𝗔𝗻𝗼𝘁𝗵𝗲𝗿 𝗠𝗲𝗺𝗼𝗿𝘆 𝗟𝗮𝘆𝗲𝗿. 𝗜𝘁 𝗜𝘀𝗻'𝘁.\n\nWhen I first saw claude-mem, I thought: another memory layer. We already have mem0, supermemory, Letta and Basic Memory.\n\nThen I dug in. 𝗔 𝗳𝗲𝘄 𝘁𝗵𝗶𝗻𝗴𝘀 𝗰𝗮𝗺𝗲 𝘂𝗽 𝘁𝗵𝗮𝘁 𝗲𝘃𝗲𝗿𝘆 𝗱𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝘂𝘀𝗶𝗻𝗴 𝗰𝗼𝗱𝗶𝗻𝗴 𝗮𝗴𝗲𝗻𝘁𝘀 𝘀𝗵𝗼𝘂𝗹𝗱 𝗸𝗻𝗼𝘄.\n\n𝗧𝗵𝗲 𝗣𝗿𝗼𝗯𝗹𝗲𝗺 𝗜𝘁 𝗦𝗼𝗹𝘃𝗲𝘀\n\nYou spend an hour with Claude Code. It reads your files, runs the tests, finds the bug, fixes it.\n\nThen you close the session. Tomorrow it knows 𝗻𝗼𝘁𝗵𝗶𝗻𝗴 about that hour.\n\nHere's the surprise: Claude Code does have its own \"auto memory\". But its docs say it 𝘴𝘬𝘪𝘱𝘴 𝘥𝘦𝘣𝘶𝘨𝘨𝘪𝘯𝘨 𝘧𝘪𝘹𝘦𝘴 and anything it can work out from the code. 𝗧𝗵𝗮𝘁'𝘀 𝘁𝗵𝗲 𝗴𝗮𝗽 𝗰𝗹𝗮𝘂𝗱𝗲-𝗺𝗲𝗺 𝗳𝗶𝗹𝗹𝘀.\n\n𝗛𝗼𝘄 𝗜𝘁 𝗪𝗼𝗿𝗸𝘀\n\n• 𝗜𝘁 𝘄𝗮𝘁𝗰𝗵𝗲𝘀: hooks fire on the agent's own events, like session start, each prompt and each tool call.\n• 𝗜𝘁 𝗰𝗼𝗺𝗽𝗿𝗲𝘀𝘀𝗲𝘀: a model turns what happened into short notes.\n• 𝗜𝘁 𝘀𝘁𝗼𝗿𝗲𝘀: the notes go into a SQLite database on your machine, with Chroma for meaning-based search.\n• 𝗜𝘁 𝗯𝗿𝗶𝗻𝗴𝘀 𝘁𝗵𝗲𝗺 𝗯𝗮𝗰𝗸: at the next session start, relevant notes are added to the context.\n\nSearch is staged: a short index first (𝗮𝗯𝗼𝘂𝘁 𝟱𝟬–𝟭𝟬𝟬 𝘁𝗼𝗸𝗲𝗻𝘀 per result), then a timeline, then full details (𝗮𝗯𝗼𝘂𝘁 𝟱𝟬𝟬–𝟭,𝟬𝟬𝟬 𝘁𝗼𝗸𝗲𝗻𝘀) only for what matters.\n\n𝗢𝗻𝗲 𝗘𝘅𝗮𝗺𝗽𝗹𝗲, 𝗦𝗲𝘃𝗲𝗻 𝗧𝗼𝗼𝗹𝘀\n\n𝗠𝗼𝗻𝗱𝗮𝘆: you and the agent spend an hour on a login bug. It reads 𝚊𝚞𝚝𝚑/𝚖𝚒𝚍𝚍𝚕𝚎𝚠𝚊𝚛𝚎.𝚝𝚜, runs the tests, sees 3 failures, finds the token-refresh time was wrong, fixes it. Tests pass.\n\n𝗧𝘂𝗲𝘀𝗱𝗮𝘆: new session. You ask: \"The auth test is failing again. What did we change last time?\"\n\nWhat does the agent know?\n\n• CLAUDE.md: 𝗼𝗻𝗹𝘆 𝘄𝗵𝗮𝘁 𝘆𝗼𝘂 𝘄𝗿𝗼𝘁𝗲 𝗶𝗻𝘁𝗼 𝘁𝗵𝗲 𝗳𝗶𝗹𝗲 𝘆𝗼𝘂𝗿𝘀𝗲𝗹𝗳. If you didn't write down Monday's fix, it doesn't know.\n• Claude Code auto memory: notes about you, your feedback, ongoing project decisions and references. By design it skips debugging fixes, so 𝗠𝗼𝗻𝗱𝗮𝘆'𝘀 𝗳𝗶𝘅 𝗶𝘀 𝗹𝗶𝗸𝗲𝗹𝘆 𝗻𝗼𝘁 𝘁𝗵𝗲𝗿𝗲.\n• mem0: 𝗻𝗼𝘁𝗵𝗶𝗻𝗴, unless you're building your own app and your code sends it the conversation. It pulls facts out of what you send. A building block, not a memory plugin for Claude Code.\n• supermemory plugin: hooks send your prompt to Supermemory's service (it needs their API key) and add matching memories and a profile of you. 𝗧𝗵𝗲 𝗰𝗹𝗼𝘀𝗲𝘀𝘁 𝗿𝗶𝘃𝗮𝗹.\n• Letta Code: 𝘆𝗼𝘂'𝗱 𝗯𝗲 𝘂𝘀𝗶𝗻𝗴 𝗟𝗲𝘁𝘁𝗮'𝘀 𝗼𝘄𝗻 𝗮𝗴𝗲𝗻𝘁 instead of Claude Code. It rewrites its own memory, skills and prompts, and tracks its memory in git.\n• Basic Memory: Markdown files you and the AI both read and edit through MCP. It knows about Monday if a note was written on Monday.\n• claude-mem: 𝗵𝗼𝗼𝗸𝘀 𝗿𝗲𝗰𝗼𝗿𝗱𝗲𝗱 𝗲𝗮𝗰𝗵 𝘀𝘁𝗲𝗽 𝗼𝗻 𝗠𝗼𝗻𝗱𝗮𝘆: the file read, the test run, the failures, the edit. A model turned that into a note like \"𝘣𝘶𝘨𝘧𝘪𝘹: 𝘵𝘰𝘬𝘦𝘯 𝘳𝘦𝘧𝘳𝘦𝘴𝘩 𝘪𝘯 𝘮𝘪𝘥𝘥𝘭𝘦𝘸𝘢𝘳𝘦.𝘵𝘴 𝘶𝘴𝘦𝘥 𝘵𝘩𝘦 𝘸𝘳𝘰𝘯𝘨 𝘦𝘹𝘱𝘪𝘳𝘺\". On Tuesday it's added at session start, and the agent can search the timeline.\n\n𝗜𝗻 𝘀𝗵𝗼𝗿𝘁:\n\n• mem0 is 𝗳𝗼𝗿 𝗯𝘂𝗶𝗹𝗱𝗶𝗻𝗴 𝘆𝗼𝘂𝗿 𝗼𝘄𝗻 𝗮𝗽𝗽.\n• Letta Code 𝗿𝗲𝗽𝗹𝗮𝗰𝗲𝘀 𝘆𝗼𝘂𝗿 𝗮𝗴𝗲𝗻𝘁.\n• Basic Memory is 𝗻𝗼𝘁𝗲𝘀 𝘆𝗼𝘂 𝗰𝗮𝗻 𝗿𝗲𝗮𝗱 𝘆𝗼𝘂𝗿𝘀𝗲𝗹𝗳.\n• supermemory and claude-mem 𝗯𝗼𝘁𝗵 𝗽𝗹𝘂𝗴 𝗶𝗻𝘁𝗼 𝗖𝗹𝗮𝘂𝗱𝗲 𝗖𝗼𝗱𝗲. supermemory keeps memory in its cloud service. claude-mem records each tool call and keeps the database on your machine.\n\n𝗪𝗵𝗮𝘁 𝗘𝗹𝘀𝗲 𝗧𝗵𝗲 𝗗𝗶𝗴𝗴𝗶𝗻𝗴 𝗨𝗻𝗰𝗼𝘃𝗲𝗿𝗲𝗱\n\n• 𝗜𝘁'𝘀 𝗻𝗼𝘁 𝗷𝘂𝘀𝘁 𝗳𝗼𝗿 𝗖𝗹𝗮𝘂𝗱𝗲: install options for OpenCode, T3 Code, Antigravity CLI, Grok Bot, Pi and DeepSeek Harness, plus plugins for Cursor, Codex and Hermes Agent.\n• 𝗦𝗵𝗮𝗿𝗲𝗱 𝗺𝗲𝗺𝗼𝗿𝘆 𝗶𝘀 𝗼𝗽𝘁-𝗶𝗻: agents write to the same project memory, but by default a new session only loads notes from the same agent. One setting changes that.\n• 𝗬𝗼𝘂𝗿 𝘀𝗲𝘀𝘀𝗶𝗼𝗻𝘀 𝗴𝗼 𝘁𝗼 𝗮 𝗺𝗼𝗱𝗲𝗹: the installer first offers claude-mem's own hosted note-writer (30-day trial). Your own Anthropic, OpenRouter or Gemini key still sends session data to that provider. 𝗙𝘂𝗹𝗹𝘆 𝗹𝗼𝗰𝗮𝗹 𝗺𝗲𝗮𝗻𝘀 𝗽𝗼𝗶𝗻𝘁𝗶𝗻𝗴 𝗶𝘁 𝗮𝘁 𝗮 𝘀𝗲𝗹𝗳-𝗵𝗼𝘀𝘁𝗲𝗱 𝗺𝗼𝗱𝗲𝗹.\n• 𝗦𝗲𝗹𝗳-𝗿𝗲𝗽𝗼𝗿𝘁𝗲𝗱: the README's \"𝗮𝗯𝗼𝘂𝘁 𝟭𝟬𝘅 𝘁𝗼𝗸𝗲𝗻 𝘀𝗮𝘃𝗶𝗻𝗴𝘀\" has no independent test.\n• 𝗖𝗼𝗽𝗶𝗹𝗼𝘁: listed in the repo description, but the repo has no Copilot-specific files as of today.\n• 𝗖𝗿𝘆𝗽𝘁𝗼 𝘁𝗼𝗸𝗲𝗻: the README promotes a third-party token, CMEM, that the author has embraced.\n\n𝗧𝗵𝗲 𝗡𝘂𝗺𝗯𝗲𝗿𝘀\n\n𝗔𝗯𝗼𝘂𝘁 𝟭𝟭𝟭.𝟴𝗸 𝗚𝗶𝘁𝗛𝘂𝗯 𝘀𝘁𝗮𝗿𝘀 and 9.7k forks as of today. Created August 2025, Apache-2.0, now at v15.9.0. 𝗔𝗯𝗼𝘂𝘁 𝟵𝟯𝗸 𝗻𝗽𝗺 𝗱𝗼𝘄𝗻𝗹𝗼𝗮𝗱𝘀 in the last 30 days.\n\n𝗧𝗵𝗲 𝗯𝗶𝗴𝗴𝗲𝗿 𝗽𝗼𝗶𝗻𝘁: 𝘵𝘩𝘦 𝘮𝘰𝘥𝘦𝘭 𝘪𝘴 𝘯𝘰 𝘭𝘰𝘯𝘨𝘦𝘳 𝘵𝘩𝘦 𝘣𝘰𝘵𝘵𝘭𝘦𝘯𝘦𝘤𝘬. 𝘞𝘩𝘢𝘵 𝘵𝘩𝘦 𝘢𝘨𝘦𝘯𝘵 𝘳𝘦𝘮𝘦𝘮𝘣𝘦𝘳𝘴 𝘪𝘴.\n\nLinks in reply 👇\nhttps://github.com/thedotmack/claude-mem",
+   "raw_text": {
+    "text": "𝗖𝗹𝗮𝘂𝗱𝗲-𝗠𝗲𝗺: 𝗜 𝗧𝗵𝗼𝘂𝗴𝗵𝘁 𝗜𝘁 𝗪𝗮𝘀 𝗝𝘂𝘀𝘁 𝗔𝗻𝗼𝘁𝗵𝗲𝗿 𝗠𝗲𝗺𝗼𝗿𝘆 𝗟𝗮𝘆𝗲𝗿. 𝗜𝘁 𝗜𝘀𝗻'𝘁.\n\nWhen I first saw claude-mem, I thought: another memory layer. We already have mem0, supermemory, Letta and Basic Memory.\n\nThen I dug in. 𝗔 𝗳𝗲𝘄 𝘁𝗵𝗶𝗻𝗴𝘀 𝗰𝗮𝗺𝗲 𝘂𝗽 𝘁𝗵𝗮𝘁 𝗲𝘃𝗲𝗿𝘆 𝗱𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝘂𝘀𝗶𝗻𝗴 𝗰𝗼𝗱𝗶𝗻𝗴 𝗮𝗴𝗲𝗻𝘁𝘀 𝘀𝗵𝗼𝘂𝗹𝗱 𝗸𝗻𝗼𝘄.\n\n𝗧𝗵𝗲 𝗣𝗿𝗼𝗯𝗹𝗲𝗺 𝗜𝘁 𝗦𝗼𝗹𝘃𝗲𝘀\n\nYou spend an hour with Claude Code. It reads your files, runs the tests, finds the bug, fixes it.\n\nThen you close the session. Tomorrow it knows 𝗻𝗼𝘁𝗵𝗶𝗻𝗴 about that hour.\n\nHere's the surprise: Claude Code does have its own \"auto memory\". But its docs say it 𝘴𝘬𝘪𝘱𝘴 𝘥𝘦𝘣𝘶𝘨𝘨𝘪𝘯𝘨 𝘧𝘪𝘹𝘦𝘴 and anything it can work out from the code. 𝗧𝗵𝗮𝘁'𝘀 𝘁𝗵𝗲 𝗴𝗮𝗽 𝗰𝗹𝗮𝘂𝗱𝗲-𝗺𝗲𝗺 𝗳𝗶𝗹𝗹𝘀.\n\n𝗛𝗼𝘄 𝗜𝘁 𝗪𝗼𝗿𝗸𝘀\n\n• 𝗜𝘁 𝘄𝗮𝘁𝗰𝗵𝗲𝘀: hooks fire on the agent's own events, like session start, each prompt and each tool call.\n• 𝗜𝘁 𝗰𝗼𝗺𝗽𝗿𝗲𝘀𝘀𝗲𝘀: a model turns what happened into short notes.\n• 𝗜𝘁 𝘀𝘁𝗼𝗿𝗲𝘀: the notes go into a SQLite database on your machine, with Chroma for meaning-based search.\n• 𝗜𝘁 𝗯𝗿𝗶𝗻𝗴𝘀 𝘁𝗵𝗲𝗺 𝗯𝗮𝗰𝗸: at the next session start, relevant notes are added to the context.\n\nSearch is staged: a short index first (𝗮𝗯𝗼𝘂𝘁 𝟱𝟬–𝟭𝟬𝟬 𝘁𝗼𝗸𝗲𝗻𝘀 per result), then a timeline, then full details (𝗮𝗯𝗼𝘂𝘁 𝟱𝟬𝟬–𝟭,𝟬𝟬𝟬 𝘁𝗼𝗸𝗲𝗻𝘀) only for what matters.\n\n𝗢𝗻𝗲 𝗘𝘅𝗮𝗺𝗽𝗹𝗲, 𝗦𝗲𝘃𝗲𝗻 𝗧𝗼𝗼𝗹𝘀\n\n𝗠𝗼𝗻𝗱𝗮𝘆: you and the agent spend an hour on a login bug. It reads 𝚊𝚞𝚝𝚑/𝚖𝚒𝚍𝚍𝚕𝚎𝚠𝚊𝚛𝚎.𝚝𝚜, runs the tests, sees 3 failures, finds the token-refresh time was wrong, fixes it. Tests pass.\n\n𝗧𝘂𝗲𝘀𝗱𝗮𝘆: new session. You ask: \"The auth test is failing again. What did we change last time?\"\n\nWhat does the agent know?\n\n• CLAUDE.md: 𝗼𝗻𝗹𝘆 𝘄𝗵𝗮𝘁 𝘆𝗼𝘂 𝘄𝗿𝗼𝘁𝗲 𝗶𝗻𝘁𝗼 𝘁𝗵𝗲 𝗳𝗶𝗹𝗲 𝘆𝗼𝘂𝗿𝘀𝗲𝗹𝗳. If you didn't write down Monday's fix, it doesn't know.\n• Claude Code auto memory: notes about you, your feedback, ongoing project decisions and references. By design it skips debugging fixes, so 𝗠𝗼𝗻𝗱𝗮𝘆'𝘀 𝗳𝗶𝘅 𝗶𝘀 𝗹𝗶𝗸𝗲𝗹𝘆 𝗻𝗼𝘁 𝘁𝗵𝗲𝗿𝗲.\n• mem0: 𝗻𝗼𝘁𝗵𝗶𝗻𝗴, unless you're building your own app and your code sends it the conversation. It pulls facts out of what you send. A building block, not a memory plugin for Claude Code.\n• supermemory plugin: hooks send your prompt to Supermemory's service (it needs their API key) and add matching memories and a profile of you. 𝗧𝗵𝗲 𝗰𝗹𝗼𝘀𝗲𝘀𝘁 𝗿𝗶𝘃𝗮𝗹.\n• Letta Code: 𝘆𝗼𝘂'𝗱 𝗯𝗲 𝘂𝘀𝗶𝗻𝗴 𝗟𝗲𝘁𝘁𝗮'𝘀 𝗼𝘄𝗻 𝗮𝗴𝗲𝗻𝘁 instead of Claude Code. It rewrites its own memory, skills and prompts, and tracks its memory in git.\n• Basic Memory: Markdown files you and the AI both read and edit through MCP. It knows about Monday if a note was written on Monday.\n• claude-mem: 𝗵𝗼𝗼𝗸𝘀 𝗿𝗲𝗰𝗼𝗿𝗱𝗲𝗱 𝗲𝗮𝗰𝗵 𝘀𝘁𝗲𝗽 𝗼𝗻 𝗠𝗼𝗻𝗱𝗮𝘆: the file read, the test run, the failures, the edit. A model turned that into a note like \"𝘣𝘶𝘨𝘧𝘪𝘹: 𝘵𝘰𝘬𝘦𝘯 𝘳𝘦𝘧𝘳𝘦𝘴𝘩 𝘪𝘯 𝘮𝘪𝘥𝘥𝘭𝘦𝘸𝘢𝘳𝘦.𝘵𝘴 𝘶𝘴𝘦𝘥 𝘵𝘩𝘦 𝘸𝘳𝘰𝘯𝘨 𝘦𝘹𝘱𝘪𝘳𝘺\". On Tuesday it's added at session start, and the agent can search the timeline.\n\n𝗜𝗻 𝘀𝗵𝗼𝗿𝘁:\n\n• mem0 is 𝗳𝗼𝗿 𝗯𝘂𝗶𝗹𝗱𝗶𝗻𝗴 𝘆𝗼𝘂𝗿 𝗼𝘄𝗻 𝗮𝗽𝗽.\n• Letta Code 𝗿𝗲𝗽𝗹𝗮𝗰𝗲𝘀 𝘆𝗼𝘂𝗿 𝗮𝗴𝗲𝗻𝘁.\n• Basic Memory is 𝗻𝗼𝘁𝗲𝘀 𝘆𝗼𝘂 𝗰𝗮𝗻 𝗿𝗲𝗮𝗱 𝘆𝗼𝘂𝗿𝘀𝗲𝗹𝗳.\n• supermemory and claude-mem 𝗯𝗼𝘁𝗵 𝗽𝗹𝘂𝗴 𝗶𝗻𝘁𝗼 𝗖𝗹𝗮𝘂𝗱𝗲 𝗖𝗼𝗱𝗲. supermemory keeps memory in its cloud service. claude-mem records each tool call and keeps the database on your machine.\n\n𝗪𝗵𝗮𝘁 𝗘𝗹𝘀𝗲 𝗧𝗵𝗲 𝗗𝗶𝗴𝗴𝗶𝗻𝗴 𝗨𝗻𝗰𝗼𝘃𝗲𝗿𝗲𝗱\n\n• 𝗜𝘁'𝘀 𝗻𝗼𝘁 𝗷𝘂𝘀𝘁 𝗳𝗼𝗿 𝗖𝗹𝗮𝘂𝗱𝗲: install options for OpenCode, T3 Code, Antigravity CLI, Grok Bot, Pi and DeepSeek Harness, plus plugins for Cursor, Codex and Hermes Agent.\n• 𝗦𝗵𝗮𝗿𝗲𝗱 𝗺𝗲𝗺𝗼𝗿𝘆 𝗶𝘀 𝗼𝗽𝘁-𝗶𝗻: agents write to the same project memory, but by default a new session only loads notes from the same agent. One setting changes that.\n• 𝗬𝗼𝘂𝗿 𝘀𝗲𝘀𝘀𝗶𝗼𝗻𝘀 𝗴𝗼 𝘁𝗼 𝗮 𝗺𝗼𝗱𝗲𝗹: the installer first offers claude-mem's own hosted note-writer (30-day trial). Your own Anthropic, OpenRouter or Gemini key still sends session data to that provider. 𝗙𝘂𝗹𝗹𝘆 𝗹𝗼𝗰𝗮𝗹 𝗺𝗲𝗮𝗻𝘀 𝗽𝗼𝗶𝗻𝘁𝗶𝗻𝗴 𝗶𝘁 𝗮𝘁 𝗮 𝘀𝗲𝗹𝗳-𝗵𝗼𝘀𝘁𝗲𝗱 𝗺𝗼𝗱𝗲𝗹.\n• 𝗦𝗲𝗹𝗳-𝗿𝗲𝗽𝗼𝗿𝘁𝗲𝗱: the README's \"𝗮𝗯𝗼𝘂𝘁 𝟭𝟬𝘅 𝘁𝗼𝗸𝗲𝗻 𝘀𝗮𝘃𝗶𝗻𝗴𝘀\" has no independent test.\n• 𝗖𝗼𝗽𝗶𝗹𝗼𝘁: listed in the repo description, but the repo has no Copilot-specific files as of today.\n• 𝗖𝗿𝘆𝗽𝘁𝗼 𝘁𝗼𝗸𝗲𝗻: the README promotes a third-party token, CMEM, that the author has embraced.\n\n𝗧𝗵𝗲 𝗡𝘂𝗺𝗯𝗲𝗿𝘀\n\n𝗔𝗯𝗼𝘂𝘁 𝟭𝟭𝟭.𝟴𝗸 𝗚𝗶𝘁𝗛𝘂𝗯 𝘀𝘁𝗮𝗿𝘀 and 9.7k forks as of today. Created August 2025, Apache-2.0, now at v15.9.0. 𝗔𝗯𝗼𝘂𝘁 𝟵𝟯𝗸 𝗻𝗽𝗺 𝗱𝗼𝘄𝗻𝗹𝗼𝗮𝗱𝘀 in the last 30 days.\n\n𝗧𝗵𝗲 𝗯𝗶𝗴𝗴𝗲𝗿 𝗽𝗼𝗶𝗻𝘁: 𝘵𝘩𝘦 𝘮𝘰𝘥𝘦𝘭 𝘪𝘴 𝘯𝘰 𝘭𝘰𝘯𝘨𝘦𝘳 𝘵𝘩𝘦 𝘣𝘰𝘵𝘵𝘭𝘦𝘯𝘦𝘤𝘬. 𝘞𝘩𝘢𝘵 𝘵𝘩𝘦 𝘢𝘨𝘦𝘯𝘵 𝘳𝘦𝘮𝘦𝘮𝘣𝘦𝘳𝘴 𝘪𝘴.\n\nLinks in reply 👇\nhttps://t.co/QxPEXksQna",
+    "display_text_range": [
+     0,
+     5104
+    ],
+    "facets": [
+     {
+      "type": "url",
+      "indices": [
+       4186,
+       4209
+      ],
+      "original": "https://t.co/QxPEXksQna",
+      "replacement": "https://github.com/thedotmack/claude-mem",
+      "display": "github.com/thedotmack/cla…"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "Ldataengineer",
+    "url": "https://x.com/Ldataengineer",
+    "id": "1665335769538392064",
+    "followers": 499,
+    "following": 627,
+    "likes": 1163,
+    "media_count": 294,
+    "statuses": 2024,
+    "name": "Gul Saeed Khattak",
+    "description": "Lead Data Engineer at the University of Glasgow, exploring the future of data and AI through autonomous agents, and agentic workflows",
+    "raw_description": {
+     "text": "Lead Data Engineer at the University of Glasgow, exploring the future of data and AI through autonomous agents, and agentic workflows",
+     "facets": []
+    },
+    "location": "Scotland, United Kingdom",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1665335769538392064/1789135145",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2063281035014500352/3hpG3G0Q_200x200.jpg",
+    "joined": "Sun Jun 04 12:33:28 +0000 2023",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 5,
+   "reposts": 1,
+   "likes": 6,
+   "bookmarks": 4,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Tue Nov 03 22:23:05 +0000 2026",
+   "created_timestamp": 1793744585,
+   "views": 668,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "card": {
+    "url": "https://github.com/thedotmack/claude-mem",
+    "title": "GitHub - thedotmack/claude-mem: Persistent Context Across Sessions for Every Agent – Captures...",
+    "description": "Persistent Context Across Sessions for Every Agent – Captures everything your agent does during sessions, compresses it with AI, and injects relevant context back into future sessions. Works with ...",
+    "domain": "github.com",
+    "image": {
+     "width": 800,
+     "height": 419,
+     "url": "https://pbs.twimg.com/card_img/2119172880978321408/raMCtVnR?format=jpg&name=800x419"
+    }
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/Story91_/status/2116211150715027459",
+   "id": "2116211150715027459",
+   "text": "Meet OpenTeleport\n\nYou spent hours teaching your AI agent how you work.\nSwitch apps and you’re back to copy-pasting.\n\nI built @Open_Teleport  to help your agent’s setup travel with you.\n\nInstructions. Skills. Persona. Supported memory.\nOne portable .jetpack file, with a report showing what transferred, what changed, and what couldn’t move.\n\n8 adapters:\n→ Claude Code\n→ OpenClaw\n→ Hermes Agent\n→ Codex\n→ OpenBot\n→ Grok Bot\n→ Letta Code\n→ Folder — plain agent directories built around AGENTS.md\n\nUse the guided terminal wizard or connect through MCP to prepare and review transfers from inside a session.\n\nAlready 409 downloads. And this is just the beginning.\nOpenTeleport is open source under Apache 2.0. \n\nDevelopers: there are open issues for real-app testing, adapter improvements, and verification work. Pick an issue, bring your setup, and help make agent portability work across more tools.\n\nSome integrations remain experimental especially OpenBot, Grok Bot, and Letta and require manual steps to finish importing. Moving a configuration doesn’t guarantee identical behavior across apps.\n\nTry it:\nnpx openteleport@latest\n\nRequires Node.js 24+.\n\nWebsite: https://openteleport.dev\nCode: https://github.com/Open-Teleport/openteleport\nOpen issues: https://github.com/Open-Teleport/openteleport/issues\n\nWhich two AI apps would you move your agent between? qq",
+   "raw_text": {
+    "text": "Meet OpenTeleport\n\nYou spent hours teaching your AI agent how you work.\nSwitch apps and you’re back to copy-pasting.\n\nI built @Open_Teleport  to help your agent’s setup travel with you.\n\nInstructions. Skills. Persona. Supported memory.\nOne portable .jetpack file, with a report showing what transferred, what changed, and what couldn’t move.\n\n8 adapters:\n→ Claude Code\n→ OpenClaw\n→ Hermes Agent\n→ Codex\n→ OpenBot\n→ Grok Bot\n→ Letta Code\n→ Folder — plain agent directories built around AGENTS.md\n\nUse the guided terminal wizard or connect through MCP to prepare and review transfers from inside a session.\n\nAlready 409 downloads. And this is just the beginning.\nOpenTeleport is open source under Apache 2.0. \n\nDevelopers: there are open issues for real-app testing, adapter improvements, and verification work. Pick an issue, bring your setup, and help make agent portability work across more tools.\n\nSome integrations remain experimental especially OpenBot, Grok Bot, and Letta and require manual steps to finish importing. Moving a configuration doesn’t guarantee identical behavior across apps.\n\nTry it:\nnpx openteleport@latest\n\nRequires Node.js 24+.\n\nWebsite: https://t.co/HDRHpoLtQ2\nCode: https://t.co/S4TXQnCX0s\nOpen issues: https://t.co/pM3ar0Fc23\n\nWhich two AI apps would you move your agent between? qq",
+    "display_text_range": [
+     0,
+     1310
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       126,
+       140
+      ],
+      "original": "Open_Teleport",
+      "id": "2117572428096208896"
+     },
+     {
+      "type": "url",
+      "indices": [
+       1163,
+       1186
+      ],
+      "original": "https://t.co/HDRHpoLtQ2",
+      "replacement": "https://openteleport.dev",
+      "display": "openteleport.dev"
+     },
+     {
+      "type": "url",
+      "indices": [
+       1193,
+       1216
+      ],
+      "original": "https://t.co/S4TXQnCX0s",
+      "replacement": "https://github.com/Open-Teleport/openteleport",
+      "display": "github.com/Open-Teleport/…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       1230,
+       1253
+      ],
+      "original": "https://t.co/pM3ar0Fc23",
+      "replacement": "https://github.com/Open-Teleport/openteleport/issues",
+      "display": "github.com/Open-Teleport/…"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "Story91_",
+    "url": "https://x.com/Story91_",
+    "id": "1406051151104155648",
+    "followers": 4363,
+    "following": 5259,
+    "likes": 28563,
+    "media_count": 954,
+    "statuses": 7846,
+    "name": "Story91",
+    "description": "npm run devrel@mode\n\nSerial awarded builder 🥇\n\n@base devrels ambassador 🟦\n\nBuilding :\n@cashboardlive @zoogames_nft @mysphereai",
+    "raw_description": {
+     "text": "npm run devrel@mode\n\nSerial awarded builder 🥇\n\n@base devrels ambassador 🟦\n\nBuilding :\n@cashboardlive @zoogames_nft @mysphereai",
+     "facets": []
+    },
+    "location": "web3",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2018436096930070528/-xWR5CGh_200x200.jpg",
+    "joined": "Sat Jun 19 00:48:37 +0000 2021",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 10,
+   "reposts": 1,
+   "likes": 12,
+   "bookmarks": 7,
+   "quotes": 6,
+   "embed_card": "tweet",
+   "created_at": "Fri Oct 30 16:50:30 +0000 2026",
+   "created_timestamp": 1793379030,
+   "views": 1543,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "card": {
+    "url": "https://openteleport.dev",
+    "title": "OpenTeleport — Move AI agents between apps",
+    "description": "Move AI agents, instructions, skills and memory between Claude Code, OpenClaw, Hermes, Codex and more. Open-source CLI with transfer reports and local MCP tools.",
+    "domain": "openteleport.dev",
+    "image": {
+     "width": 800,
+     "height": 419,
+     "url": "https://pbs.twimg.com/card_img/2118522092530421760/q7j-fIEp?format=jpg&name=800x419",
+     "alt": "OpenTeleport: move your AI agent between apps. Shift logo and two white portals."
+    }
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/devswha/status/2115884941993283956",
+   "id": "2115884941993283956",
+   "text": "Ovis 0.4.20 is out.\n\n• Chat keeps up while your agent works: your message shows at once and turns solid when the agent takes it\n• No more terminal tearing (xterm.js 6)\n• Letta Code chat @Letta_AI \n• Sign in again to an expired account\n\nSame session on desktop and phone. http://ovis.sh",
+   "raw_text": {
+    "text": "Ovis 0.4.20 is out.\n\n• Chat keeps up while your agent works: your message shows at once and turns solid when the agent takes it\n• No more terminal tearing (xterm.js 6)\n• Letta Code chat @Letta_AI \n• Sign in again to an expired account\n\nSame session on desktop and phone. https://t.co/yDwKzele5D",
+    "display_text_range": [
+     0,
+     294
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       186,
+       195
+      ],
+      "original": "Letta_AI",
+      "id": "1821252546469752832"
+     },
+     {
+      "type": "url",
+      "indices": [
+       271,
+       294
+      ],
+      "original": "https://t.co/yDwKzele5D",
+      "replacement": "http://ovis.sh",
+      "display": "ovis.sh"
+     },
+     {
+      "type": "media",
+      "indices": [
+       271,
+       294
+      ],
+      "id": "2115884803920973824",
+      "display": "pic.x.com/S7mab2qSVn",
+      "original": "https://t.co/S7mab2qSVn",
+      "replacement": "https://x.com/devswha/status/2115884941993283956/video/1"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "devswha",
+    "url": "https://x.com/devswha",
+    "id": "1824119476457226240",
+    "followers": 695,
+    "following": 219,
+    "likes": 633,
+    "media_count": 99,
+    "statuses": 771,
+    "name": "Hako",
+    "description": "Ovis maintainer\n\nBuilding Ovis 1.4k ⭐️ !",
+    "raw_description": {
+     "text": "Ovis maintainer\n\nBuilding Ovis 1.4k ⭐️ !",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1824119476457226240/1792846922",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2105002593248489472/76mDeEae_200x200.jpg",
+    "joined": "Thu Aug 15 16:22:44 +0000 2024",
+    "protected": false,
+    "website": {
+     "url": "https://github.com/devswha",
+     "display_url": "github.com/devswha"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 2,
+   "reposts": 1,
+   "likes": 31,
+   "bookmarks": 9,
+   "quotes": 0,
+   "embed_card": "player",
+   "created_at": "Thu Oct 29 19:14:16 +0000 2026",
+   "created_timestamp": 1793301256,
+   "possibly_sensitive": false,
+   "views": 2114,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "id": "2115884803920973824",
+      "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1920x1080/p06NTnUa24DU1xG8.mp4?tag=29",
+      "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2115884803920973824/img/o_8PscvQJK1RILTp.jpg",
+      "duration": 63.6,
+      "width": 1920,
+      "height": 1080,
+      "format": "video/mp4",
+      "type": "video",
+      "formats": [
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/pl/H0KItpBEfvlQTVYc.m3u8?tag=29",
+        "container": "m3u8"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/480x270/z8NrAIN-vmfYdev4.mp4?tag=29",
+        "bitrate": 256000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/640x360/jXmoc832-g1znEts.mp4?tag=29",
+        "bitrate": 832000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1280x720/Z01rdtGqzlBhIJWL.mp4?tag=29",
+        "bitrate": 2176000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1920x1080/p06NTnUa24DU1xG8.mp4?tag=29",
+        "bitrate": 10368000,
+        "container": "mp4",
+        "codec": "h264"
+       }
+      ],
+      "publisher": null
+     }
+    ],
+    "videos": [
+     {
+      "id": "2115884803920973824",
+      "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1920x1080/p06NTnUa24DU1xG8.mp4?tag=29",
+      "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2115884803920973824/img/o_8PscvQJK1RILTp.jpg",
+      "duration": 63.6,
+      "width": 1920,
+      "height": 1080,
+      "format": "video/mp4",
+      "type": "video",
+      "formats": [
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/pl/H0KItpBEfvlQTVYc.m3u8?tag=29",
+        "container": "m3u8"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/480x270/z8NrAIN-vmfYdev4.mp4?tag=29",
+        "bitrate": 256000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/640x360/jXmoc832-g1znEts.mp4?tag=29",
+        "bitrate": 832000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1280x720/Z01rdtGqzlBhIJWL.mp4?tag=29",
+        "bitrate": 2176000,
+        "container": "mp4",
+        "codec": "h264"
+       },
+       {
+        "url": "https://video.twimg.com/amplify_video/2115884803920973824/vid/avc1/1920x1080/p06NTnUa24DU1xG8.mp4?tag=29",
+        "bitrate": 10368000,
+        "container": "mp4",
+        "codec": "h264"
+       }
+      ],
+      "publisher": null
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/LangChainJP/status/2115730787593044043",
+   "id": "2115730787593044043",
+   "text": "【Letta、AIが経験を次の課題に生かせるかを測るベンチマークを公開】\n\nAI研究企業のLettaが「FrontierMemory 1.0」を公開した。過去の作業記録から記憶を作り、次の課題に生かせるかを測る。既存のベンチマークを基にした15課題で、作業の決まり、ユーザーの好み、環境の特徴を学ぶ力を調べる。記憶作成は最大6時間。\n\nモデル比較では、記憶を作る仕組み「Letta Dream」と、記憶を使って課題を解くコーディングエージェント「Letta Code」を使用。解答役にはOpus 5.5とGPT-6 Solを使い、考える量の設定を最大にして、2モデルのうち高い達成率を成績とする。\n\n記憶を作るモデルがOpus 5.5またはGLM-5.3なら73.3%、GPT-6.1 SolまたはGemini 4 Argonなら60.0%となった。\n\nLettaは、Prime IntellectのAIエージェント「Prime Agent」とも比較した。記憶作成と解答にOpus 5.5を最大設定で使い、15課題を各1回解いた達成率は、Letta DreamとLetta Codeの組み合わせが73.3%、Prime Agentが60.0%。\n\n今回の比較では、同じモデルでも、記憶を作って使う仕組みごとに達成率が異なっている。",
+   "raw_text": {
+    "text": "【Letta、AIが経験を次の課題に生かせるかを測るベンチマークを公開】\n\nAI研究企業のLettaが「FrontierMemory 1.0」を公開した。過去の作業記録から記憶を作り、次の課題に生かせるかを測る。既存のベンチマークを基にした15課題で、作業の決まり、ユーザーの好み、環境の特徴を学ぶ力を調べる。記憶作成は最大6時間。\n\nモデル比較では、記憶を作る仕組み「Letta Dream」と、記憶を使って課題を解くコーディングエージェント「Letta Code」を使用。解答役にはOpus 5.5とGPT-6 Solを使い、考える量の設定を最大にして、2モデルのうち高い達成率を成績とする。\n\n記憶を作るモデルがOpus 5.5またはGLM-5.3なら73.3%、GPT-6.1 SolまたはGemini 4 Argonなら60.0%となった。\n\nLettaは、Prime IntellectのAIエージェント「Prime Agent」とも比較した。記憶作成と解答にOpus 5.5を最大設定で使い、15課題を各1回解いた達成率は、Letta DreamとLetta Codeの組み合わせが73.3%、Prime Agentが60.0%。\n\n今回の比較では、同じモデルでも、記憶を作って使う仕組みごとに達成率が異なっている。",
+    "display_text_range": [
+     0,
+     565
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       67,
+       90
+      ],
+      "id": "2115730785466548224",
+      "display": "pic.x.com/Nd7mbEc5hP",
+      "original": "https://t.co/Nd7mbEc5hP",
+      "replacement": "https://x.com/LangChainJP/status/2115730787593044043/photo/1"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "LangChainJP",
+    "url": "https://x.com/LangChainJP",
+    "id": "1859430024048513024",
+    "followers": 8964,
+    "following": 6,
+    "likes": 430,
+    "media_count": 3606,
+    "statuses": 8211,
+    "name": "LangChainJP",
+    "description": "AIエージェントやLLMアプリ開発に関連するニュース、事例、論文などを日本語で幅広くご紹介しています。",
+    "raw_description": {
+     "text": "AIエージェントやLLMアプリ開発に関連するニュース、事例、論文などを日本語で幅広くご紹介しています。",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1859431180959088640/o0oRgeex_200x200.jpg",
+    "joined": "Thu Nov 21 02:54:09 +0000 2024",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 1,
+   "reposts": 0,
+   "likes": 1,
+   "bookmarks": 1,
+   "quotes": 0,
+   "embed_card": "summary_large_image",
+   "created_at": "Thu Oct 29 09:01:42 +0000 2026",
+   "created_timestamp": 1793264502,
+   "possibly_sensitive": false,
+   "views": 729,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "ja",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2115730785466548224",
+      "url": "https://pbs.twimg.com/media/HVyV8JQXgAA9YzM.jpg?name=orig",
+      "width": 1200,
+      "height": 630
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2115730785466548224",
+      "url": "https://pbs.twimg.com/media/HVyV8JQXgAA9YzM.jpg?name=orig",
+      "width": 1200,
+      "height": 630
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/creatine_cycle/status/2114946771415937239",
+   "id": "2114946771415937239",
+   "text": "in case you didn't want to listen to this whole thing and instead prefer reading:\n\nChatGPT ChatGPT agent Claude GPT-4 Gemini Claude Code Cursor GitHub Copilot GPT-4o OpenAI Codex Gemini 2.5 Pro Grok 4 DeepSeek R1 GPT-5 Claude Sonnet 4 Siri Midjourney V7 Sora 2 Microsoft Copilot Lovable Replit Agent Manus Alexa Perplexity Comet Claude Cowork DALL-E 3 Claude Opus 4.5 GPT-6 Astra Windsurf Gemini 4 Argon Claude Fable 5 Meta AI Grok 4.7 DeepSeek V3 n8n AlphaGo Google Assistant http://Bolt.new v0 Devin ChatGPT Deep Research Nano Banana Claude Sonnet 4.5 GPT-3.5 Turbo NotebookLM Deep Blue GPT-4 Turbo Gemini 3 Pro Cortana Grok 3 Stable Diffusion XL 1.0 DALL-E 2 Midjourney V6 Sora (2024) Veo 3.1 Factory Droid http://Character.AI Google Antigravity IBM Watson Cline Notion Agents AlphaFold 2 Genspark Lindy AutoGPT OpenClaw AlphaZero Claude 3.5 Sonnet June 2024 AlphaFold Claude 3 Opus o1 AlphaFold 3 Alexa+ o3 Llama 4 Maverick Llama 4 Scout Gemini 2.0 Flash Gemini 2.5 Flash GPT-5.5 Claude Opus 4.6 GPT-4.1 Kimi K2.5 Qwen3-Max Runway Gen-4 FLUX.1 Pro ElevenLabs Agents Salesforce Agentforce Microsoft Copilot Studio Claude Duet Perplexity Deep Research Harvey Base44 Emergent Gemini CLI Warp Terminal ELIZA Amazon Q Developer Claude 3.7 Sonnet Claude Sonnet 4.6 BLACKBOX AI GPT-5.2 GPT-5.4 DeepSeek V4 Pro Seedance 2.0 Kling 3.0 Pro AlexNet Midjourney V8.2 FLUX 3 Nano Banana Pro Gemini 3.1 Pro Replika Claude Opus 5 GPT-6 Sol Grok 4.5 Mistral Large 3 CodeRabbit Pi by Inflection OpenCode Aider Roo Code CrewAI LangGraph Dify Zapier Agents Google Agent Development Kit OpenAI Agents SDK Augment Code Poe Amp Kiro Glean Agents Sierra OpenAI Five Decagon Jasper Fireflies Otter Meeting Agent GitLab Duo Agent Platform Bixby CLIP Cursor Bugbot Greptile Retool Agents Browser Use ChatGPT Work Vapi Retell AI Bland AI Eleven v3 GPT-4o Mini Tay GPT-5.1 GPT-5.3 Codex GPT-5 Codex Claude Haiku 4.5 Claude 3.5 Haiku Claude 3 Sonnet AlphaGo Zero Claude 3 Haiku Claude 2 Gemini 1.5 Pro Cleverbot Gemini 1.0 Ultra Llama 3.1 405B Instruct Llama 3.3 70B Instruct Llama 2 70B Chat Llama 3 70B Instruct Mixtral 8x7B Mistral 7B v0.1 AlphaStar QwQ-32B Qwen2.5 72B Instruct Muse Code Qwen3 235B-A22B DeepSeek V3.1 DeepSeek V3.2 GLM-5 GLM-4.7 Kimi K2 Thinking MiniMax M2.5 gpt-oss-120B Segment Anything LaMDA gpt-oss-20B GPT-1 GPT-2 1.5B GPT-3 Davinci text-davinci-003 DALL-E 1 Stable Diffusion 1.5 Stable Diffusion 3.5 Large Midjourney V5 Midjourney V6.1 Runway Gen-3 Alpha Runway Gen-4.5 Whisper Large v3 Whisper Large v3 Turbo Phi-4 Genie 3 BERT Base Uncased T5 Base BLOOM 176B Falcon 180B Cascade Jules Transformer Firebase Studio Junie TRAE Kilo Qoder MuZero AlphaEvolve Qodo Google Duplex Zencoder Rork VibeCode Pythagora PaLM Continue Goose OpenHands SWE-agent GPT Pilot Imagen Open Interpreter BabyAGI AgentGPT Microsoft AutoGen Semantic Kernel MetaGPT Agno smolagents PydanticAI Mastra PaLM 2 StyleGAN WaveNet Letta Agent Zero Hermes Agent Gumloop Dust Flowise Langflow Botpress Voiceflow Relevance AI AlphaGenome Alpaca 7B Make AI Agents Amazon Bedrock Agents IBM watsonx Orchestrate SAP Joule Agents ServiceNow AI Agent Studio Vicuna 13B Muse Wonder Muse Wonder Full Muse Spark 1.3 Muse Spark 1.2 Muse Spark 1.1 Muse Spark Open Muse Glimmer Muse Image Muse Voice Transcribe SAM 3.1 UiPath Agent Builder Automation Anywhere Moveworks Atlassian Rovo ClickUp Super Agents SAM 2 Asana AI Teammates Airtable Omni Eleven v4 FLUX.1 Schnell FLUX.1 Dev FLUX.1 Kontext Pro FLUX.2 Pro Gemma 3 27B Instruct Gemma 4 31B LLaVA Phi-3 Mini 4K Instruct Mistral Large 2.0 Mistral Small 3.1 Mixtral 8x22B Codestral 2405 Devstral 2 Qwen3 Coder 480B-A35B Instruct Qwen3.5 397B-A17B Qwen3.8-Max Kimi K3 Kimi K1.5 Chinchilla MiniMax M3 GLM-5.3 Nemotron 3 Ultra Command R+ April 2024 Command A Amazon Nova Pro Amazon Nova Premier GPT-Image-1 GPT-Image-2 Nano Banana 2 Grok Imagine Image Grok Imagine Video MiniMax Hailuo 2.3 OLMo Wan 3.0 Stable Video Diffusion Runway Gen-2 Runway Gen-1 Kling O3 Pro Lyria 3.5 Julius AI AlphaCode word2vec YOLOv1 Hex Databricks Genie Agents Fin Chatbase Ada Cognigy Parloa PolyAI Synthflow http://Yellow.ai Gato Vision Transformer Mamba Zendesk AI Agents Gorgias AI Agent Freddy AI Agent Maven AGI Forethought 11x Alice Artisan Ava GPT-J StarCoder Claygent Rox AiSDR http://Regie.ai Qualified Piper HubSpot Customer Agent HubSpot Prospecting Agent HubSpot Content Agent AirOps http://Copy.ai GPT-Neo Descript Underlord Shortwave Fyxer LeNet-5 StyleGAN2 Elicit Legora Spellbook Luminance Norm AI Eve Numeric Basis Rillet FloQast AI Agents Dropzone AI Resolve AI Rootly Tines Torq HappyRobot Hippocratic AI EliseAI Assort Health Eightfold AI ResNet-18 Genie 2 ResNet-34 ResNet-50 ResNet-101 Pi0 Pi0-FAST Pi0.5 ResNet-152 Paradox Olivia Humanly Moonhub Skyvern Bardeen Fellou Simular Abacus AI Agent MiniMax Agent Xiaoice Voyager Skywork U-Net RoBERTa RT-2 Vellum Sentry Seer OpenManus DeerFlow AgenticSeek AlphaGeometry Helix Helix 02 UI-TARS Desktop GPT Researcher Agent S OpenAI Agents API Amazon Nova Act DBRX PaliGemma Libratus Oracle AI Agent Studio Grok Bot Devin Desktop Warp Agent CLI BitNet Devin Local Agent Gemini Spark Gemini Enterprise Agent Platform Gemini Deep Research Microsoft Researcher Microsoft Analyst Airtable Field Agents CICERO Gopher Qwen Code Kimi Code StarCoderBase 7B StarCoder2 3B StarCoder2 7B StarCoder2 15B StarCoder2 15B Instruct v0.1 BLACKBOX CLI Mistral Vibe Letta Code Codebuff Plandex GPT-5 Pro GPT-5.1 Codex GPT-5.1 Codex Max GPT-5.2 Codex AlphaProof StyleGAN3 BLIP Claude Science MusicGen Genie YOLOv5 GPT-5.2 Pro GPT-5.3 Instant BLIP-2 GPT-5.4 Pro GPT-5.5 Pro GPT-5.6 Cyber GPT-5.6 Luna GPT-5.6 Sol Mark I Perceptron Dolly 1.0 GPT-5.6 Terra GPT-6 Luna Dolly 2.0 GPT-6.1 Sol MusicLM GPT-Rosalind o1 Pro o3 Deep Research o3 Pro Claude 1.0 Claude 1.1 BlenderBot SWE-1.5 Claude 1.2 Claude 1.3 Claude 2.1 Claude 3.5 Sonnet October 2024 Deep Speech Claude Fable 5.1 Claude Haiku 5.5 Claude Instant 1.0 Claude Instant 1.1 Claude Instant 1.2 FLAN-T5 Kuki Claude Opus 4 Claude Opus 4.1 Claude Opus 4.7 Claude Opus 4.8 Claude Opus 5.5 Flamingo GloVe Pluribus YOLOv8 Claude Sonnet 5 Mamba 2 Bark SWE-2 SWE-1.7 SWE-1.7 Lightning SWE-1.6 SWE-1.6 Fast swe-grep swe-check Claude Sonnet 5.5 Codex Mini GPT-4.1 Mini GPT-4.1 Nano GPT-5 Mini GPT-5 Nano GPT-5.1 Codex Mini GPT-5.4 Mini GPT-5.4 Nano DQN SWE-1 SWE-1-lite SWE-1-mini Kagi Assistant DistilBERT DINOv2 Jukebox SIMA 2 ESMFold o1 Mini o3 Mini o4 Mini o4 Mini Deep Research Computer Use Preview GPT-4 Turbo Preview GPT-4.5 Preview o1 Preview Sora 2 Pro Aisera AlphaTensor ELMo BART CycleGAN wav2vec 2.0 GR00T N1 GR00T N1.5 GR00T N1.6 GR00T N1.7 YOLOv3 Concourse Docyt Durable eesel AI Eudia Exaforce Fetcher Goodcall hireEZ EZ Agent HubSpot Agent Hub Hyro Infinitus Intezer Jotform AI Agents http://Kore.ai Leena AI Microsoft App Builder Nanonets Netomi DINOv3 Notable AlphaDev RoseTTAFold Paxton Phenom Prophet Security Regal Rossum Sana Coach Sana Concierge ServiceNow Otto Simbian Sintra SHRDLU XLNet TD-Gammon RFdiffusion Slang AI StackAI Taskade Koala 13B BLACKBOX Remote Agents telli Thoughtly Traversal Truewind VectorShift http://Vic.ai Wordsmith Logic Theorist GoogLeNet SIMA Workato Genies Yuma AI babbage-002 davinci-002 Gemini 1.0 Pro Gemini 1.5 Flash Gemini 1.5 Flash-8B Gemini 3 Flash Gemini 3.6 Flash Gemini 3.7 Flash VGG-11 DINO PaLM-E VGG-13 VGG-16 VGG-19 Gemini 3.8 Flash Gemini 1.0 Nano-1 Gemini 1.0 Nano-2 Gemini 2.0 Flash-Lite CodeGen Gemini 2.5 Flash-Lite Gemini 3.1 Flash-Lite Gemini 3.5 Flash-Lite Grok 1 Grok 1.5 Grok 1.5 Vision Shakey Inception v3 Mask R-CNN RT-1 ESM3 Grok 4 Fast Non-Reasoning Grok 4 Fast Reasoning Grok 4.1 Fast Non-Reasoning Grok 4.1 Fast Reasoning Grok 4.3 Grok 4.6 Grok Build 0.1 Grok Code Fast 1 Gemini 2.0 Flash Thinking Experimental Gemini 2.0 Pro Experimental Moshi AlphaGeometry 2 GPT-NeoX-20B pix2pix Tacotron Gemini Deep Research Max Midjourney V1 Midjourney V2 Midjourney V3 Midjourney V4 Midjourney V5.1 RWKV Evo 2 Midjourney V5.2 Midjourney V8.1 Niji 4 Niji 5 ConvNeXt ALBERT Tacotron 2 Grok 2 Mini Grok 3 Mini Veo 3.1 Lite Llama 4 Maverick Instruct Llama 4 Scout Instruct Grok 2 Beta Claude Mythos 5 Claude Mythos 5.1 DeepSeek R1 Zero Midjourney V8 Alpha DreamerV3 GraphCast OpenVLA Chinook YOLOv2 DeepSeek V4 Flash Nano Banana 2 Lite Nano Banana 2.1 Grok 2 1212 Grok 2 Vision 1212 Qwen3.8 2.4T-A95B Qwen3.8 27B Qwen3.8-Flash T5Gemma Qwen3.8-Flash-Next Claude Mythos Preview Swin Transformer BigGAN GLIDE Deep Speech 2 YOLOv4 11x Julian http://a0.dev Agent Frank AgentForge AgentPilot Akkio Alex Amplemarket Duo Anything Auquan DENDRAL OPT FunSearch Grounding DINO AutogenAI Beam AI http://Biel.ai Butternut AI Codev ModernBERT Cognite Atlas AI ConverzAI Credal cubic DeepSite HunyuanVideo Hunyuan3D 2 LTX-Video LTX-2 LTX-2.5 CogVideo CogVideoX Faster R-CNN wav2vec Dosu Endorsed Fira Gradient Labs http://HiringAgents.ai Hyphenate Inkeep Jason AI Microsoft Zo Mochi 1 TRELLIS CogView Jeeva AI Jsonify MYCIN Kadoa KaneAI Kapa Kognitos Lutra AI Lyro AI Moxo Origami Agents Pin Pine AI Dreamer DCGAN AudioLM ProcIndex qode http://Refact.ai Restack Rinna Rocket http://Sema4.ai SoftGen Sola Stacks TaxGPT AlphaChip ELECTRA Transformer-XL DeBERTa SayCan YOLOv7 Tellius Tempo ThoughtSpot Spotter Twin UI Bakery Vendelux http://xpander.ai Zenskar Zowie AgentScope RoboCat AI21 Maestro CAMEL SuperAGI DeepSeek R1 Distill Llama 70B DeepSeek R1 Distill Llama 8B DeepSeek R1 Distill Qwen 1.5B DeepSeek R1 Distill Qwen 14B OLMo 2 DeepSeek R1 Distill Qwen 32B OLMo 3 DeepSeek R1 Distill Qwen 7B DeepSeek V3.2 Exp MobileNet v2 DeepSeek V3.2 Speciale Gemini Omni Flash GPT-Image-1.5 GPT-Image-2.5 Flare GPT-Image-2.5 Sunburst DeepSeek R1 0528 DialoGPT DeepSeek R1 0528 Qwen3 8B DeepSeek V3.1 Terminus GPT-Image-1 Mini DeepSeek V4 Flash Base AlphaMissense DeepSeek V4 Pro Base DeepSeek V4.1 Flash 1017 FLUX.1 Kontext Dev FLUX.1 Kontext Max FLUX.2 Dev ESM Cambrian ESMFold2 FLUX.2 Flex FLUX.2 Klein 4B FLUX.2 Klein 9B FLUX.2 Max DeepSeek V3.2 Exp Base MobileNet v1 DeepNash Magistral Medium 1.0 Magistral Medium 1.1 Magistral Medium 1.2 BioGPT Ministral 3 14B Ministral 3 3B Ministral 3 8B Ministral 3B Ministral 8B Mistral 7B v0.2 Mistral 7B v0.3 DETR HuBERT YOLO11 Mistral Large 1.0 Mistral Large 2.1 Mistral Large 4 Mistral Medium 1.0 Mistral Medium 3 Mistral Medium 3.1 Mistral Medium 3.5 Mistral Nemo 12B Mistral Next Mistral Saba OpenLLaMA AlphaProteo DeepStack Pixtral 12B Pixtral Large Runway Gen-4 Turbo DeepSeek V3 0324 DeepSeek V3 Base DeepSeek V3.1 Base Magistral Small 1.0 Magistral Small 1.1 FLAN-UL2 Magistral Small 1.2 Mistral Small 1.0 GenCast Longformer Octo YOLOv9 YOLOv10 Mistral Small 2.0 Mistral Small 3.0 Mistral Small 3.2 Aurora Aurora 1.5 Boltz-1 Boltz-2 Mistral Small 4 Mistral Small Creative Kimi K2.6 Kimi K2.7 Code Kimi VL A3B Thinking Stable Diffusion 2.0 Stable Diffusion 2.1 DreamerV2 Stable Diffusion 3 Medium Stable Diffusion 3.5 Large Turbo Stable Diffusion 3.5 Medium Stable Diffusion Turbo Stable Diffusion XL 0.9 Stable Diffusion XL Turbo Stable Video Diffusion XT Stable Video Diffusion XT 1.1 Codestral 2501 Codestral 2508 Codestral Mamba 7B Devstral Medium 1.0 Leanstral Leanstral 1.5 Mathstral 7B Runway Gen-3 Alpha Turbo Grok Imagine Image 2.0 Grok Imagine Image Pro Grok Imagine Image Quality Grok Imagine Video 1.5 R-CNN Grok Voice 2.0 Eleven Flash v2 Eleven Flash v2.5 Eleven Music v2 Eleven Music v2.5 Eleven Scribe v1 Eleven Scribe v2 Eleven Scribe v2 Realtime Eleven Text to Voice v3 Eleven v3 Conversational PARRY Agent57 MobileNet v3 Small YOLOv6 MobileNet v3 Large Eleven v4 Turbo Devstral Small 1.0 Devstral Small 1.1 Devstral Small 2 Kimi K2 Instruct Kimi VL A3B Instruct GPT-4o Audio GPT-4o Realtime GPT-Audio GPT-Audio-1.5 Fast R-CNN GPT-Live 1 GPT-Realtime GPT-Realtime Translate GPT-Realtime Whisper GPT-Realtime-1.5 GPT-Realtime-2 GPT-Realtime-2.1 Gemma 4 12B Gemma 4 26B-A4B Gemma 4 E2B Gemma 4 E4B MiniMax M2.7 MiniMax M3.1 Flash GPT-4o Mini Audio GPT-4o Mini Realtime GPT-Audio Mini GPT-Realtime Mini GPT-Realtime-2.1 Mini Runway Act-Two Runway Aleph 2.0 AlphaQubit Qwen-Image Qwen-Image-2.0 Qwen-Image-Edit Qwen3.5 0.8B OpenHermes 2.5 Mistral 7B Qwen3.5 122B-A10B Qwen3.5 27B Qwen3.5 2B Qwen3.5 35B-A3B Qwen3.5 4B Qwen3.5 9B YOLO9000 Qwen3.6 35B-A3B FLUX.1 Canny Dev FLUX.1 Depth Dev FLUX.1 Fill Dev FLUX.1 Redux Dev FLUX1.1 Pro FLUX1.1 Pro Ultra Seedance 2.0 Fast Seedance 2.5 Gemini 2.5 Flash Live Gemini 3.1 Flash Live Gemini 3.5 Live Translate Gemini 3.8 Live Gemini 3.8 Live Extended Thinking Llama 3.1 70B Instruct Llama 3.1 8B Instruct Phi-1 Phi-1.5 Phi-2 Phi-4 Reasoning Rainbow DQN Phi-4 Reasoning Plus Phi-4 Reasoning Vision 15B Kimi K2 Base Nemotron 3 Super Nemotron 3.5 Super VL GPT-2 124M GPT-2 355M GPT-2 774M GLM-4.5 GLM-4.5 Air GLM-4.6 GLM-4.7 Flash GLM-4.7 FlashX GLM-5.1 GLM-5.2 GLM-5.3 Flash 2501 Adala Agentive Amazon Quick Amplify Security ArchiLabs Ascendo AI Ask-AI AutoCodeRover BambooAI Browserable BrowserAct Capy ChemCrow Claude Engineer CodeMachine-CLI Crush Data to Paper Deep Agents Code Devon Dexto Fieldproxy FlowMate ForgeCode Genia gptme Grok Build Grok CLI Groq Code CLI IronClaw http://Jiffy.ai Kortix Kosmos Kylon Leaping AI LettaBot Moltis nanobot NanoClaw Nanocoder Needle NOFire AI NullClaw OH-MY-PI Ouroboros Pi PicoClaw PlexeAI Prime Agent RA.Aid RunWhen Self-Operating Computer Simple Phones Smol Developer EfficientNet-B0 EfficientNet-B1 Orca 2 7B Orca 2 13B EfficientNet-B2 EfficientNet-B3 EfficientNet-B4 EfficientNet-B5 EfficientNet-B6 EfficientNet-B7 Taxy AI http://Teammates.ai TensorStax Vogent AI http://Voice.ai Zenlytic Zoë ZeroClaw Zo Computer Warp Factories Seedance 2.0 Mini DenseNet-121 DenseNet-161 DenseNet-169 DenseNet-201 WizardCoder Python 34B v1.0 WizardCoder 15B v1.0 WizardCoder Python 13B v1.0 WizardMath 7B v1.1 WizardCoder 33B v1.1 WizardMath 70B v1.0 WizardLM 70B v1.0 WizardLM 13B v1.2 WizardMath 7B v1.0 WizardLM 13B v1.0 Eleven Multilingual Speech to Speech v2 Eleven Multilingual v2 Phi-4 Mini Flash Reasoning Phi-4 Mini Reasoning Nemotron 3 Nano GPT-3 Ada GPT-3 Babbage GPT-3 Curie GPT-4o Transcribe GPT-4o Transcribe Diarize GPT-Live Transcribe GPT-Transcribe TTS-1 TTS-1 HD Qwen3 0.6B Qwen3 1.7B Qwen3 14B Qwen3 30B-A3B Qwen3 32B Qwen3 4B Qwen3 8B Amazon Nova 2 Sonic Amazon Nova Canvas Amazon Nova Reel 1.0 Amazon Nova Reel 1.1 Amazon Nova Sonic Llama 3 8B Instruct Llama 3.1 405B Base Llama 3.1 70B Base Llama 3.1 8B Base Phi-3 Medium 128K Instruct Phi-3 Medium 4K Instruct Phi-3 Vision 128K Instruct Phi-3.5 MoE Instruct Phi-3.5 Vision Instruct Phi-4 Multimodal Instruct Kimi K2 Instruct 0905 GPT-4o Mini Transcribe GPT-4o Mini TTS Whisper Large v1 Whisper Large v2 Whisper Medium Qwen3.8-Omni-Flash Amazon Nova 2 Lite Amazon Nova Lite Amazon Nova Micro Stable Diffusion 1.1 Stable Diffusion 1.2 Stable Diffusion 1.3 Stable Diffusion 1.4 Olmo 3.1 32B Think Bolmo 1B Bolmo 7B AstaBrief 8B AstaBrief 8B SFT Llama 3 Blama 8B Bwen 8B Gemini 2.5 Flash TTS Gemini 2.5 Pro TTS Gemini 3.1 Flash TTS Gemini 3.5 Transcribe Gemini 3.8 Flash TTS Lyria 3 Clip Lyria 3 Pro Lyria RealTime Llama 2 13B Chat Llama 2 7B Chat Never Give Up Phi-3 Mini 128K Instruct Phi-3 Small 128K Instruct Phi-3 Small 8K Instruct Phi-3.5 Mini Instruct Phi-4 Mini Instruct MiniMax H3 MiniMax H3 Max MiniMax Hailuo 02 MiniMax Hailuo 2.3 Fast Whisper Small Whisper Tiny Dynamics 365 Account Reconciliation Agent Dynamics 365 Case Management Agent Dynamics 365 Customer Intent Agent Dynamics 365 Sales Qualification Agent Dynamics 365 Sales Research Agent Dynamics 365 Supplier Communications Agent HubSpot Campaign Agent HubSpot Data Agent HubSpot Nurture Agent HubSpot Revenue Agent Microsoft Facilitator Microsoft Interpreter Microsoft Learning Agent Microsoft People Agent Microsoft Workflows Agent Microsoft Workforce Insights Agent Otter Recruiting Agent Otter SDR Agent SAP Joule Studio ServiceNow AI Agent Advisor ServiceNow Build Agent ThoughtSpot SpotterCode ThoughtSpot SpotterModel ThoughtSpot SpotterViz Workday Adoption Agent Workday BP Optimize Agent Workday Contracts Agent Workday Deployment Agent Workday Developer Agent Workday Financial Audit Agent Workday Organizational Development Agent Workday Payroll Agent Workday Procurement Agent Workday Self-Service Agent Workday Talent Acquisition Agent Workday Travel Agent Workday Workforce Management Agent Qwen-Image-2512 Qwen-Image-Edit-2509 Qwen-Image-Edit-2511 Gemini 3.8 Flash-Lite TTS Llama 3 70B Base Llama 3 8B Base Runway Aleph Runway Gen-4 Image Runway Gen-4 Image Turbo Aya Expanse 32B Aya Expanse 8B Aya Vision 32B Aya Vision 8B Command Command A Reasoning Command A Translate Command A Vision Command A+ Command Light Command R August 2024 Command R March 2024 Command R+ August 2024 Command R7B DeepSeek V2 DeepSeek V2.5 Gemma 3 12B Instruct Gemma 3 1B Instruct Gemma 3 4B Instruct Llama 2 13B Base Llama 2 70B Base Llama 2 7B Base Whisper Medium English Qwen-VL Qwen3 0.6B Base Qwen3 1.7B Base Qwen3 14B Base Qwen3 235B-A22B Base Qwen3 235B-A22B Thinking 2507 Qwen3 30B-A3B Base Qwen3 30B-A3B Thinking 2507 Qwen3 32B Base Apertus Arcee Bamba BARThez BARTpho BERTweet BigBird BigBird-Pegasus BlenderBot Small Byte Latent Transformer BORT ByT5 CamemBERT CANINE ConvBERT CPM CPM-Ant CTRL DeBERTa-v2 DiffLlama Doge dots.llm1 DPR ERNIE ERNIE-M EXAONE 4.0 Falcon-H1 Falcon Mamba FlauBERT FlexOlmo FNet FSMT Funnel Transformer GPT-NeoX Japanese GPTSAN Japanese GPT-SW3 Helium HerBERT I-BERT JetMoE LED LFM2 LongCat-Flash LongT5 LUKE M2M-100 MADLAD-400 MarianMT MarkupLM mBART mBART-50 MEGA Megatron-BERT Megatron-GPT2 mLUKE MobileBERT MPNet MPT MRA mT5 MVP MyT5 NEZHA NLLB NLLB-MoE Nyströmformer OLMoE PEGASUS PEGASUS-X Persimmon PhoBERT PLBART ProphetNet REALM Reformer RemBERT RetriBERT RoBERTa-PreLayerNorm RoCBert RoFormer Splinter SqueezeBERT Switch Transformer T5 v1.1 TAPEX UL2 UMT5 VaultGemma X-MOD XGLM XLM XLM-ProphetNet XLM-RoBERTa XLM-RoBERTa-XL XLM-V xLSTM YOSO Zamba Zamba 2 Qwen3 4B Base Qwen3 4B Thinking 2507 Qwen3 8B Base Cohere Transcribe March 2026 North Mini Code 1.0 North Small Translate Tiny Aya Earth Tiny Aya Fire Tiny Aya Global Tiny Aya Water DeepSeek V2 Lite Janus 1.3B Janus Pro 1B Janus Pro 7B JanusFlow 1.3B LLaMA 1 13B LLaMA 1 33B LLaMA 1 65B LLaMA 1 7B Whisper Base Whisper Small English Whisper Tiny English Qwen-Plus Qwen-Turbo Qwen2.5-Max Qwen3 Coder Next Qwen3 Next 80B-A3B Thinking Qwen-Audio Qwen2-Audio 7B Qwen2.5-Omni 3B Qwen2.5-Omni 7B Qwen3-Omni 30B-A3B Thinking DeepSeek Coder 1.3B Base v1.5 DeepSeek Coder 6.7B Base v1.5 DeepSeek V2 Chat Gemma 3 12B Base Gemma 3 1B Base Gemma 3 27B Base Gemma 3 4B Base Code Llama 13B Python Code Llama 34B Python Code Llama 70B Python Code Llama 7B Python Llama 3.2 1B Instruct Llama 3.2 3B Instruct omni-moderation QVQ-72B Preview Qwen-VL Chat Qwen2-VL 2B Instruct Qwen2-VL 72B Instruct Qwen2-VL 7B Instruct Qwen2.5-VL 32B Instruct Qwen2.5-VL 3B Instruct Qwen2.5-VL 72B Instruct Qwen2.5-VL 7B Instruct Qwen2.5 Coder 0.5B Instruct Qwen2.5 Coder 1.5B Instruct Qwen2.5 Coder 14B Instruct Qwen2.5 Coder 32B Instruct Qwen2.5 Coder 3B Instruct Qwen2.5 Coder 7B Instruct Qwen3 235B-A22B Instruct 2507 Qwen3 30B-A3B Instruct 2507 Qwen3 4B Instruct 2507 Qwen3-VL 235B-A22B Thinking Qwen3-VL 2B Thinking Qwen3-VL 30B-A3B Thinking Qwen3-VL 32B Thinking Qwen3-VL 4B Thinking Qwen3-VL 8B Thinking DeepSeek V2 Lite Chat CodeGemma 2B CodeGemma 7B EmbeddingGemma 300M FunctionGemma 270M Gemma 3 270M Gemma 3n E2B Gemma 3n E4B PaliGemma 2 10B PaliGemma 2 28B PaliGemma 2 3B PaliGemma 2 Mix 10B PaliGemma 2 Mix 28B PaliGemma 2 Mix 3B PaliGemma 3B RecurrentGemma 2B RecurrentGemma 9B ShieldGemma 2 4B ShieldGemma 27B ShieldGemma 2B ShieldGemma 9B Llama 3.2 Vision 11B Instruct Llama 3.2 Vision 90B Instruct code-davinci-002 code-davinci-edit-001 text-ada-001 text-babbage-001 text-curie-001 text-davinci-001 text-davinci-002 TimeSformer V-JEPA 2 VideoMAE ViViT ALIGN AltCLIP Aria BridgeTower BROS Chameleon Chinese-CLIP CLIPSeg CLVP ColPali ColQwen2 data2vec DePlot Donut EdgeTAM Emu3 Evolla FLAVA Florence-2 GIT GOT-OCR 2.0 Granite Vision GroupViT IDEFICS IDEFICS2 IDEFICS3 InstructBLIP InstructBLIP-Video InternVL KOSMOS-2 KOSMOS-2.5 LayoutLM LayoutLMv2 LayoutLMv3 LayoutXLM LFM2-VL LiLT LLaVA-NeXT LLaVA-NeXT-Video LLaVA-OneVision LXMERT MatCha MetaCLIP 2 MGP-STR MM Grounding DINO Nougat OmDet-Turbo OneFormer Ovis2 OWL-ViT OWLv2 Perceiver PerceptionLM Pix2Struct SigLIP SigLIP 2 SmolVLM TAPAS TrOCR TVLT TVP UDOP Video-LLaVA Vip-LLaVA ViLT VisualBERT X-CLIP text-davinci-edit-001 Runway GWM-1 Falcon 2 11B Falcon 2 11B VLM Falcon 40B Falcon 7B Falcon H1R 7B Falcon Mamba 7B Qwen2.5-14B Instruct 1M Qwen2.5-7B Instruct 1M Qwen3 Coder 30B-A3B Instruct Qwen3 Next 80B-A3B Instruct QwQ-32B Preview Qwen-Audio Chat Qwen2-Audio 7B Instruct Qwen3-Omni 30B-A3B Instruct Qwen2.5 0.5B Instruct Qwen2.5 1.5B Instruct Qwen2.5 14B Instruct Qwen2.5 32B Instruct Qwen2.5 3B Instruct Qwen2.5 7B Instruct Cohere Transcribe Arabic July 2026 Deepgram Aura-2 Deepgram Enhanced Deepgram Flux Deepgram Nova Deepgram Nova-2 Deepgram Nova-3 DeepSeek Coder V2 236B Instruct DeepSeek V2.5 1210 Code Llama 13B Instruct Code Llama 34B Instruct Code Llama 70B Instruct Code Llama 7B Instruct Llama 3.2 1B Base Llama 3.2 3B Base Voxtral Mini Voxtral Small Whisper Base English Stable Audio 3.0 Medium Stable Audio Open 1.0 Falcon H1 Tiny R ChatGLM 6B ChatGLM2 6B ChatGLM3 6B Jamba 1.5 Large Jurassic-1 Jumbo Jurassic-1 Large Jurassic-2 Light AIMv2 BEiT BiT Conditional DETR ConvNeXt V2 CvT D-FINE DAB-DETR Deformable DETR DeiT Depth Anything Depth Anything V2 Depth Pro DETA DiNAT DINOv2 with Registers DiT (document images) DPT EfficientFormer EfficientLoFTR EoMT FocalNet GLPN HGNet-V2 Hiera I-JEPA ImageGPT LeViT LightGlue Mask2Former MaskFormer MLCD MobileViT MobileViT v2 NAT PoolFormer Prompt Depth Anything Pyramid Vision Transformer Pyramid Vision Transformer v2 RegNet RT-DETR RT-DETRv2 SegFormer SegGPT SAM-HQ SuperGlue SuperPoint SwiftFormer Swin Transformer V2 Swin2SR Table Transformer TextNet UPerNet VAN ViT Hybrid ViTDet ViT-MAE ViTMatte ViT-MSN ViTPose YOLOS ZoeDepth Jurassic-2 Mid Jurassic-2 Ultra Qwen3-Omni 30B-A3B Captioner Qwen2.5 Coder 0.5B Base Qwen2.5 Coder 1.5B Base Qwen2.5 Coder 14B Base Qwen2.5 Coder 32B Base Qwen2.5 Coder 3B Base Qwen2.5 Coder 7B Base Qwen3-VL 235B-A22B Instruct Qwen3-VL 2B Instruct Qwen3-VL 30B-A3B Instruct Qwen3-VL 32B Instruct Qwen3-VL 4B Instruct Qwen3-VL 8B Instruct DeepSeek Coder 5.7B MQA Base DeepSeek Coder V2 Lite Instruct CodeGemma 7B Instruct Gemma 2B Instruct Gemma 3 270M Instruct Gemma 7B Instruct RecurrentGemma 2B Instruct RecurrentGemma 9B Instruct BERT Large Cased BERT Large Uncased BERT Medium Granite Speech 3.3 8B Llama 3.2 Vision 11B Base Llama 3.2 Vision 90B Base text-embedding-3-large Stable Audio 3.0 Small GLM-4.1V 9B Thinking GLM-4.5V GLM-4.6V GLM-4.6V Flash Jamba 1.5 Mini Qwen2.5 0.5B Base Qwen2.5 1.5B Base Qwen2.5 14B Base Qwen2.5 32B Base Qwen2.5 3B Base Qwen2.5 72B Base Qwen2.5 7B Base Wan 2.2 Animate 14B Wan 2.2 I2V A14B Wan 2.2 S2V 14B Wan 2.2 T2V A14B Wan 2.2 TI2V 5B DeepSeek Coder V2 236B Base DeepSeek V2 Chat 0628 Gemma 2 27B Instruct Gemma 2 2B Instruct Gemma 2 9B Instruct BERT Mini BERT Small BERT Tiny T5 11B T5 3B T5 Large Granite 4 Micro Granite 4-H Micro Granite 4-H Small Granite 4-H Tiny Code Llama 13B Base Code Llama 34B Base Code Llama 70B Base Code Llama 7B Base Voxtral TTS Voxtral TTS 3 text-embedding-3-small Deepgram Flux TTS DeepSeek Coder 1.3B Instruct DeepSeek Coder 33B Instruct DeepSeek Coder 6.7B Instruct DeepSeek Coder V2 Lite Base Gemma 2B Base Gemma 7B Base T5 Small Granite 3.3 2B Instruct Granite 3.3 8B Instruct MiniMax Speech 02 HD MiniMax Speech 02 Turbo MiniMax Speech 2.6 HD MiniMax Speech 2.6 Turbo MiniMax Speech 2.8 HD MiniMax Speech 2.8 Turbo Voxtral Mini Transcribe 2 Voxtral Mini Transcribe 3 Voxtral Mini Transcribe Realtime Voxtral Mini Transcribe Realtime 3 Voxtral Small Transcribe 3 GLM-4 9B GLM-4V 9B Qwen3.8-LiveTranslate Deepgram Base DeepSeek Prover V1 DeepSeek Prover V2 671B DeepSeek Prover V2 7B DeepSeek OCR DeepSeek VL2 Audio Spectrogram Transformer CLAP CSM Descript Audio Codec Dia EnCodec FastSpeech 2 Conformer Granite Speech Kyutai Speech-to-Text MCTCT Mimi MMS Moonshine MusicGen Melody Parakeet Pop2Piano SeamlessM4T SeamlessM4T v2 SEW SEW-D Speech2Text Speech2Text2 SpeechT5 UniSpeech UniSpeech-SAT UnivNet VITS wav2vec 2.0 BERT wav2vec 2.0 Conformer wav2vec 2.0 Phoneme WavLM X-Codec XLS-R XLSR-Wav2Vec2 Gemma 2 27B Base Gemma 2 2B Base Gemma 2 9B Base BERT Large Cased Whole Word Masking BERT Large Uncased Whole Word Masking DeepSeek Coder 1.3B Base DeepSeek Coder 33B Base DeepSeek Coder 6.7B Base DeepSeek VL2 Small DeepSeek VL2 Tiny BERT Base Cased SmolLM3 3B Codestral Embed Mistral Embed Mistral OCR 1 Mistral OCR 2 Mistral OCR 3 Mistral OCR 4.0 Mistral OCR 4.1 Shieldstral 1.0 text-embedding-ada-002 GLM-4 9B Chat GLM-4 9B Chat 1M",
+   "raw_text": {
+    "text": "in case you didn't want to listen to this whole thing and instead prefer reading:\n\nChatGPT ChatGPT agent Claude GPT-4 Gemini Claude Code Cursor GitHub Copilot GPT-4o OpenAI Codex Gemini 2.5 Pro Grok 4 DeepSeek R1 GPT-5 Claude Sonnet 4 Siri Midjourney V7 Sora 2 Microsoft Copilot Lovable Replit Agent Manus Alexa Perplexity Comet Claude Cowork DALL-E 3 Claude Opus 4.5 GPT-6 Astra Windsurf Gemini 4 Argon Claude Fable 5 Meta AI Grok 4.7 DeepSeek V3 n8n AlphaGo Google Assistant https://t.co/0Y8rxk5xJJ v0 Devin ChatGPT Deep Research Nano Banana Claude Sonnet 4.5 GPT-3.5 Turbo NotebookLM Deep Blue GPT-4 Turbo Gemini 3 Pro Cortana Grok 3 Stable Diffusion XL 1.0 DALL-E 2 Midjourney V6 Sora (2024) Veo 3.1 Factory Droid https://t.co/8UAkcTN88x Google Antigravity IBM Watson Cline Notion Agents AlphaFold 2 Genspark Lindy AutoGPT OpenClaw AlphaZero Claude 3.5 Sonnet June 2024 AlphaFold Claude 3 Opus o1 AlphaFold 3 Alexa+ o3 Llama 4 Maverick Llama 4 Scout Gemini 2.0 Flash Gemini 2.5 Flash GPT-5.5 Claude Opus 4.6 GPT-4.1 Kimi K2.5 Qwen3-Max Runway Gen-4 FLUX.1 Pro ElevenLabs Agents Salesforce Agentforce Microsoft Copilot Studio Claude Duet Perplexity Deep Research Harvey Base44 Emergent Gemini CLI Warp Terminal ELIZA Amazon Q Developer Claude 3.7 Sonnet Claude Sonnet 4.6 BLACKBOX AI GPT-5.2 GPT-5.4 DeepSeek V4 Pro Seedance 2.0 Kling 3.0 Pro AlexNet Midjourney V8.2 FLUX 3 Nano Banana Pro Gemini 3.1 Pro Replika Claude Opus 5 GPT-6 Sol Grok 4.5 Mistral Large 3 CodeRabbit Pi by Inflection OpenCode Aider Roo Code CrewAI LangGraph Dify Zapier Agents Google Agent Development Kit OpenAI Agents SDK Augment Code Poe Amp Kiro Glean Agents Sierra OpenAI Five Decagon Jasper Fireflies Otter Meeting Agent GitLab Duo Agent Platform Bixby CLIP Cursor Bugbot Greptile Retool Agents Browser Use ChatGPT Work Vapi Retell AI Bland AI Eleven v3 GPT-4o Mini Tay GPT-5.1 GPT-5.3 Codex GPT-5 Codex Claude Haiku 4.5 Claude 3.5 Haiku Claude 3 Sonnet AlphaGo Zero Claude 3 Haiku Claude 2 Gemini 1.5 Pro Cleverbot Gemini 1.0 Ultra Llama 3.1 405B Instruct Llama 3.3 70B Instruct Llama 2 70B Chat Llama 3 70B Instruct Mixtral 8x7B Mistral 7B v0.1 AlphaStar QwQ-32B Qwen2.5 72B Instruct Muse Code Qwen3 235B-A22B DeepSeek V3.1 DeepSeek V3.2 GLM-5 GLM-4.7 Kimi K2 Thinking MiniMax M2.5 gpt-oss-120B Segment Anything LaMDA gpt-oss-20B GPT-1 GPT-2 1.5B GPT-3 Davinci text-davinci-003 DALL-E 1 Stable Diffusion 1.5 Stable Diffusion 3.5 Large Midjourney V5 Midjourney V6.1 Runway Gen-3 Alpha Runway Gen-4.5 Whisper Large v3 Whisper Large v3 Turbo Phi-4 Genie 3 BERT Base Uncased T5 Base BLOOM 176B Falcon 180B Cascade Jules Transformer Firebase Studio Junie TRAE Kilo Qoder MuZero AlphaEvolve Qodo Google Duplex Zencoder Rork VibeCode Pythagora PaLM Continue Goose OpenHands SWE-agent GPT Pilot Imagen Open Interpreter BabyAGI AgentGPT Microsoft AutoGen Semantic Kernel MetaGPT Agno smolagents PydanticAI Mastra PaLM 2 StyleGAN WaveNet Letta Agent Zero Hermes Agent Gumloop Dust Flowise Langflow Botpress Voiceflow Relevance AI AlphaGenome Alpaca 7B Make AI Agents Amazon Bedrock Agents IBM watsonx Orchestrate SAP Joule Agents ServiceNow AI Agent Studio Vicuna 13B Muse Wonder Muse Wonder Full Muse Spark 1.3 Muse Spark 1.2 Muse Spark 1.1 Muse Spark Open Muse Glimmer Muse Image Muse Voice Transcribe SAM 3.1 UiPath Agent Builder Automation Anywhere Moveworks Atlassian Rovo ClickUp Super Agents SAM 2 Asana AI Teammates Airtable Omni Eleven v4 FLUX.1 Schnell FLUX.1 Dev FLUX.1 Kontext Pro FLUX.2 Pro Gemma 3 27B Instruct Gemma 4 31B LLaVA Phi-3 Mini 4K Instruct Mistral Large 2.0 Mistral Small 3.1 Mixtral 8x22B Codestral 2405 Devstral 2 Qwen3 Coder 480B-A35B Instruct Qwen3.5 397B-A17B Qwen3.8-Max Kimi K3 Kimi K1.5 Chinchilla MiniMax M3 GLM-5.3 Nemotron 3 Ultra Command R+ April 2024 Command A Amazon Nova Pro Amazon Nova Premier GPT-Image-1 GPT-Image-2 Nano Banana 2 Grok Imagine Image Grok Imagine Video MiniMax Hailuo 2.3 OLMo Wan 3.0 Stable Video Diffusion Runway Gen-2 Runway Gen-1 Kling O3 Pro Lyria 3.5 Julius AI AlphaCode word2vec YOLOv1 Hex Databricks Genie Agents Fin Chatbase Ada Cognigy Parloa PolyAI Synthflow https://t.co/uG3AEor1FP Gato Vision Transformer Mamba Zendesk AI Agents Gorgias AI Agent Freddy AI Agent Maven AGI Forethought 11x Alice Artisan Ava GPT-J StarCoder Claygent Rox AiSDR https://t.co/y6Qev3Oab2 Qualified Piper HubSpot Customer Agent HubSpot Prospecting Agent HubSpot Content Agent AirOps https://t.co/fJGMLSQO8v GPT-Neo Descript Underlord Shortwave Fyxer LeNet-5 StyleGAN2 Elicit Legora Spellbook Luminance Norm AI Eve Numeric Basis Rillet FloQast AI Agents Dropzone AI Resolve AI Rootly Tines Torq HappyRobot Hippocratic AI EliseAI Assort Health Eightfold AI ResNet-18 Genie 2 ResNet-34 ResNet-50 ResNet-101 Pi0 Pi0-FAST Pi0.5 ResNet-152 Paradox Olivia Humanly Moonhub Skyvern Bardeen Fellou Simular Abacus AI Agent MiniMax Agent Xiaoice Voyager Skywork U-Net RoBERTa RT-2 Vellum Sentry Seer OpenManus DeerFlow AgenticSeek AlphaGeometry Helix Helix 02 UI-TARS Desktop GPT Researcher Agent S OpenAI Agents API Amazon Nova Act DBRX PaliGemma Libratus Oracle AI Agent Studio Grok Bot Devin Desktop Warp Agent CLI BitNet Devin Local Agent Gemini Spark Gemini Enterprise Agent Platform Gemini Deep Research Microsoft Researcher Microsoft Analyst Airtable Field Agents CICERO Gopher Qwen Code Kimi Code StarCoderBase 7B StarCoder2 3B StarCoder2 7B StarCoder2 15B StarCoder2 15B Instruct v0.1 BLACKBOX CLI Mistral Vibe Letta Code Codebuff Plandex GPT-5 Pro GPT-5.1 Codex GPT-5.1 Codex Max GPT-5.2 Codex AlphaProof StyleGAN3 BLIP Claude Science MusicGen Genie YOLOv5 GPT-5.2 Pro GPT-5.3 Instant BLIP-2 GPT-5.4 Pro GPT-5.5 Pro GPT-5.6 Cyber GPT-5.6 Luna GPT-5.6 Sol Mark I Perceptron Dolly 1.0 GPT-5.6 Terra GPT-6 Luna Dolly 2.0 GPT-6.1 Sol MusicLM GPT-Rosalind o1 Pro o3 Deep Research o3 Pro Claude 1.0 Claude 1.1 BlenderBot SWE-1.5 Claude 1.2 Claude 1.3 Claude 2.1 Claude 3.5 Sonnet October 2024 Deep Speech Claude Fable 5.1 Claude Haiku 5.5 Claude Instant 1.0 Claude Instant 1.1 Claude Instant 1.2 FLAN-T5 Kuki Claude Opus 4 Claude Opus 4.1 Claude Opus 4.7 Claude Opus 4.8 Claude Opus 5.5 Flamingo GloVe Pluribus YOLOv8 Claude Sonnet 5 Mamba 2 Bark SWE-2 SWE-1.7 SWE-1.7 Lightning SWE-1.6 SWE-1.6 Fast swe-grep swe-check Claude Sonnet 5.5 Codex Mini GPT-4.1 Mini GPT-4.1 Nano GPT-5 Mini GPT-5 Nano GPT-5.1 Codex Mini GPT-5.4 Mini GPT-5.4 Nano DQN SWE-1 SWE-1-lite SWE-1-mini Kagi Assistant DistilBERT DINOv2 Jukebox SIMA 2 ESMFold o1 Mini o3 Mini o4 Mini o4 Mini Deep Research Computer Use Preview GPT-4 Turbo Preview GPT-4.5 Preview o1 Preview Sora 2 Pro Aisera AlphaTensor ELMo BART CycleGAN wav2vec 2.0 GR00T N1 GR00T N1.5 GR00T N1.6 GR00T N1.7 YOLOv3 Concourse Docyt Durable eesel AI Eudia Exaforce Fetcher Goodcall hireEZ EZ Agent HubSpot Agent Hub Hyro Infinitus Intezer Jotform AI Agents https://t.co/d357vreCbc Leena AI Microsoft App Builder Nanonets Netomi DINOv3 Notable AlphaDev RoseTTAFold Paxton Phenom Prophet Security Regal Rossum Sana Coach Sana Concierge ServiceNow Otto Simbian Sintra SHRDLU XLNet TD-Gammon RFdiffusion Slang AI StackAI Taskade Koala 13B BLACKBOX Remote Agents telli Thoughtly Traversal Truewind VectorShift https://t.co/vI5WjMJkdZ Wordsmith Logic Theorist GoogLeNet SIMA Workato Genies Yuma AI babbage-002 davinci-002 Gemini 1.0 Pro Gemini 1.5 Flash Gemini 1.5 Flash-8B Gemini 3 Flash Gemini 3.6 Flash Gemini 3.7 Flash VGG-11 DINO PaLM-E VGG-13 VGG-16 VGG-19 Gemini 3.8 Flash Gemini 1.0 Nano-1 Gemini 1.0 Nano-2 Gemini 2.0 Flash-Lite CodeGen Gemini 2.5 Flash-Lite Gemini 3.1 Flash-Lite Gemini 3.5 Flash-Lite Grok 1 Grok 1.5 Grok 1.5 Vision Shakey Inception v3 Mask R-CNN RT-1 ESM3 Grok 4 Fast Non-Reasoning Grok 4 Fast Reasoning Grok 4.1 Fast Non-Reasoning Grok 4.1 Fast Reasoning Grok 4.3 Grok 4.6 Grok Build 0.1 Grok Code Fast 1 Gemini 2.0 Flash Thinking Experimental Gemini 2.0 Pro Experimental Moshi AlphaGeometry 2 GPT-NeoX-20B pix2pix Tacotron Gemini Deep Research Max Midjourney V1 Midjourney V2 Midjourney V3 Midjourney V4 Midjourney V5.1 RWKV Evo 2 Midjourney V5.2 Midjourney V8.1 Niji 4 Niji 5 ConvNeXt ALBERT Tacotron 2 Grok 2 Mini Grok 3 Mini Veo 3.1 Lite Llama 4 Maverick Instruct Llama 4 Scout Instruct Grok 2 Beta Claude Mythos 5 Claude Mythos 5.1 DeepSeek R1 Zero Midjourney V8 Alpha DreamerV3 GraphCast OpenVLA Chinook YOLOv2 DeepSeek V4 Flash Nano Banana 2 Lite Nano Banana 2.1 Grok 2 1212 Grok 2 Vision 1212 Qwen3.8 2.4T-A95B Qwen3.8 27B Qwen3.8-Flash T5Gemma Qwen3.8-Flash-Next Claude Mythos Preview Swin Transformer BigGAN GLIDE Deep Speech 2 YOLOv4 11x Julian https://t.co/DF1BzC4Rml Agent Frank AgentForge AgentPilot Akkio Alex Amplemarket Duo Anything Auquan DENDRAL OPT FunSearch Grounding DINO AutogenAI Beam AI https://t.co/Atvw1ocWSU Butternut AI Codev ModernBERT Cognite Atlas AI ConverzAI Credal cubic DeepSite HunyuanVideo Hunyuan3D 2 LTX-Video LTX-2 LTX-2.5 CogVideo CogVideoX Faster R-CNN wav2vec Dosu Endorsed Fira Gradient Labs https://t.co/in240Qm6Ce Hyphenate Inkeep Jason AI Microsoft Zo Mochi 1 TRELLIS CogView Jeeva AI Jsonify MYCIN Kadoa KaneAI Kapa Kognitos Lutra AI Lyro AI Moxo Origami Agents Pin Pine AI Dreamer DCGAN AudioLM ProcIndex qode https://t.co/O6QNiyZ5uI Restack Rinna Rocket https://t.co/Pmx7YDtIQQ SoftGen Sola Stacks TaxGPT AlphaChip ELECTRA Transformer-XL DeBERTa SayCan YOLOv7 Tellius Tempo ThoughtSpot Spotter Twin UI Bakery Vendelux https://t.co/jDSJgJblIS Zenskar Zowie AgentScope RoboCat AI21 Maestro CAMEL SuperAGI DeepSeek R1 Distill Llama 70B DeepSeek R1 Distill Llama 8B DeepSeek R1 Distill Qwen 1.5B DeepSeek R1 Distill Qwen 14B OLMo 2 DeepSeek R1 Distill Qwen 32B OLMo 3 DeepSeek R1 Distill Qwen 7B DeepSeek V3.2 Exp MobileNet v2 DeepSeek V3.2 Speciale Gemini Omni Flash GPT-Image-1.5 GPT-Image-2.5 Flare GPT-Image-2.5 Sunburst DeepSeek R1 0528 DialoGPT DeepSeek R1 0528 Qwen3 8B DeepSeek V3.1 Terminus GPT-Image-1 Mini DeepSeek V4 Flash Base AlphaMissense DeepSeek V4 Pro Base DeepSeek V4.1 Flash 1017 FLUX.1 Kontext Dev FLUX.1 Kontext Max FLUX.2 Dev ESM Cambrian ESMFold2 FLUX.2 Flex FLUX.2 Klein 4B FLUX.2 Klein 9B FLUX.2 Max DeepSeek V3.2 Exp Base MobileNet v1 DeepNash Magistral Medium 1.0 Magistral Medium 1.1 Magistral Medium 1.2 BioGPT Ministral 3 14B Ministral 3 3B Ministral 3 8B Ministral 3B Ministral 8B Mistral 7B v0.2 Mistral 7B v0.3 DETR HuBERT YOLO11 Mistral Large 1.0 Mistral Large 2.1 Mistral Large 4 Mistral Medium 1.0 Mistral Medium 3 Mistral Medium 3.1 Mistral Medium 3.5 Mistral Nemo 12B Mistral Next Mistral Saba OpenLLaMA AlphaProteo DeepStack Pixtral 12B Pixtral Large Runway Gen-4 Turbo DeepSeek V3 0324 DeepSeek V3 Base DeepSeek V3.1 Base Magistral Small 1.0 Magistral Small 1.1 FLAN-UL2 Magistral Small 1.2 Mistral Small 1.0 GenCast Longformer Octo YOLOv9 YOLOv10 Mistral Small 2.0 Mistral Small 3.0 Mistral Small 3.2 Aurora Aurora 1.5 Boltz-1 Boltz-2 Mistral Small 4 Mistral Small Creative Kimi K2.6 Kimi K2.7 Code Kimi VL A3B Thinking Stable Diffusion 2.0 Stable Diffusion 2.1 DreamerV2 Stable Diffusion 3 Medium Stable Diffusion 3.5 Large Turbo Stable Diffusion 3.5 Medium Stable Diffusion Turbo Stable Diffusion XL 0.9 Stable Diffusion XL Turbo Stable Video Diffusion XT Stable Video Diffusion XT 1.1 Codestral 2501 Codestral 2508 Codestral Mamba 7B Devstral Medium 1.0 Leanstral Leanstral 1.5 Mathstral 7B Runway Gen-3 Alpha Turbo Grok Imagine Image 2.0 Grok Imagine Image Pro Grok Imagine Image Quality Grok Imagine Video 1.5 R-CNN Grok Voice 2.0 Eleven Flash v2 Eleven Flash v2.5 Eleven Music v2 Eleven Music v2.5 Eleven Scribe v1 Eleven Scribe v2 Eleven Scribe v2 Realtime Eleven Text to Voice v3 Eleven v3 Conversational PARRY Agent57 MobileNet v3 Small YOLOv6 MobileNet v3 Large Eleven v4 Turbo Devstral Small 1.0 Devstral Small 1.1 Devstral Small 2 Kimi K2 Instruct Kimi VL A3B Instruct GPT-4o Audio GPT-4o Realtime GPT-Audio GPT-Audio-1.5 Fast R-CNN GPT-Live 1 GPT-Realtime GPT-Realtime Translate GPT-Realtime Whisper GPT-Realtime-1.5 GPT-Realtime-2 GPT-Realtime-2.1 Gemma 4 12B Gemma 4 26B-A4B Gemma 4 E2B Gemma 4 E4B MiniMax M2.7 MiniMax M3.1 Flash GPT-4o Mini Audio GPT-4o Mini Realtime GPT-Audio Mini GPT-Realtime Mini GPT-Realtime-2.1 Mini Runway Act-Two Runway Aleph 2.0 AlphaQubit Qwen-Image Qwen-Image-2.0 Qwen-Image-Edit Qwen3.5 0.8B OpenHermes 2.5 Mistral 7B Qwen3.5 122B-A10B Qwen3.5 27B Qwen3.5 2B Qwen3.5 35B-A3B Qwen3.5 4B Qwen3.5 9B YOLO9000 Qwen3.6 35B-A3B FLUX.1 Canny Dev FLUX.1 Depth Dev FLUX.1 Fill Dev FLUX.1 Redux Dev FLUX1.1 Pro FLUX1.1 Pro Ultra Seedance 2.0 Fast Seedance 2.5 Gemini 2.5 Flash Live Gemini 3.1 Flash Live Gemini 3.5 Live Translate Gemini 3.8 Live Gemini 3.8 Live Extended Thinking Llama 3.1 70B Instruct Llama 3.1 8B Instruct Phi-1 Phi-1.5 Phi-2 Phi-4 Reasoning Rainbow DQN Phi-4 Reasoning Plus Phi-4 Reasoning Vision 15B Kimi K2 Base Nemotron 3 Super Nemotron 3.5 Super VL GPT-2 124M GPT-2 355M GPT-2 774M GLM-4.5 GLM-4.5 Air GLM-4.6 GLM-4.7 Flash GLM-4.7 FlashX GLM-5.1 GLM-5.2 GLM-5.3 Flash 2501 Adala Agentive Amazon Quick Amplify Security ArchiLabs Ascendo AI Ask-AI AutoCodeRover BambooAI Browserable BrowserAct Capy ChemCrow Claude Engineer CodeMachine-CLI Crush Data to Paper Deep Agents Code Devon Dexto Fieldproxy FlowMate ForgeCode Genia gptme Grok Build Grok CLI Groq Code CLI IronClaw https://t.co/ME1DAw3AOq Kortix Kosmos Kylon Leaping AI LettaBot Moltis nanobot NanoClaw Nanocoder Needle NOFire AI NullClaw OH-MY-PI Ouroboros Pi PicoClaw PlexeAI Prime Agent RA.Aid RunWhen Self-Operating Computer Simple Phones Smol Developer EfficientNet-B0 EfficientNet-B1 Orca 2 7B Orca 2 13B EfficientNet-B2 EfficientNet-B3 EfficientNet-B4 EfficientNet-B5 EfficientNet-B6 EfficientNet-B7 Taxy AI https://t.co/qvGQMcAGO4 TensorStax Vogent AI https://t.co/rGLXkrEhIn Zenlytic Zoë ZeroClaw Zo Computer Warp Factories Seedance 2.0 Mini DenseNet-121 DenseNet-161 DenseNet-169 DenseNet-201 WizardCoder Python 34B v1.0 WizardCoder 15B v1.0 WizardCoder Python 13B v1.0 WizardMath 7B v1.1 WizardCoder 33B v1.1 WizardMath 70B v1.0 WizardLM 70B v1.0 WizardLM 13B v1.2 WizardMath 7B v1.0 WizardLM 13B v1.0 Eleven Multilingual Speech to Speech v2 Eleven Multilingual v2 Phi-4 Mini Flash Reasoning Phi-4 Mini Reasoning Nemotron 3 Nano GPT-3 Ada GPT-3 Babbage GPT-3 Curie GPT-4o Transcribe GPT-4o Transcribe Diarize GPT-Live Transcribe GPT-Transcribe TTS-1 TTS-1 HD Qwen3 0.6B Qwen3 1.7B Qwen3 14B Qwen3 30B-A3B Qwen3 32B Qwen3 4B Qwen3 8B Amazon Nova 2 Sonic Amazon Nova Canvas Amazon Nova Reel 1.0 Amazon Nova Reel 1.1 Amazon Nova Sonic Llama 3 8B Instruct Llama 3.1 405B Base Llama 3.1 70B Base Llama 3.1 8B Base Phi-3 Medium 128K Instruct Phi-3 Medium 4K Instruct Phi-3 Vision 128K Instruct Phi-3.5 MoE Instruct Phi-3.5 Vision Instruct Phi-4 Multimodal Instruct Kimi K2 Instruct 0905 GPT-4o Mini Transcribe GPT-4o Mini TTS Whisper Large v1 Whisper Large v2 Whisper Medium Qwen3.8-Omni-Flash Amazon Nova 2 Lite Amazon Nova Lite Amazon Nova Micro Stable Diffusion 1.1 Stable Diffusion 1.2 Stable Diffusion 1.3 Stable Diffusion 1.4 Olmo 3.1 32B Think Bolmo 1B Bolmo 7B AstaBrief 8B AstaBrief 8B SFT Llama 3 Blama 8B Bwen 8B Gemini 2.5 Flash TTS Gemini 2.5 Pro TTS Gemini 3.1 Flash TTS Gemini 3.5 Transcribe Gemini 3.8 Flash TTS Lyria 3 Clip Lyria 3 Pro Lyria RealTime Llama 2 13B Chat Llama 2 7B Chat Never Give Up Phi-3 Mini 128K Instruct Phi-3 Small 128K Instruct Phi-3 Small 8K Instruct Phi-3.5 Mini Instruct Phi-4 Mini Instruct MiniMax H3 MiniMax H3 Max MiniMax Hailuo 02 MiniMax Hailuo 2.3 Fast Whisper Small Whisper Tiny Dynamics 365 Account Reconciliation Agent Dynamics 365 Case Management Agent Dynamics 365 Customer Intent Agent Dynamics 365 Sales Qualification Agent Dynamics 365 Sales Research Agent Dynamics 365 Supplier Communications Agent HubSpot Campaign Agent HubSpot Data Agent HubSpot Nurture Agent HubSpot Revenue Agent Microsoft Facilitator Microsoft Interpreter Microsoft Learning Agent Microsoft People Agent Microsoft Workflows Agent Microsoft Workforce Insights Agent Otter Recruiting Agent Otter SDR Agent SAP Joule Studio ServiceNow AI Agent Advisor ServiceNow Build Agent ThoughtSpot SpotterCode ThoughtSpot SpotterModel ThoughtSpot SpotterViz Workday Adoption Agent Workday BP Optimize Agent Workday Contracts Agent Workday Deployment Agent Workday Developer Agent Workday Financial Audit Agent Workday Organizational Development Agent Workday Payroll Agent Workday Procurement Agent Workday Self-Service Agent Workday Talent Acquisition Agent Workday Travel Agent Workday Workforce Management Agent Qwen-Image-2512 Qwen-Image-Edit-2509 Qwen-Image-Edit-2511 Gemini 3.8 Flash-Lite TTS Llama 3 70B Base Llama 3 8B Base Runway Aleph Runway Gen-4 Image Runway Gen-4 Image Turbo Aya Expanse 32B Aya Expanse 8B Aya Vision 32B Aya Vision 8B Command Command A Reasoning Command A Translate Command A Vision Command A+ Command Light Command R August 2024 Command R March 2024 Command R+ August 2024 Command R7B DeepSeek V2 DeepSeek V2.5 Gemma 3 12B Instruct Gemma 3 1B Instruct Gemma 3 4B Instruct Llama 2 13B Base Llama 2 70B Base Llama 2 7B Base Whisper Medium English Qwen-VL Qwen3 0.6B Base Qwen3 1.7B Base Qwen3 14B Base Qwen3 235B-A22B Base Qwen3 235B-A22B Thinking 2507 Qwen3 30B-A3B Base Qwen3 30B-A3B Thinking 2507 Qwen3 32B Base Apertus Arcee Bamba BARThez BARTpho BERTweet BigBird BigBird-Pegasus BlenderBot Small Byte Latent Transformer BORT ByT5 CamemBERT CANINE ConvBERT CPM CPM-Ant CTRL DeBERTa-v2 DiffLlama Doge dots.llm1 DPR ERNIE ERNIE-M EXAONE 4.0 Falcon-H1 Falcon Mamba FlauBERT FlexOlmo FNet FSMT Funnel Transformer GPT-NeoX Japanese GPTSAN Japanese GPT-SW3 Helium HerBERT I-BERT JetMoE LED LFM2 LongCat-Flash LongT5 LUKE M2M-100 MADLAD-400 MarianMT MarkupLM mBART mBART-50 MEGA Megatron-BERT Megatron-GPT2 mLUKE MobileBERT MPNet MPT MRA mT5 MVP MyT5 NEZHA NLLB NLLB-MoE Nyströmformer OLMoE PEGASUS PEGASUS-X Persimmon PhoBERT PLBART ProphetNet REALM Reformer RemBERT RetriBERT RoBERTa-PreLayerNorm RoCBert RoFormer Splinter SqueezeBERT Switch Transformer T5 v1.1 TAPEX UL2 UMT5 VaultGemma X-MOD XGLM XLM XLM-ProphetNet XLM-RoBERTa XLM-RoBERTa-XL XLM-V xLSTM YOSO Zamba Zamba 2 Qwen3 4B Base Qwen3 4B Thinking 2507 Qwen3 8B Base Cohere Transcribe March 2026 North Mini Code 1.0 North Small Translate Tiny Aya Earth Tiny Aya Fire Tiny Aya Global Tiny Aya Water DeepSeek V2 Lite Janus 1.3B Janus Pro 1B Janus Pro 7B JanusFlow 1.3B LLaMA 1 13B LLaMA 1 33B LLaMA 1 65B LLaMA 1 7B Whisper Base Whisper Small English Whisper Tiny English Qwen-Plus Qwen-Turbo Qwen2.5-Max Qwen3 Coder Next Qwen3 Next 80B-A3B Thinking Qwen-Audio Qwen2-Audio 7B Qwen2.5-Omni 3B Qwen2.5-Omni 7B Qwen3-Omni 30B-A3B Thinking DeepSeek Coder 1.3B Base v1.5 DeepSeek Coder 6.7B Base v1.5 DeepSeek V2 Chat Gemma 3 12B Base Gemma 3 1B Base Gemma 3 27B Base Gemma 3 4B Base Code Llama 13B Python Code Llama 34B Python Code Llama 70B Python Code Llama 7B Python Llama 3.2 1B Instruct Llama 3.2 3B Instruct omni-moderation QVQ-72B Preview Qwen-VL Chat Qwen2-VL 2B Instruct Qwen2-VL 72B Instruct Qwen2-VL 7B Instruct Qwen2.5-VL 32B Instruct Qwen2.5-VL 3B Instruct Qwen2.5-VL 72B Instruct Qwen2.5-VL 7B Instruct Qwen2.5 Coder 0.5B Instruct Qwen2.5 Coder 1.5B Instruct Qwen2.5 Coder 14B Instruct Qwen2.5 Coder 32B Instruct Qwen2.5 Coder 3B Instruct Qwen2.5 Coder 7B Instruct Qwen3 235B-A22B Instruct 2507 Qwen3 30B-A3B Instruct 2507 Qwen3 4B Instruct 2507 Qwen3-VL 235B-A22B Thinking Qwen3-VL 2B Thinking Qwen3-VL 30B-A3B Thinking Qwen3-VL 32B Thinking Qwen3-VL 4B Thinking Qwen3-VL 8B Thinking DeepSeek V2 Lite Chat CodeGemma 2B CodeGemma 7B EmbeddingGemma 300M FunctionGemma 270M Gemma 3 270M Gemma 3n E2B Gemma 3n E4B PaliGemma 2 10B PaliGemma 2 28B PaliGemma 2 3B PaliGemma 2 Mix 10B PaliGemma 2 Mix 28B PaliGemma 2 Mix 3B PaliGemma 3B RecurrentGemma 2B RecurrentGemma 9B ShieldGemma 2 4B ShieldGemma 27B ShieldGemma 2B ShieldGemma 9B Llama 3.2 Vision 11B Instruct Llama 3.2 Vision 90B Instruct code-davinci-002 code-davinci-edit-001 text-ada-001 text-babbage-001 text-curie-001 text-davinci-001 text-davinci-002 TimeSformer V-JEPA 2 VideoMAE ViViT ALIGN AltCLIP Aria BridgeTower BROS Chameleon Chinese-CLIP CLIPSeg CLVP ColPali ColQwen2 data2vec DePlot Donut EdgeTAM Emu3 Evolla FLAVA Florence-2 GIT GOT-OCR 2.0 Granite Vision GroupViT IDEFICS IDEFICS2 IDEFICS3 InstructBLIP InstructBLIP-Video InternVL KOSMOS-2 KOSMOS-2.5 LayoutLM LayoutLMv2 LayoutLMv3 LayoutXLM LFM2-VL LiLT LLaVA-NeXT LLaVA-NeXT-Video LLaVA-OneVision LXMERT MatCha MetaCLIP 2 MGP-STR MM Grounding DINO Nougat OmDet-Turbo OneFormer Ovis2 OWL-ViT OWLv2 Perceiver PerceptionLM Pix2Struct SigLIP SigLIP 2 SmolVLM TAPAS TrOCR TVLT TVP UDOP Video-LLaVA Vip-LLaVA ViLT VisualBERT X-CLIP text-davinci-edit-001 Runway GWM-1 Falcon 2 11B Falcon 2 11B VLM Falcon 40B Falcon 7B Falcon H1R 7B Falcon Mamba 7B Qwen2.5-14B Instruct 1M Qwen2.5-7B Instruct 1M Qwen3 Coder 30B-A3B Instruct Qwen3 Next 80B-A3B Instruct QwQ-32B Preview Qwen-Audio Chat Qwen2-Audio 7B Instruct Qwen3-Omni 30B-A3B Instruct Qwen2.5 0.5B Instruct Qwen2.5 1.5B Instruct Qwen2.5 14B Instruct Qwen2.5 32B Instruct Qwen2.5 3B Instruct Qwen2.5 7B Instruct Cohere Transcribe Arabic July 2026 Deepgram Aura-2 Deepgram Enhanced Deepgram Flux Deepgram Nova Deepgram Nova-2 Deepgram Nova-3 DeepSeek Coder V2 236B Instruct DeepSeek V2.5 1210 Code Llama 13B Instruct Code Llama 34B Instruct Code Llama 70B Instruct Code Llama 7B Instruct Llama 3.2 1B Base Llama 3.2 3B Base Voxtral Mini Voxtral Small Whisper Base English Stable Audio 3.0 Medium Stable Audio Open 1.0 Falcon H1 Tiny R ChatGLM 6B ChatGLM2 6B ChatGLM3 6B Jamba 1.5 Large Jurassic-1 Jumbo Jurassic-1 Large Jurassic-2 Light AIMv2 BEiT BiT Conditional DETR ConvNeXt V2 CvT D-FINE DAB-DETR Deformable DETR DeiT Depth Anything Depth Anything V2 Depth Pro DETA DiNAT DINOv2 with Registers DiT (document images) DPT EfficientFormer EfficientLoFTR EoMT FocalNet GLPN HGNet-V2 Hiera I-JEPA ImageGPT LeViT LightGlue Mask2Former MaskFormer MLCD MobileViT MobileViT v2 NAT PoolFormer Prompt Depth Anything Pyramid Vision Transformer Pyramid Vision Transformer v2 RegNet RT-DETR RT-DETRv2 SegFormer SegGPT SAM-HQ SuperGlue SuperPoint SwiftFormer Swin Transformer V2 Swin2SR Table Transformer TextNet UPerNet VAN ViT Hybrid ViTDet ViT-MAE ViTMatte ViT-MSN ViTPose YOLOS ZoeDepth Jurassic-2 Mid Jurassic-2 Ultra Qwen3-Omni 30B-A3B Captioner Qwen2.5 Coder 0.5B Base Qwen2.5 Coder 1.5B Base Qwen2.5 Coder 14B Base Qwen2.5 Coder 32B Base Qwen2.5 Coder 3B Base Qwen2.5 Coder 7B Base Qwen3-VL 235B-A22B Instruct Qwen3-VL 2B Instruct Qwen3-VL 30B-A3B Instruct Qwen3-VL 32B Instruct Qwen3-VL 4B Instruct Qwen3-VL 8B Instruct DeepSeek Coder 5.7B MQA Base DeepSeek Coder V2 Lite Instruct CodeGemma 7B Instruct Gemma 2B Instruct Gemma 3 270M Instruct Gemma 7B Instruct RecurrentGemma 2B Instruct RecurrentGemma 9B Instruct BERT Large Cased BERT Large Uncased BERT Medium Granite Speech 3.3 8B Llama 3.2 Vision 11B Base Llama 3.2 Vision 90B Base text-embedding-3-large Stable Audio 3.0 Small GLM-4.1V 9B Thinking GLM-4.5V GLM-4.6V GLM-4.6V Flash Jamba 1.5 Mini Qwen2.5 0.5B Base Qwen2.5 1.5B Base Qwen2.5 14B Base Qwen2.5 32B Base Qwen2.5 3B Base Qwen2.5 72B Base Qwen2.5 7B Base Wan 2.2 Animate 14B Wan 2.2 I2V A14B Wan 2.2 S2V 14B Wan 2.2 T2V A14B Wan 2.2 TI2V 5B DeepSeek Coder V2 236B Base DeepSeek V2 Chat 0628 Gemma 2 27B Instruct Gemma 2 2B Instruct Gemma 2 9B Instruct BERT Mini BERT Small BERT Tiny T5 11B T5 3B T5 Large Granite 4 Micro Granite 4-H Micro Granite 4-H Small Granite 4-H Tiny Code Llama 13B Base Code Llama 34B Base Code Llama 70B Base Code Llama 7B Base Voxtral TTS Voxtral TTS 3 text-embedding-3-small Deepgram Flux TTS DeepSeek Coder 1.3B Instruct DeepSeek Coder 33B Instruct DeepSeek Coder 6.7B Instruct DeepSeek Coder V2 Lite Base Gemma 2B Base Gemma 7B Base T5 Small Granite 3.3 2B Instruct Granite 3.3 8B Instruct MiniMax Speech 02 HD MiniMax Speech 02 Turbo MiniMax Speech 2.6 HD MiniMax Speech 2.6 Turbo MiniMax Speech 2.8 HD MiniMax Speech 2.8 Turbo Voxtral Mini Transcribe 2 Voxtral Mini Transcribe 3 Voxtral Mini Transcribe Realtime Voxtral Mini Transcribe Realtime 3 Voxtral Small Transcribe 3 GLM-4 9B GLM-4V 9B Qwen3.8-LiveTranslate Deepgram Base DeepSeek Prover V1 DeepSeek Prover V2 671B DeepSeek Prover V2 7B DeepSeek OCR DeepSeek VL2 Audio Spectrogram Transformer CLAP CSM Descript Audio Codec Dia EnCodec FastSpeech 2 Conformer Granite Speech Kyutai Speech-to-Text MCTCT Mimi MMS Moonshine MusicGen Melody Parakeet Pop2Piano SeamlessM4T SeamlessM4T v2 SEW SEW-D Speech2Text Speech2Text2 SpeechT5 UniSpeech UniSpeech-SAT UnivNet VITS wav2vec 2.0 BERT wav2vec 2.0 Conformer wav2vec 2.0 Phoneme WavLM X-Codec XLS-R XLSR-Wav2Vec2 Gemma 2 27B Base Gemma 2 2B Base Gemma 2 9B Base BERT Large Cased Whole Word Masking BERT Large Uncased Whole Word Masking DeepSeek Coder 1.3B Base DeepSeek Coder 33B Base DeepSeek Coder 6.7B Base DeepSeek VL2 Small DeepSeek VL2 Tiny BERT Base Cased SmolLM3 3B Codestral Embed Mistral Embed Mistral OCR 1 Mistral OCR 2 Mistral OCR 3 Mistral OCR 4.0 Mistral OCR 4.1 Shieldstral 1.0 text-embedding-ada-002 GLM-4 9B Chat GLM-4 9B Chat 1M",
+    "display_text_range": [
+     0,
+     24952
+    ],
+    "facets": [
+     {
+      "type": "url",
+      "indices": [
+       477,
+       500
+      ],
+      "original": "https://t.co/0Y8rxk5xJJ",
+      "replacement": "http://Bolt.new",
+      "display": "Bolt.new"
+     },
+     {
+      "type": "url",
+      "indices": [
+       718,
+       741
+      ],
+      "original": "https://t.co/8UAkcTN88x",
+      "replacement": "http://Character.AI",
+      "display": "Character.AI"
+     },
+     {
+      "type": "url",
+      "indices": [
+       4103,
+       4126
+      ],
+      "original": "https://t.co/uG3AEor1FP",
+      "replacement": "http://Yellow.ai",
+      "display": "Yellow.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       4287,
+       4310
+      ],
+      "original": "https://t.co/y6Qev3Oab2",
+      "replacement": "http://Regie.ai",
+      "display": "Regie.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       4405,
+       4428
+      ],
+      "original": "https://t.co/fJGMLSQO8v",
+      "replacement": "http://Copy.ai",
+      "display": "Copy.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       6807,
+       6830
+      ],
+      "original": "https://t.co/d357vreCbc",
+      "replacement": "http://Kore.ai",
+      "display": "Kore.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       7155,
+       7178
+      ],
+      "original": "https://t.co/vI5WjMJkdZ",
+      "replacement": "http://Vic.ai",
+      "display": "Vic.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       8530,
+       8553
+      ],
+      "original": "https://t.co/DF1BzC4Rml",
+      "replacement": "http://a0.dev",
+      "display": "a0.dev"
+     },
+     {
+      "type": "url",
+      "indices": [
+       8686,
+       8709
+      ],
+      "original": "https://t.co/Atvw1ocWSU",
+      "replacement": "http://Biel.ai",
+      "display": "Biel.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       8911,
+       8934
+      ],
+      "original": "https://t.co/in240Qm6Ce",
+      "replacement": "http://HiringAgents.ai",
+      "display": "HiringAgents.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       9134,
+       9157
+      ],
+      "original": "https://t.co/O6QNiyZ5uI",
+      "replacement": "http://Refact.ai",
+      "display": "Refact.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       9179,
+       9202
+      ],
+      "original": "https://t.co/Pmx7YDtIQQ",
+      "replacement": "http://Sema4.ai",
+      "display": "Sema4.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       9343,
+       9366
+      ],
+      "original": "https://t.co/jDSJgJblIS",
+      "replacement": "http://xpander.ai",
+      "display": "xpander.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       13196,
+       13219
+      ],
+      "original": "https://t.co/ME1DAw3AOq",
+      "replacement": "http://Jiffy.ai",
+      "display": "Jiffy.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       13596,
+       13619
+      ],
+      "original": "https://t.co/qvGQMcAGO4",
+      "replacement": "http://Teammates.ai",
+      "display": "Teammates.ai"
+     },
+     {
+      "type": "url",
+      "indices": [
+       13641,
+       13664
+      ],
+      "original": "https://t.co/rGLXkrEhIn",
+      "replacement": "http://Voice.ai",
+      "display": "Voice.ai"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "creatine_cycle",
+    "url": "https://x.com/creatine_cycle",
+    "id": "1279292401123647494",
+    "followers": 45991,
+    "following": 996,
+    "likes": 158287,
+    "media_count": 1925,
+    "statuses": 35209,
+    "name": "atlas",
+    "description": "HOST @mots_pod he/him",
+    "raw_description": {
+     "text": "HOST @mots_pod he/him",
+     "facets": []
+    },
+    "location": "Pac Heights",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1279292401123647494/1790892740",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1905420963128508417/tnL4ltal_200x200.jpg",
+    "joined": "Sat Jul 04 05:54:18 +0000 2020",
+    "protected": false,
+    "website": {
+     "url": "https://youtu.be/s6Yrtktxavs?si=bheIVvuNNMfO_stS",
+     "display_url": "youtu.be/s6Yrtktxavs?si…"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 12,
+   "reposts": 3,
+   "likes": 29,
+   "bookmarks": 1,
+   "quotes": 1,
+   "embed_card": "player",
+   "created_at": "Tue Oct 27 05:06:18 +0000 2026",
+   "created_timestamp": 1793077578,
+   "views": 14634,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "quote": {
+    "type": "status",
+    "url": "https://x.com/creatine_cycle/status/2114817131934282166",
+    "id": "2114817131934282166",
+    "text": "In celebration of Anthropic's S1 I read out every single AI ever made.\nThis is the last AI podcast that anyone has to ever listen to.\n\n00:00 - The only AI podcast you’ll ever need\n01:28 - Naming every single AI ever made\n51:38 - Never give up\n58:28 - Is this still on?\n1:31:24 - I finished (and then I completed the list of AI)",
+    "raw_text": {
+     "text": "In celebration of Anthropic's S1 I read out every single AI ever made.\nThis is the last AI podcast that anyone has to ever listen to.\n\n00:00 - The only AI podcast you’ll ever need\n01:28 - Naming every single AI ever made\n51:38 - Never give up\n58:28 - Is this still on?\n1:31:24 - I finished (and then I completed the list of AI)",
+     "display_text_range": [
+      0,
+      327
+     ],
+     "facets": [
+      {
+       "type": "media",
+       "indices": [
+        281,
+        304
+       ],
+       "id": "2114809703285018624",
+       "display": "pic.x.com/2lOOvhkSh4",
+       "original": "https://t.co/2lOOvhkSh4",
+       "replacement": "https://x.com/creatine_cycle/status/2114817131934282166/video/1"
+      }
+     ]
+    },
+    "author": {
+     "screen_name": "creatine_cycle",
+     "url": "https://x.com/creatine_cycle",
+     "id": "1279292401123647494",
+     "followers": 45991,
+     "following": 996,
+     "likes": 158287,
+     "media_count": 1925,
+     "statuses": 35209,
+     "name": "atlas",
+     "description": "HOST @mots_pod he/him",
+     "raw_description": {
+      "text": "HOST @mots_pod he/him",
+      "facets": []
+     },
+     "location": "Pac Heights",
+     "banner_url": "https://pbs.twimg.com/profile_banners/1279292401123647494/1790892740",
+     "avatar_url": "https://pbs.twimg.com/profile_images/1905420963128508417/tnL4ltal_200x200.jpg",
+     "joined": "Sat Jul 04 05:54:18 +0000 2020",
+     "protected": false,
+     "website": {
+      "url": "https://youtu.be/s6Yrtktxavs?si=bheIVvuNNMfO_stS",
+      "display_url": "youtu.be/s6Yrtktxavs?si…"
+     },
+     "verification": {
+      "verified": true,
+      "verified_at": null,
+      "type": "individual"
+     },
+     "type": "profile"
+    },
+    "replies": 33,
+    "reposts": 3,
+    "likes": 122,
+    "bookmarks": 53,
+    "quotes": 9,
+    "embed_card": "player",
+    "created_at": "Mon Oct 26 20:31:10 +0000 2026",
+    "created_timestamp": 1793046670,
+    "possibly_sensitive": false,
+    "views": 92298,
+    "is_note_tweet": true,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "media": {
+     "all": [
+      {
+       "id": "2114809703285018624",
+       "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1920x1080/m2wwbRcVZVnJn429.mp4?tag=29",
+       "thumbnail_url": "https://pbs.twimg.com/media/HVlXI0UbIAAJ_R4.jpg",
+       "duration": 5621.886,
+       "width": 1920,
+       "height": 1080,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/pl/LY-VyCgIPj3lG7Sr.m3u8?tag=29",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/480x270/sImhfhhAhxVfdMzu.mp4?tag=29",
+         "bitrate": 256000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/640x360/rbJgwV68qmLDWoFy.mp4?tag=29",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1280x720/VAGcLFjH3EEre30k.mp4?tag=29",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1920x1080/m2wwbRcVZVnJn429.mp4?tag=29",
+         "bitrate": 10368000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ],
+     "videos": [
+      {
+       "id": "2114809703285018624",
+       "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1920x1080/m2wwbRcVZVnJn429.mp4?tag=29",
+       "thumbnail_url": "https://pbs.twimg.com/media/HVlXI0UbIAAJ_R4.jpg",
+       "duration": 5621.886,
+       "width": 1920,
+       "height": 1080,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/pl/LY-VyCgIPj3lG7Sr.m3u8?tag=29",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/480x270/sImhfhhAhxVfdMzu.mp4?tag=29",
+         "bitrate": 256000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/640x360/rbJgwV68qmLDWoFy.mp4?tag=29",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1280x720/VAGcLFjH3EEre30k.mp4?tag=29",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2114809703285018624/vid/avc1/1920x1080/m2wwbRcVZVnJn429.mp4?tag=29",
+         "bitrate": 10368000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ]
+    },
+    "provider": "twitter",
+    "reposted_by": null
+   },
+   "card": {
+    "url": "http://Bolt.new",
+    "title": "Bolt AI builder: Websites, apps & prototypes",
+    "description": "Build and scale high-performing websites & apps using your words. Join millions and start building today.",
+    "domain": "bolt.new",
+    "image": {
+     "width": 800,
+     "height": 419,
+     "url": "https://pbs.twimg.com/card_img/2118451193773207553/_8Dq8G-i?format=png&name=800x419"
+    }
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/dartnixtrix360/status/2114300044249890906",
+   "id": "2114300044249890906",
+   "text": "@Da7_Tech Letta Code harness is the best way tbh, their harness and ubiquitous cloud compute per thread, seemless teleport from any computer/server gives you great workflows and compute utilisation that most providers haven't got right.",
+   "raw_text": {
+    "text": "@Da7_Tech Letta Code harness is the best way tbh, their harness and ubiquitous cloud compute per thread, seemless teleport from any computer/server gives you great workflows and compute utilisation that most providers haven't got right.",
+    "display_text_range": [
+     10,
+     236
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       9
+      ],
+      "original": "Da7_Tech",
+      "id": "1981270038817693696"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "dartnixtrix360",
+    "url": "https://x.com/dartnixtrix360",
+    "id": "1763785482096594944",
+    "followers": 14,
+    "following": 173,
+    "likes": 139,
+    "media_count": 6,
+    "statuses": 221,
+    "name": "Dartnixtrix",
+    "description": "",
+    "raw_description": {
+     "text": "",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1763785607128780800/lxwEoIwv_200x200.jpg",
+    "joined": "Sat Mar 02 04:37:12 +0000 2024",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 2,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Sun Oct 25 10:16:27 +0000 2026",
+   "created_timestamp": 1792923387,
+   "views": 173,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": {
+    "screen_name": "Da7_Tech",
+    "status": "2114277761355305339",
+    "url": "https://x.com/Da7_Tech/status/2114277761355305339",
+    "profile_url": "https://x.com/Da7_Tech"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/devswha/status/2113230772887048194",
+   "id": "2113230772887048194",
+   "text": "• Support all native app for all platform.\n• Code refactoring and kill nodejs (maybe)\n• Support Droid and Letta code\n• Support as many commands as possible in the chat, as long as it stays lightweight",
+   "raw_text": {
+    "text": "• Support all native app for all platform.\n• Code refactoring and kill nodejs (maybe)\n• Support Droid and Letta code\n• Support as many commands as possible in the chat, as long as it stays lightweight",
+    "display_text_range": [
+     0,
+     200
+    ],
+    "facets": []
+   },
+   "author": {
+    "screen_name": "devswha",
+    "url": "https://x.com/devswha",
+    "id": "1824119476457226240",
+    "followers": 695,
+    "following": 219,
+    "likes": 633,
+    "media_count": 99,
+    "statuses": 771,
+    "name": "Hako",
+    "description": "Ovis maintainer\n\nBuilding Ovis 1.4k ⭐️ !",
+    "raw_description": {
+     "text": "Ovis maintainer\n\nBuilding Ovis 1.4k ⭐️ !",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1824119476457226240/1792846922",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2105002593248489472/76mDeEae_200x200.jpg",
+    "joined": "Thu Aug 15 16:22:44 +0000 2024",
+    "protected": false,
+    "website": {
+     "url": "https://github.com/devswha",
+     "display_url": "github.com/devswha"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 2,
+   "bookmarks": 1,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Thu Oct 22 11:27:32 +0000 2026",
+   "created_timestamp": 1792668452,
+   "views": 464,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": {
+    "screen_name": "devswha",
+    "status": "2113229735211966863",
+    "url": "https://x.com/devswha/status/2113229735211966863",
+    "profile_url": "https://x.com/devswha"
+   },
+   "media": {},
+   "source": "Twitter Web App",
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/RizeOnline/status/2113131060955390296",
+   "id": "2113131060955390296",
+   "text": "Meet Letta, a platform for stateful AI agents that keep structured memory and improve across sessions. It is the open-source project behind the MemGPT idea of treating memory as part of the agent runtime.\n\n🧭 Overview\nLetta is built for long-running assistants whose identity, facts, and working context must survive beyond one chat window. The repository contains the historical Letta server source; the actively developed agent harness, terminal UI, App Server, channels, and runtime now live in the related Letta Code project.\n\n🛠️ What it does\n• Give an agent persistent memory blocks with clear boundaries instead of relying on a short prompt.\n• Keep identity, conversation history, and durable state available across sessions and deployments.\n• Expose tools and structured outputs so an agent can inspect data, take actions, and update memory deliberately.\n• Run locally or self-hosted, with channels for browser, Slack, Telegram, Discord, and custom integrations.\n\n✅ Practical uses\n1) Build a personal assistant that remembers preferences without replaying every transcript.\n2) Create research or support agents that maintain project facts over weeks of work.\n3) Keep memory, identity, and conversations synchronized when an agent moves between devices.\n4) Experiment with memory policies, deletion controls, and retention rules before production.\n\n⚙️ Getting started\nThe current CLI is installed with npm install -g @letta-ai/letta-code. Launch the interactive terminal with letta, or start a local App Server with letta server. Define the memory blocks and tool permissions first, then test what the agent may retain, revise, or delete.\n\n⚠️ License & security\nThe repository is Apache-2.0 licensed. Treat memory as sensitive state: protect API keys and backups, enforce access controls, set retention and deletion policies, validate tool inputs, and review logs before sharing them.\n\n🔗 Repository: https://github.com/letta-ai/letta\n#StatefulAgents #AIAgents #OpenSource",
+   "raw_text": {
+    "text": "Meet Letta, a platform for stateful AI agents that keep structured memory and improve across sessions. It is the open-source project behind the MemGPT idea of treating memory as part of the agent runtime.\n\n🧭 Overview\nLetta is built for long-running assistants whose identity, facts, and working context must survive beyond one chat window. The repository contains the historical Letta server source; the actively developed agent harness, terminal UI, App Server, channels, and runtime now live in the related Letta Code project.\n\n🛠️ What it does\n• Give an agent persistent memory blocks with clear boundaries instead of relying on a short prompt.\n• Keep identity, conversation history, and durable state available across sessions and deployments.\n• Expose tools and structured outputs so an agent can inspect data, take actions, and update memory deliberately.\n• Run locally or self-hosted, with channels for browser, Slack, Telegram, Discord, and custom integrations.\n\n✅ Practical uses\n1) Build a personal assistant that remembers preferences without replaying every transcript.\n2) Create research or support agents that maintain project facts over weeks of work.\n3) Keep memory, identity, and conversations synchronized when an agent moves between devices.\n4) Experiment with memory policies, deletion controls, and retention rules before production.\n\n⚙️ Getting started\nThe current CLI is installed with npm install -g @letta-ai/letta-code. Launch the interactive terminal with letta, or start a local App Server with letta server. Define the memory blocks and tool permissions first, then test what the agent may retain, revise, or delete.\n\n⚠️ License & security\nThe repository is Apache-2.0 licensed. Treat memory as sensitive state: protect API keys and backups, enforce access controls, set retention and deletion policies, validate tool inputs, and review logs before sharing them.\n\n🔗 Repository: https://t.co/d8qilZGAxK\n#StatefulAgents #AIAgents #OpenSource",
+    "display_text_range": [
+     0,
+     1969
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       276,
+       299
+      ],
+      "id": "2113131019100475392",
+      "display": "pic.x.com/NGtHg4HmEG",
+      "original": "https://t.co/NGtHg4HmEG",
+      "replacement": "https://x.com/RizeOnline/status/2113131060955390296/photo/1"
+     },
+     {
+      "type": "mention",
+      "indices": [
+       1422,
+       1428
+      ],
+      "original": "letta",
+      "id": "565454260"
+     },
+     {
+      "type": "url",
+      "indices": [
+       1905,
+       1928
+      ],
+      "original": "https://t.co/d8qilZGAxK",
+      "replacement": "https://github.com/letta-ai/letta",
+      "display": "github.com/letta-ai/letta"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       1929,
+       1944
+      ],
+      "original": "StatefulAgents"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       1945,
+       1954
+      ],
+      "original": "AIAgents"
+     },
+     {
+      "type": "hashtag",
+      "indices": [
+       1955,
+       1966
+      ],
+      "original": "OpenSource"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "RizeOnline",
+    "url": "https://x.com/RizeOnline",
+    "id": "85244302",
+    "followers": 104,
+    "following": 94,
+    "likes": 183,
+    "media_count": 605,
+    "statuses": 2280,
+    "name": "SpyTech Ai",
+    "description": "Practical AI guides, open-source tools, and reliable engineering workflows from SpyTechAi. Explore hands-on tutorials, model notes, and useful automation ideas.",
+    "raw_description": {
+     "text": "Practical AI guides, open-source tools, and reliable engineering workflows from SpyTechAi. Explore hands-on tutorials, model notes, and useful automation ideas.",
+     "facets": []
+    },
+    "location": "Turkey",
+    "banner_url": "https://pbs.twimg.com/profile_banners/85244302/1791622320",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2108842971319717888/YYp3gHDq_200x200.jpg",
+    "joined": "Mon Oct 26 05:17:02 +0000 2009",
+    "protected": false,
+    "website": {
+     "url": "https://spytechai.com",
+     "display_url": "spytechai.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 2,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "summary_large_image",
+   "created_at": "Thu Oct 22 04:51:19 +0000 2026",
+   "created_timestamp": 1792644679,
+   "possibly_sensitive": false,
+   "views": 67,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2113131019100475392",
+      "url": "https://pbs.twimg.com/media/HVNZd01X0AAGyC8.png?name=orig",
+      "width": 460,
+      "height": 460
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2113131019100475392",
+      "url": "https://pbs.twimg.com/media/HVNZd01X0AAGyC8.png?name=orig",
+      "width": 460,
+      "height": 460
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  }
+ ],
+ "cursor": {
+  "top": "DAADDAABCgABHWULbu1W0WwKAAIdU1mBDBchWAAIAAIAAAABCAADAAAAAAgABAAAAAAKAAUdbfeQzwAnEAoABh1t95DO_9jwCwAHAAAAkEVtUEM2d0FBQWZRL2dHSk4wdkdwL0FBQUFBc2RYa3JVVkJjQUF4MVR0REVLVzFBQ0hWTlpnUXdYSVZnZFk3MVBieFlndGgxWGdMQXVHNEJhSFYwaUpQRWJrWFFkWlF0dTdWYlJiQjFaek9JVkd6RFhIV1BVM2U3V3dhQWRaR3o5MkZZeDloMWNsZkVTMTBCTAAA",
+  "bottom": "DAADDAABCgABHWULbu1W0WwKAAIdU1mBDBchWAAIAAIAAAACCAADAAAAAAgABAAAAAAKAAUdbfeQzwAnEAoABh1t95DO_9jwCwAHAAAAkEVtUEM2d0FBQWZRL2dHSk4wdkdwL0FBQUFBc2RYa3JVVkJjQUF4MVR0REVLVzFBQ0hWTlpnUXdYSVZnZFk3MVBieFlndGgxWGdMQXVHNEJhSFYwaUpQRWJrWFFkWlF0dTdWYlJiQjFaek9JVkd6RFhIV1BVM2U3V3dhQWRaR3o5MkZZeDloMWNsZkVTMTBCTAAA"
+ }
+}

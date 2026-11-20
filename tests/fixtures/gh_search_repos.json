@@ -1,0 +1,46 @@
+[
+  {
+    "fullName": "example-org/example-cli",
+    "url": "https://github.com/example-org/example-cli",
+    "description": "A small example command line tool for reading research sources.",
+    "owner": {
+      "id": "O_kgDOExample1",
+      "is_bot": false,
+      "login": "example-org",
+      "type": "Organization",
+      "url": "https://github.com/example-org"
+    },
+    "pushedAt": "2026-11-03T12:30:00Z",
+    "stargazersCount": 1234,
+    "forksCount": 56,
+    "openIssuesCount": 17,
+    "watchersCount": 1234,
+    "language": "Python",
+    "isArchived": false,
+    "isFork": false,
+    "createdAt": "2025-03-14T09:26:53Z",
+    "updatedAt": "2026-11-02T18:04:11Z"
+  },
+  {
+    "fullName": "sample-user/notes-agent",
+    "url": "https://github.com/sample-user/notes-agent",
+    "description": "",
+    "owner": {
+      "id": "U_kgDOExample2",
+      "is_bot": false,
+      "login": "sample-user",
+      "type": "User",
+      "url": "https://github.com/sample-user"
+    },
+    "pushedAt": "2026-10-20T08:00:00Z",
+    "stargazersCount": 9,
+    "forksCount": 0,
+    "openIssuesCount": 1,
+    "watchersCount": 9,
+    "language": "TypeScript",
+    "isArchived": false,
+    "isFork": false,
+    "createdAt": "2026-01-02T03:04:05Z",
+    "updatedAt": "2026-10-20T08:00:00Z"
+  }
+]

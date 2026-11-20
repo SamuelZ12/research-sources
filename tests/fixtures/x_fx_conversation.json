@@ -1,0 +1,1524 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+  "id": "2117770299454177696",
+  "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://github.com/mem0ai/mem0\nHindsight：保留、回忆，再反思\n🔗 https://github.com/vectorize-io/hindsight\n\nmemU：智能体长期记忆基础设施\n🔗 https://github.com/NevaMind-AI/memU\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://github.com/topoteretes/cognee\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://github.com/getzep/graphiti\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://github.com/volcengine/OpenViking\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://github.com/letta-ai/letta\n\nLetta Code：编程智能体的持久记忆\n🔗 https://github.com/letta-ai/letta-code\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://github.com/mem0ai/openmemory\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://github.com/vectorize-io/agent-memory-benchmark\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+  "raw_text": {
+   "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://t.co/FmVPuuMtf8\nHindsight：保留、回忆，再反思\n🔗 https://t.co/TBAoh9JuGB\n\nmemU：智能体长期记忆基础设施\n🔗 https://t.co/in8kSuw3EH\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://t.co/TRVXg0MuRF\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://t.co/QBpFIjljh1\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://t.co/l4dg6rTDvO\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://t.co/R1Ah10ZFjL\n\nLetta Code：编程智能体的持久记忆\n🔗 https://t.co/2W9rysxFWE\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://t.co/gUoBMq4jkv\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://t.co/u7kwDlPl6V\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+   "display_text_range": [
+    0,
+    737
+   ],
+   "facets": [
+    {
+     "type": "media",
+     "indices": [
+      147,
+      170
+     ],
+     "id": "2117572319254286336",
+     "display": "pic.x.com/klNefwolrr",
+     "original": "https://t.co/klNefwolrr",
+     "replacement": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1"
+    },
+    {
+     "type": "url",
+     "indices": [
+      172,
+      195
+     ],
+     "original": "https://t.co/FmVPuuMtf8",
+     "replacement": "https://github.com/mem0ai/mem0",
+     "display": "github.com/mem0ai/mem0"
+    },
+    {
+     "type": "url",
+     "indices": [
+      218,
+      241
+     ],
+     "original": "https://t.co/TBAoh9JuGB",
+     "replacement": "https://github.com/vectorize-io/hindsight",
+     "display": "github.com/vectorize-io/h…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      262,
+      285
+     ],
+     "original": "https://t.co/in8kSuw3EH",
+     "replacement": "https://github.com/NevaMind-AI/memU",
+     "display": "github.com/NevaMind-AI/me…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      321,
+      344
+     ],
+     "original": "https://t.co/TRVXg0MuRF",
+     "replacement": "https://github.com/topoteretes/cognee",
+     "display": "github.com/topoteretes/co…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      374,
+      397
+     ],
+     "original": "https://t.co/QBpFIjljh1",
+     "replacement": "https://github.com/getzep/graphiti",
+     "display": "github.com/getzep/graphiti"
+    },
+    {
+     "type": "url",
+     "indices": [
+      427,
+      450
+     ],
+     "original": "https://t.co/l4dg6rTDvO",
+     "replacement": "https://github.com/volcengine/OpenViking",
+     "display": "github.com/volcengine/Ope…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      479,
+      502
+     ],
+     "original": "https://t.co/R1Ah10ZFjL",
+     "replacement": "https://github.com/letta-ai/letta",
+     "display": "github.com/letta-ai/letta"
+    },
+    {
+     "type": "url",
+     "indices": [
+      528,
+      551
+     ],
+     "original": "https://t.co/2W9rysxFWE",
+     "replacement": "https://github.com/letta-ai/letta-code",
+     "display": "github.com/letta-ai/letta…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      592,
+      615
+     ],
+     "original": "https://t.co/gUoBMq4jkv",
+     "replacement": "https://github.com/mem0ai/openmemory",
+     "display": "github.com/mem0ai/openmem…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      658,
+      681
+     ],
+     "original": "https://t.co/u7kwDlPl6V",
+     "replacement": "https://github.com/vectorize-io/agent-memory-benchmark",
+     "display": "github.com/vectorize-io/a…"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "bkdgiffug",
+   "url": "https://x.com/bkdgiffug",
+   "id": "1865771438671810560",
+   "followers": 34609,
+   "following": 7316,
+   "likes": 5,
+   "media_count": 2637,
+   "statuses": 2856,
+   "name": "lumxss",
+   "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+   "raw_description": {
+    "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+    "facets": []
+   },
+   "location": "",
+   "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+   "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+   "joined": "Sun Dec 08 14:52:37 +0000 2024",
+   "protected": false,
+   "website": null,
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 14,
+  "reposts": 3,
+  "likes": 9,
+  "bookmarks": 5,
+  "quotes": 0,
+  "embed_card": "summary_large_image",
+  "created_at": "Wed Nov 04 00:06:00 +0000 2026",
+  "created_timestamp": 1793750760,
+  "possibly_sensitive": false,
+  "views": 1140,
+  "is_note_tweet": true,
+  "community_note": null,
+  "lang": "zh",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "type": "photo",
+     "id": "2117572319254286336",
+     "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+     "width": 855,
+     "height": 882
+    }
+   ],
+   "photos": [
+    {
+     "type": "photo",
+     "id": "2117572319254286336",
+     "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+     "width": 855,
+     "height": 882
+    }
+   ]
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": [
+  {
+   "type": "status",
+   "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+   "id": "2117770299454177696",
+   "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://github.com/mem0ai/mem0\nHindsight：保留、回忆，再反思\n🔗 https://github.com/vectorize-io/hindsight\n\nmemU：智能体长期记忆基础设施\n🔗 https://github.com/NevaMind-AI/memU\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://github.com/topoteretes/cognee\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://github.com/getzep/graphiti\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://github.com/volcengine/OpenViking\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://github.com/letta-ai/letta\n\nLetta Code：编程智能体的持久记忆\n🔗 https://github.com/letta-ai/letta-code\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://github.com/mem0ai/openmemory\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://github.com/vectorize-io/agent-memory-benchmark\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+   "raw_text": {
+    "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://t.co/FmVPuuMtf8\nHindsight：保留、回忆，再反思\n🔗 https://t.co/TBAoh9JuGB\n\nmemU：智能体长期记忆基础设施\n🔗 https://t.co/in8kSuw3EH\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://t.co/TRVXg0MuRF\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://t.co/QBpFIjljh1\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://t.co/l4dg6rTDvO\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://t.co/R1Ah10ZFjL\n\nLetta Code：编程智能体的持久记忆\n🔗 https://t.co/2W9rysxFWE\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://t.co/gUoBMq4jkv\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://t.co/u7kwDlPl6V\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+    "display_text_range": [
+     0,
+     737
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       147,
+       170
+      ],
+      "id": "2117572319254286336",
+      "display": "pic.x.com/klNefwolrr",
+      "original": "https://t.co/klNefwolrr",
+      "replacement": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1"
+     },
+     {
+      "type": "url",
+      "indices": [
+       172,
+       195
+      ],
+      "original": "https://t.co/FmVPuuMtf8",
+      "replacement": "https://github.com/mem0ai/mem0",
+      "display": "github.com/mem0ai/mem0"
+     },
+     {
+      "type": "url",
+      "indices": [
+       218,
+       241
+      ],
+      "original": "https://t.co/TBAoh9JuGB",
+      "replacement": "https://github.com/vectorize-io/hindsight",
+      "display": "github.com/vectorize-io/h…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       262,
+       285
+      ],
+      "original": "https://t.co/in8kSuw3EH",
+      "replacement": "https://github.com/NevaMind-AI/memU",
+      "display": "github.com/NevaMind-AI/me…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       321,
+       344
+      ],
+      "original": "https://t.co/TRVXg0MuRF",
+      "replacement": "https://github.com/topoteretes/cognee",
+      "display": "github.com/topoteretes/co…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       374,
+       397
+      ],
+      "original": "https://t.co/QBpFIjljh1",
+      "replacement": "https://github.com/getzep/graphiti",
+      "display": "github.com/getzep/graphiti"
+     },
+     {
+      "type": "url",
+      "indices": [
+       427,
+       450
+      ],
+      "original": "https://t.co/l4dg6rTDvO",
+      "replacement": "https://github.com/volcengine/OpenViking",
+      "display": "github.com/volcengine/Ope…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       479,
+       502
+      ],
+      "original": "https://t.co/R1Ah10ZFjL",
+      "replacement": "https://github.com/letta-ai/letta",
+      "display": "github.com/letta-ai/letta"
+     },
+     {
+      "type": "url",
+      "indices": [
+       528,
+       551
+      ],
+      "original": "https://t.co/2W9rysxFWE",
+      "replacement": "https://github.com/letta-ai/letta-code",
+      "display": "github.com/letta-ai/letta…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       592,
+       615
+      ],
+      "original": "https://t.co/gUoBMq4jkv",
+      "replacement": "https://github.com/mem0ai/openmemory",
+      "display": "github.com/mem0ai/openmem…"
+     },
+     {
+      "type": "url",
+      "indices": [
+       658,
+       681
+      ],
+      "original": "https://t.co/u7kwDlPl6V",
+      "replacement": "https://github.com/vectorize-io/agent-memory-benchmark",
+      "display": "github.com/vectorize-io/a…"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "bkdgiffug",
+    "url": "https://x.com/bkdgiffug",
+    "id": "1865771438671810560",
+    "followers": 34609,
+    "following": 7316,
+    "likes": 5,
+    "media_count": 2637,
+    "statuses": 2856,
+    "name": "lumxss",
+    "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+    "raw_description": {
+     "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+    "joined": "Sun Dec 08 14:52:37 +0000 2024",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 14,
+   "reposts": 3,
+   "likes": 9,
+   "bookmarks": 5,
+   "quotes": 0,
+   "embed_card": "summary_large_image",
+   "created_at": "Wed Nov 04 00:06:00 +0000 2026",
+   "created_timestamp": 1793750760,
+   "possibly_sensitive": false,
+   "views": 1140,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2117572319254286336",
+      "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+      "width": 855,
+      "height": 882
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2117572319254286336",
+      "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+      "width": 855,
+      "height": 882
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  }
+ ],
+ "replies": [
+  {
+   "type": "status",
+   "url": "https://x.com/_xuvyn/status/2117821068237062474",
+   "id": "2117821068237062474",
+   "text": "@bkdgiffug 补一个容易混的点：很多\"失忆\"其实不是记忆库的问题，是会话本身没落盘。长任务跑到一半断线或重启，上下文直接没了，记忆库只能补回零散事实，补不回进行到哪一步。\n\n我在 Talos 里把这两层分开：会话持久化负责\"接着干\"，记忆负责跨会话的知识。这十个项目基本都在第二层。",
+   "raw_text": {
+    "text": "@bkdgiffug 补一个容易混的点：很多\"失忆\"其实不是记忆库的问题，是会话本身没落盘。长任务跑到一半断线或重启，上下文直接没了，记忆库只能补回零散事实，补不回进行到哪一步。\n\n我在 Talos 里把这两层分开：会话持久化负责\"接着干\"，记忆负责跨会话的知识。这十个项目基本都在第二层。",
+    "display_text_range": [
+     11,
+     145
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "_xuvyn",
+    "url": "https://x.com/_xuvyn",
+    "id": "1317799573",
+    "followers": 47,
+    "following": 610,
+    "likes": 184,
+    "media_count": 153,
+    "statuses": 664,
+    "name": "Xuvyn | Building Talos",
+    "description": "Ex-Alibaba database engineer building @_talosai, an open-source AI agent runtime in Rust. Durable execution, local + cloud agents. Building in public.",
+    "raw_description": {
+     "text": "Ex-Alibaba database engineer building @_talosai, an open-source AI agent runtime in Rust. Durable execution, local + cloud agents. Building in public.",
+     "facets": []
+    },
+    "location": "Beijing",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1317799573/1399382533",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1869515931036286976/GUcnT1Rr_200x200.jpg",
+    "joined": "Sun Mar 31 05:42:44 +0000 2013",
+    "protected": false,
+    "website": {
+     "url": "http://github.com/apilots/talos",
+     "display_url": "github.com/apilots/talos"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 03:27:44 +0000 2026",
+   "created_timestamp": 1793762864,
+   "views": 6,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/WANGaf2a/status/2117786080246473053",
+   "id": "2117786080246473053",
+   "text": "@bkdgiffug 挑之前先分清需求：只想让编码助手记住项目约定，一个规则文件（AGENTS.md 之类）就够，零依赖；要给自己做的 AI 应用加跨会话、跨用户的长期记忆，才值得上 Mem0、Letta 这类。\n最后那个 Agent Memory Benchmark 放得好，装之前先看它在你关心的场景里得分，比看星数靠谱。",
+   "raw_text": {
+    "text": "@bkdgiffug 挑之前先分清需求：只想让编码助手记住项目约定，一个规则文件（AGENTS.md 之类）就够，零依赖；要给自己做的 AI 应用加跨会话、跨用户的长期记忆，才值得上 Mem0、Letta 这类。\n最后那个 Agent Memory Benchmark 放得好，装之前先看它在你关心的场景里得分，比看星数靠谱。",
+    "display_text_range": [
+     11,
+     163
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "WANGaf2a",
+    "url": "https://x.com/WANGaf2a",
+    "id": "2068243871176519680",
+    "followers": 8,
+    "following": 106,
+    "likes": 101,
+    "media_count": 4,
+    "statuses": 73,
+    "name": "WANG",
+    "description": "实测好用的 AI 工具｜分享普通人用 AI 搞副业的真实过程｜每天一个能直接上手的技巧，提示词和模板免费分享",
+    "raw_description": {
+     "text": "实测好用的 AI 工具｜分享普通人用 AI 搞副业的真实过程｜每天一个能直接上手的技巧，提示词和模板免费分享",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/2068243871176519680/1792925892",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2114295894950412288/JsPJmgNJ_200x200.jpg",
+    "joined": "Sat Jun 20 08:07:00 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:08:42 +0000 2026",
+   "created_timestamp": 1793754522,
+   "views": 12,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/zsdwzyx/status/2117859131080208503",
+   "id": "2117859131080208503",
+   "text": "@bkdgiffug 我用的办法比较土，所有资料放一个知识库，Bot 每次开工先读一遍，就不用从头交代。\n\n这 10 个里，有适合不写代码的人直接用的吗？",
+   "raw_text": {
+    "text": "@bkdgiffug 我用的办法比较土，所有资料放一个知识库，Bot 每次开工先读一遍，就不用从头交代。\n\n这 10 个里，有适合不写代码的人直接用的吗？",
+    "display_text_range": [
+     11,
+     77
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "zsdwzyx",
+    "url": "https://x.com/zsdwzyx",
+    "id": "2100035619661791232",
+    "followers": 17,
+    "following": 139,
+    "likes": 29,
+    "media_count": 9,
+    "statuses": 134,
+    "name": "育轩 Yuxuan Zhao",
+    "description": "育轩｜身在医疗AI行业，连续创业者，6年海外经历。把需求拆清楚，做出可落地的AI工具和工作流程。这里只讲真做过的：怎么做，卡在哪，值不值得。",
+    "raw_description": {
+     "text": "育轩｜身在医疗AI行业，连续创业者，6年海外经历。把需求拆清楚，做出可落地的AI工具和工作流程。这里只讲真做过的：怎么做，卡在哪，值不值得。",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/2100035619661791232/1792401553",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2114032431162626048/XjBL4aPI_200x200.jpg",
+    "joined": "Wed Sep 16 01:36:54 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 05:58:59 +0000 2026",
+   "created_timestamp": 1793771939,
+   "views": 2,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/chen_xiao27835/status/2117788256532299823",
+   "id": "2117788256532299823",
+   "text": "@bkdgiffug 记忆这块难点可能不在存，而在忘：什么该记、什么过期该删，记错一次比不记还麻烦。这 10 个里有能自动清理过期记忆的吗？",
+   "raw_text": {
+    "text": "@bkdgiffug 记忆这块难点可能不在存，而在忘：什么该记、什么过期该删，记错一次比不记还麻烦。这 10 个里有能自动清理过期记忆的吗？",
+    "display_text_range": [
+     11,
+     70
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "chen_xiao27835",
+    "url": "https://x.com/chen_xiao27835",
+    "id": "1794364823637303296",
+    "followers": 15,
+    "following": 142,
+    "likes": 2,
+    "media_count": 0,
+    "statuses": 101,
+    "name": "待燃AI",
+    "description": "国企打工人| 过期留学生| 纳瓦拉大学及IE商学院市场营销研究生| \nENTJ| AI × Web3实践者",
+    "raw_description": {
+     "text": "国企打工人| 过期留学生| 纳瓦拉大学及IE商学院市场营销研究生| \nENTJ| AI × Web3实践者",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1794365752432271360/hzNa1DRk_200x200.jpg",
+    "joined": "Sat May 25 13:48:40 +0000 2024",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": false,
+     "verified_at": null,
+     "type": null
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:17:21 +0000 2026",
+   "created_timestamp": 1793755041,
+   "views": 1,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/Keliang65j7/status/2117787425636487581",
+   "id": "2117787425636487581",
+   "text": "@bkdgiffug 开源项目之外，普通人还有个零门槛办法：每次聊完让 AI 写一段「交接卡」，目标、结论、没解决的问题、偏好各一句，下次新对话先贴进去。土，但能用。你这 10 个里哪个对不会装软件的人最友好？",
+   "raw_text": {
+    "text": "@bkdgiffug 开源项目之外，普通人还有个零门槛办法：每次聊完让 AI 写一段「交接卡」，目标、结论、没解决的问题、偏好各一句，下次新对话先贴进去。土，但能用。你这 10 个里哪个对不会装软件的人最友好？",
+    "display_text_range": [
+     11,
+     105
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "Keliang65j7",
+    "url": "https://x.com/Keliang65j7",
+    "id": "2033134915127275520",
+    "followers": 6,
+    "following": 48,
+    "likes": 6,
+    "media_count": 0,
+    "statuses": 28,
+    "name": "Keliang AI 副业实验室",
+    "description": "程序员｜用 AI 帮普通人提效、搞副业｜工具实测 · 实操步骤 · 避坑指南｜每天更新",
+    "raw_description": {
+     "text": "程序员｜用 AI 帮普通人提效、搞副业｜工具实测 · 实操步骤 · 避坑指南｜每天更新",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2116822279778897920/6aL466Ct_200x200.jpg",
+    "joined": "Sun Mar 15 10:56:05 +0000 2026",
+    "protected": false,
+    "website": {
+     "url": "http://deeplocals.com",
+     "display_url": "deeplocals.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:14:03 +0000 2026",
+   "created_timestamp": 1793754843,
+   "views": 13,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/caojinbing/status/2117786306680123752",
+   "id": "2117786306680123752",
+   "text": "@bkdgiffug 每次新会话都要从头交代一遍，确实最磨人。我的土办法是让它把关键决定写进一个文件，下次开工先读。不优雅，但比指望模型记性靠谱。",
+   "raw_text": {
+    "text": "@bkdgiffug 每次新会话都要从头交代一遍，确实最磨人。我的土办法是让它把关键决定写进一个文件，下次开工先读。不优雅，但比指望模型记性靠谱。",
+    "display_text_range": [
+     11,
+     73
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "caojinbing",
+    "url": "https://x.com/caojinbing",
+    "id": "2096268040904359936",
+    "followers": 0,
+    "following": 1,
+    "likes": 0,
+    "media_count": 0,
+    "statuses": 73,
+    "name": "曹金兵",
+    "description": "",
+    "raw_description": {
+     "text": "",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/2096268040904359936/1789183352",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2098613115781033984/-6TFipK9_200x200.jpg",
+    "joined": "Sat Sep 05 16:04:44 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": false,
+     "verified_at": null,
+     "type": null
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:09:36 +0000 2026",
+   "created_timestamp": 1793754576,
+   "views": 17,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/it_works_123/status/2117782309357412734",
+   "id": "2117782309357412734",
+   "text": "@bkdgiffug 新会话失忆真的要命，现在全靠一个 md 文件续命",
+   "raw_text": {
+    "text": "@bkdgiffug 新会话失忆真的要命，现在全靠一个 md 文件续命",
+    "display_text_range": [
+     11,
+     35
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "it_works_123",
+    "url": "https://x.com/it_works_123",
+    "id": "921188685202169856",
+    "followers": 1800,
+    "following": 1515,
+    "likes": 1979,
+    "media_count": 39,
+    "statuses": 2054,
+    "name": "it_works",
+    "description": "Building Pi Bot 🤖 An AI team on your computer.\n一个人，也能拥有一支 AI 团队。\n🚧 开发中 · Coming soon\n🌐 https://pibot.space",
+    "raw_description": {
+     "text": "Building Pi Bot 🤖 An AI team on your computer.\n一个人，也能拥有一支 AI 团队。\n🚧 开发中 · Coming soon\n🌐 https://t.co/bWgQyYxs8L",
+     "facets": [
+      {
+       "type": "url",
+       "indices": [
+        87,
+        110
+       ],
+       "original": "https://t.co/bWgQyYxs8L",
+       "replacement": "https://pibot.space",
+       "display": "pibot.space"
+      }
+     ]
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2105879193502552064/aI43p7gQ_200x200.jpg",
+    "joined": "Fri Oct 20 01:37:52 +0000 2017",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 00:53:43 +0000 2026",
+   "created_timestamp": 1793753623,
+   "views": 11,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/SeP0sitivo/status/2117770657824190950",
+   "id": "2117770657824190950",
+   "text": "@bkdgiffug 这记性确实硬伤，赶紧去看看有没有能用的",
+   "raw_text": {
+    "text": "@bkdgiffug 这记性确实硬伤，赶紧去看看有没有能用的",
+    "display_text_range": [
+     11,
+     30
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "SeP0sitivo",
+    "url": "https://x.com/SeP0sitivo",
+    "id": "1140814364",
+    "followers": 129,
+    "following": 340,
+    "likes": 0,
+    "media_count": 16,
+    "statuses": 1135,
+    "name": "Bitget70%省费管家",
+    "description": "只讨论真实使用问题，不承诺回报，也不代替个人判断；了解合约与高频用户真正关心什么，大交易量可单独对接｜长期复盘行情与账户明细，寻找被忽略的成本空间｜更看重清楚、稳定的沟通，不用模糊话术敷衍｜TG：@Banm777｜QQ：1791416771｜WX：bm666696",
+    "raw_description": {
+     "text": "只讨论真实使用问题，不承诺回报，也不代替个人判断；了解合约与高频用户真正关心什么，大交易量可单独对接｜长期复盘行情与账户明细，寻找被忽略的成本空间｜更看重清楚、稳定的沟通，不用模糊话术敷衍｜TG：@Banm777｜QQ：1791416771｜WX：bm666696",
+     "facets": []
+    },
+    "location": "Guatemala!",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/3194263319/65ced05c640e187782479a1306f82ce3_200x200.jpeg",
+    "joined": "Fri Feb 01 21:53:18 +0000 2013",
+    "protected": false,
+    "website": {
+     "url": "https://t.me/Banm777",
+     "display_url": "t.me/Banm777"
+    },
+    "verification": {
+     "verified": false,
+     "verified_at": null,
+     "type": null
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 00:07:25 +0000 2026",
+   "created_timestamp": 1793750845,
+   "views": 10,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/Lyson998/status/2117865398024732884",
+   "id": "2117865398024732884",
+   "text": "@bkdgiffug 补一个思路：除了装记忆库，也可以让 Bot 自己沉淀经验。看到过 @nobsfud 做的 Dreamer 模版，每晚复盘 Bot 白天干的活，把反复出现的修正整理成可复用的技能。想问下这 10 个里你实际用下来哪个最稳？",
+   "raw_text": {
+    "text": "@bkdgiffug 补一个思路：除了装记忆库，也可以让 Bot 自己沉淀经验。看到过 @nobsfud 做的 Dreamer 模版，每晚复盘 Bot 白天干的活，把反复出现的修正整理成可复用的技能。想问下这 10 个里你实际用下来哪个最稳？",
+    "display_text_range": [
+     11,
+     121
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     },
+     {
+      "type": "mention",
+      "indices": [
+       44,
+       52
+      ],
+      "original": "nobsfud",
+      "id": "1542244237193920514"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "Lyson998",
+    "url": "https://x.com/Lyson998",
+    "id": "2113492341344628736",
+    "followers": 13,
+    "following": 7,
+    "likes": 6,
+    "media_count": 27,
+    "statuses": 84,
+    "name": "Lyson",
+    "description": "每天 2-3 条：最新 AI 工具/更新，翻成普通人马上能用的步骤。每条都有出处，不吹不炒。效率·创作·编程 Agent。",
+    "raw_description": {
+     "text": "每天 2-3 条：最新 AI 工具/更新，翻成普通人马上能用的步骤。每条都有出处，不吹不炒。效率·创作·编程 Agent。",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://abs.twimg.com/sticky/default_profile_images/default_profile_200x200.png",
+    "joined": "Fri Oct 23 04:48:19 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 06:23:53 +0000 2026",
+   "created_timestamp": 1793773433,
+   "views": 4,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/ajs6888/status/2117793928464519453",
+   "id": "2117793928464519453",
+   "text": "@bkdgiffug 记住倒是好事，就怕把过时需求也记得牢牢的。",
+   "raw_text": {
+    "text": "@bkdgiffug 记住倒是好事，就怕把过时需求也记得牢牢的。",
+    "display_text_range": [
+     11,
+     32
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "ajs6888",
+    "url": "https://x.com/ajs6888",
+    "id": "1518315606830829568",
+    "followers": 16661,
+    "following": 3096,
+    "likes": 37244,
+    "media_count": 283,
+    "statuses": 151549,
+    "name": "安叫兽|Bird🕊️ 🔶 BNB",
+    "description": "AI中转站：http://anpin.ai|其他所返佣https://link3.cc/anjiaoshou \n币安永久返佣：https://www.bsmkweb.cc/join?ref=CRYPTO1818|欧意：https://www.promooboost.com/join/11165721",
+    "raw_description": {
+     "text": "AI中转站：https://t.co/TpSOi0jwcp|其他所返佣https://t.co/1YRGFH5Rwv \n币安永久返佣：https://t.co/BVCUkKvBQM|欧意：https://t.co/xlGiGnQFNU",
+     "facets": [
+      {
+       "type": "url",
+       "indices": [
+        6,
+        29
+       ],
+       "original": "https://t.co/TpSOi0jwcp",
+       "replacement": "http://anpin.ai",
+       "display": "anpin.ai"
+      },
+      {
+       "type": "url",
+       "indices": [
+        35,
+        58
+       ],
+       "original": "https://t.co/1YRGFH5Rwv",
+       "replacement": "https://link3.cc/anjiaoshou",
+       "display": "link3.cc/anjiaoshou"
+      },
+      {
+       "type": "url",
+       "indices": [
+        67,
+        90
+       ],
+       "original": "https://t.co/BVCUkKvBQM",
+       "replacement": "https://www.bsmkweb.cc/join?ref=CRYPTO1818",
+       "display": "bsmkweb.cc/join?ref=CRYPT…"
+      },
+      {
+       "type": "url",
+       "indices": [
+        94,
+        117
+       ],
+       "original": "https://t.co/xlGiGnQFNU",
+       "replacement": "https://www.promooboost.com/join/11165721",
+       "display": "promooboost.com/join/11165721"
+      }
+     ]
+    },
+    "location": "撸毛卡网：",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1518315606830829568/1782468007",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2088305056076488704/gXs1iBA5_200x200.jpg",
+    "joined": "Sun Apr 24 19:48:02 +0000 2022",
+    "protected": false,
+    "website": {
+     "url": "https://lumao8.cn",
+     "display_url": "lumao8.cn"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:39:53 +0000 2026",
+   "created_timestamp": 1793756393,
+   "views": 4,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/404latitude/status/2117779879471317320",
+   "id": "2117779879471317320",
+   "text": "@bkdgiffug 新会话一开全清零，这毛病最烦人",
+   "raw_text": {
+    "text": "@bkdgiffug 新会话一开全清零，这毛病最烦人",
+    "display_text_range": [
+     11,
+     26
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "404latitude",
+    "url": "https://x.com/404latitude",
+    "id": "2053800927858167808",
+    "followers": 2186,
+    "following": 2632,
+    "likes": 519,
+    "media_count": 298,
+    "statuses": 10135,
+    "name": "404资源库",
+    "description": "免费分享 AI 资料｜电子书｜实用工具｜副业资源，每日更新，记得收藏。",
+    "raw_description": {
+     "text": "免费分享 AI 资料｜电子书｜实用工具｜副业资源，每日更新，记得收藏。",
+     "facets": []
+    },
+    "location": "互联网",
+    "banner_url": "https://pbs.twimg.com/profile_banners/2053800927858167808/1782119726",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2068986008352493568/RyrS6e1I_200x200.jpg",
+    "joined": "Mon May 11 11:34:42 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 00:44:04 +0000 2026",
+   "created_timestamp": 1793753044,
+   "views": 9,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/younglu0125/status/2117798695374897218",
+   "id": "2117798695374897218",
+   "text": "@bkdgiffug 每次新对话都得从头交代 我现在干脆存了个说明文档开头就丢给它",
+   "raw_text": {
+    "text": "@bkdgiffug 每次新对话都得从头交代 我现在干脆存了个说明文档开头就丢给它",
+    "display_text_range": [
+     11,
+     41
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "younglu0125",
+    "url": "https://x.com/younglu0125",
+    "id": "896738636208537600",
+    "followers": 1833,
+    "following": 1865,
+    "likes": 2782,
+    "media_count": 64,
+    "statuses": 3354,
+    "name": "Louis｜复利人生",
+    "description": "普通上班族，边探索边分享｜和女儿一起定投纳指，每天晒真实盈亏，跌了也发｜亲测好用的 AI 工具和玩法｜力量训练+读书，复利人生｜不预测，不荐股｜关注必回，一起慢慢变富",
+    "raw_description": {
+     "text": "普通上班族，边探索边分享｜和女儿一起定投纳指，每天晒真实盈亏，跌了也发｜亲测好用的 AI 工具和玩法｜力量训练+读书，复利人生｜不预测，不荐股｜关注必回，一起慢慢变富",
+     "facets": []
+    },
+    "location": "",
+    "banner_url": "https://pbs.twimg.com/profile_banners/896738636208537600/1792332355",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2111816736886632448/Ac_uL55z_200x200.jpg",
+    "joined": "Sun Aug 13 14:22:06 +0000 2017",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:58:50 +0000 2026",
+   "created_timestamp": 1793757530,
+   "views": 3,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/TonyTalksAI/status/2117787389808775598",
+   "id": "2117787389808775598",
+   "text": "@bkdgiffug Mem0 我装过又卸了：会话一开上下文还是丢。坑是没把关键决策写进固定笔记。你现在主力哪个？",
+   "raw_text": {
+    "text": "@bkdgiffug Mem0 我装过又卸了：会话一开上下文还是丢。坑是没把关键决策写进固定笔记。你现在主力哪个？",
+    "display_text_range": [
+     11,
+     57
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "TonyTalksAI",
+    "url": "https://x.com/TonyTalksAI",
+    "id": "2037033042343321600",
+    "followers": 48,
+    "following": 105,
+    "likes": 172,
+    "media_count": 33,
+    "statuses": 260,
+    "name": "Tony Song",
+    "description": "实测AI工具和GitHub Skill，只发跑过的数据和能抄的命令｜拼豆+AI做图样 http://beads.cooooflire.tech",
+    "raw_description": {
+     "text": "实测AI工具和GitHub Skill，只发跑过的数据和能抄的命令｜拼豆+AI做图样 https://t.co/9eCXPTFFoH",
+     "facets": [
+      {
+       "type": "url",
+       "indices": [
+        43,
+        66
+       ],
+       "original": "https://t.co/9eCXPTFFoH",
+       "replacement": "http://beads.cooooflire.tech",
+       "display": "beads.cooooflire.tech"
+      }
+     ]
+    },
+    "location": "",
+    "banner_url": "",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2037033103882129408/ahyqo34j_200x200.png",
+    "joined": "Thu Mar 26 05:05:12 +0000 2026",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 01:13:54 +0000 2026",
+   "created_timestamp": 1793754834,
+   "views": 12,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/fuzishushu/status/2117802396994912418",
+   "id": "2117802396994912418",
+   "text": "@bkdgiffug 最烦这个，昨天刚跟它讲完我仓位咋拿的，今天新开一个又得从头交代，跟天天带新人一样，先收藏了",
+   "raw_text": {
+    "text": "@bkdgiffug 最烦这个，昨天刚跟它讲完我仓位咋拿的，今天新开一个又得从头交代，跟天天带新人一样，先收藏了",
+    "display_text_range": [
+     11,
+     56
+    ],
+    "facets": [
+     {
+      "type": "mention",
+      "indices": [
+       0,
+       10
+      ],
+      "original": "bkdgiffug",
+      "id": "1865771438671810560"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "fuzishushu",
+    "url": "https://x.com/fuzishushu",
+    "id": "1519352275843825666",
+    "followers": 4192,
+    "following": 1351,
+    "likes": 20,
+    "media_count": 254,
+    "statuses": 3415,
+    "name": "夫子 znet.btc",
+    "description": "全职交易｜crypto × AI。",
+    "raw_description": {
+     "text": "全职交易｜crypto × AI。",
+     "facets": []
+    },
+    "location": "月球",
+    "banner_url": "https://pbs.twimg.com/profile_banners/1519352275843825666/1735798099",
+    "avatar_url": "https://pbs.twimg.com/profile_images/1943933081255100416/0nHfp0Xq_200x200.jpg",
+    "joined": "Wed Apr 27 16:26:35 +0000 2022",
+    "protected": false,
+    "website": null,
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 0,
+   "reposts": 0,
+   "likes": 0,
+   "bookmarks": 0,
+   "quotes": 0,
+   "embed_card": "tweet",
+   "created_at": "Wed Nov 04 02:13:32 +0000 2026",
+   "created_timestamp": 1793758412,
+   "views": 7,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "zh",
+   "replying_to": {
+    "screen_name": "bkdgiffug",
+    "status": "2117770299454177696",
+    "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+    "profile_url": "https://x.com/bkdgiffug"
+   },
+   "media": {},
+   "provider": "twitter",
+   "reposted_by": null
+  }
+ ],
+ "author": {
+  "screen_name": "bkdgiffug",
+  "url": "https://x.com/bkdgiffug",
+  "id": "1865771438671810560",
+  "followers": 34609,
+  "following": 7316,
+  "likes": 5,
+  "media_count": 2637,
+  "statuses": 2856,
+  "name": "lumxss",
+  "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+  "raw_description": {
+   "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+   "facets": []
+  },
+  "location": "",
+  "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+  "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+  "joined": "Sun Dec 08 14:52:37 +0000 2024",
+  "protected": false,
+  "website": null,
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "cursor": {
+  "bottom": "DAAKCgABHWaZiC3__3ELAAIAAAC8RW1QQzZ3QUFBZlEvZ0dKTjB2R3AvQUFBQUE4ZFkvSVBPVnBBb2gxajVHa1hXcEd1SFdQdXNWK2JRRUlkWTkvS05OcmhmaDFrSmFpb1duQjNIV1FEQ25ZYndVb2RZK1J4YnRvUm5SMWo0emd2VzZGZEhXUHFXMzJiVVIwZFkrTnM1OXJ4YUIxajFOM3Uxc0dnSFdQZGxIUmJnVWdkWkN0Ynkxc0ExQjFqMVRGZld6SG1IV1BsTXVRYUFDOD0IAAMAAAACCwAEAAAABkJvdHRvbQAA"
+ },
+ "code": 200
+}

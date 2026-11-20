@@ -1,0 +1,214 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.448 --> 00:00:02.293
+Claude Fable 5.2 is out.
+
+00:00:02.790 --> 00:00:06.689
+It's our most capable generally
+available model for technical fields.
+
+00:00:07.432 --> 00:00:10.546
+With several models to choose
+from, how do you pick the right
+
+00:00:10.546 --> 00:00:12.014
+one for the task in front of you?
+
+00:00:12.054 --> 00:00:15.195
+Most of the time, the answer is Opus 5.5
+
+00:00:15.195 --> 00:00:16.095
+on medium effort.
+
+00:00:16.464 --> 00:00:19.917
+It's the daily driver for complex
+coding and knowledge work, and
+
+00:00:19.918 --> 00:00:21.757
+the starting point we recommend.
+
+00:00:22.057 --> 00:00:25.621
+As an example, I am working on
+a online shop and I would like
+
+00:00:25.622 --> 00:00:27.033
+to add monthly subscriptions.
+
+00:00:27.633 --> 00:00:31.157
+That change touches the data
+model, the API, and the UI.
+
+00:00:31.757 --> 00:00:35.413
+I'll leave the model and effort level
+on the default and start the task.
+
+00:00:36.001 --> 00:00:39.969
+If the result falls short, the first
+thing to try is raising the effort level.
+
+00:00:40.548 --> 00:00:43.275
+It's a smaller step than
+changing the model, and it
+
+00:00:43.275 --> 00:00:44.921
+usually keeps the prompt cache.
+
+00:00:45.639 --> 00:00:48.583
+Some work, however, is more
+ambitious than a single feature.
+
+00:00:49.183 --> 00:00:51.881
+I'd like to migrate the whole
+shop to a new architecture.
+
+00:00:52.380 --> 00:00:56.783
+It's a large, loosely defined problem
+across the whole codebase, with
+
+00:00:56.826 --> 00:01:00.411
+dozens of milestones and decisions
+that nobody has written down yet.
+
+00:01:00.991 --> 00:01:05.435
+For work that is ambitious and
+open-ended, where judgment and accuracy
+
+00:01:05.441 --> 00:01:10.759
+matter, move to Fable. At twice the
+price of Opus per token, it's suited
+
+00:01:10.759 --> 00:01:13.142
+to work where quality is paramount.
+
+00:01:13.629 --> 00:01:16.302
+I'll give Fable the goal
+and two non-negotiables.
+
+00:01:16.741 --> 00:01:20.337
+Checkout can't go down
+and orders can't be lost.
+
+00:01:20.879 --> 00:01:24.704
+It makes the plan, does the
+work, and tests as it goes, so
+
+00:01:24.705 --> 00:01:28.044
+the result is much closer to what
+I consider done when I review it.
+
+00:01:28.644 --> 00:01:32.379
+In the other direction, for
+well-scoped work where speed and
+
+00:01:32.382 --> 00:01:36.297
+cost matters, consider moving
+down to a faster, cheaper model.
+
+00:01:36.897 --> 00:01:41.860
+Let's say a bug report comes in for
+the shop with a clear reproduction.
+
+00:01:42.658 --> 00:01:45.194
+I can say what done looks
+like in one sentence.
+
+00:01:45.736 --> 00:01:50.112
+Sonnet is suited to well-scoped tasks
+like this one, and it's faster than
+
+00:01:50.112 --> 00:01:52.273
+Opus at half the price per token.
+
+00:01:52.939 --> 00:01:56.578
+For even simpler work, you can
+move further down to Haiku.
+
+00:01:57.038 --> 00:02:00.426
+It's the fastest and cheapest
+of the family, and it's well
+
+00:02:00.426 --> 00:02:04.634
+suited to high-volume, cost-sensitive
+work like summarization,
+
+00:02:04.636 --> 00:02:06.616
+classification, and routing.
+
+00:02:07.216 --> 00:02:12.050
+For example, the shop has an inbox for
+customer messages, and I can add a feature
+
+00:02:12.053 --> 00:02:14.237
+that sorts each one as it comes in.
+
+00:02:14.837 --> 00:02:19.154
+That feature runs on Haiku through
+the Claude API many times a day.
+
+00:02:19.795 --> 00:02:22.437
+You can also split one
+job across many models.
+
+00:02:22.808 --> 00:02:26.673
+Let's say the shop has to move
+to a new major version of its
+
+00:02:26.773 --> 00:02:28.953
+framework across every package.
+
+00:02:29.366 --> 00:02:34.896
+It's a large, complex migration,
+so I'll use Fable, but not every
+
+00:02:34.897 --> 00:02:37.105
+part of it needs its capabilities.
+
+00:02:37.385 --> 00:02:41.779
+Upgrading each package and fixing
+its tests is a well-scoped task.
+
+00:02:42.379 --> 00:02:46.753
+In Claude Code, the main session can
+hand parts like these to subagents.
+
+00:02:47.233 --> 00:02:50.583
+A subagent is a separate
+Claude with its own context.
+
+00:02:50.997 --> 00:02:53.949
+It does one part of the
+job and reports back.
+
+00:02:54.452 --> 00:02:58.528
+So I've asked Fable to lead the
+migration and hand those parts to Sonnet.
+
+00:02:59.028 --> 00:03:02.523
+Alright, hopefully that gives you
+a sense of where each model fits.
+
+00:03:02.762 --> 00:03:07.016
+Most tasks start on Opus, the
+daily driver for complex coding.
+
+00:03:07.616 --> 00:03:11.006
+The most ambitious, open-ended
+work goes to Fable.
+
+00:03:11.606 --> 00:03:15.902
+Well-scoped work where speed
+or cost matters goes to Sonnet.
+
+00:03:16.502 --> 00:03:20.225
+And high-volume, cost-sensitive
+work goes to Haiku.
+
+00:03:20.838 --> 00:03:25.504
+To measure how each model does on your
+own tasks and projects, follow the
+
+00:03:25.504 --> 00:03:27.326
+steps in the guide linked below.
+

@@ -1,0 +1,184 @@
+{
+ "loads": 1,
+ "url": "https://www.reddit.com/r/claude/comments/1xootop/i_thought_claude_was_just_another_llm_and_then_i/?sort=top",
+ "title": "I thought Claude was just another LLM and then I discovered recently how much you can do with Claude Code and now I'm genuinely addicted : r/claude",
+ "page_text": "",
+ "search_page": false,
+ "posts": [],
+ "post": {
+  "attrs": {
+   "id": "t3_1xootop",
+   "permalink": "/r/claude/comments/1xootop/i_thought_claude_was_just_another_llm_and_then_i/",
+   "post-title": "I thought Claude was just another LLM and then I discovered recently how much you can do with Claude Code and now I'm genuinely addicted",
+   "author": "StephCurrySauce",
+   "created-timestamp": "2026-11-05T17:34:19.282000+0000",
+   "score": "557",
+   "comment-count": "159",
+   "subreddit-prefixed-name": "r/claude",
+   "post-type": "text",
+   "domain": "self.claude",
+   "content-href": "https://www.reddit.com/r/claude/comments/1xootop/i_thought_claude_was_just_another_llm_and_then_i/",
+   "upvote-ratio": "0.8442521631644005",
+   "item-state": "UNMODERATED",
+   "post-language": "en"
+  },
+  "text": "thought claude was just another LLM, similar to chatgpt where it helps with simple projects, then i went down a rabbit hole of what i can hook it up with using powershell. i've not left my house for the last 5 days\n\ni've been training it to produce really good stuff.. and i'm on the simple pro plan. i'm very close to getting a higher tier if it gives me longer weekly limit. i have so many ideas rushing through my head that i keep trying out. it's too much.\n\nthis the best/worst thing i discovered. haven't slept properly either. it's all i got on my mind."
+ },
+ "comments": [
+  {
+   "attrs": {
+    "thingid": "t1_19s6shbgfi0f4",
+    "postid": "t3_1xootop",
+    "author": "GatePorters",
+    "created": "2026-11-05T17:46:09.246000+0000",
+    "score": "284",
+    "depth": "0",
+    "permalink": "/r/claude/comments/1xootop/comment/19s6shbgfi0f4/"
+   },
+   "text": "Yo dawg you are clearly expressing symptoms of hypomania in this post. That’s not dangerous on its own.\n\nAI Psychosis is a real phenomenon when you’re cascading the dopamine like this.\n\nEnsure you are grounding yourself in reality and have clear goals to keep yourself on a productive path. Don’t get carried away chasing the next head rush. Check yourself before you wreck yourself.\n\n——\n\nWhat’s the coolest thing you have worked on that you’re willing to discuss?"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s6ssby1abhf",
+    "parentid": "t1_19s6shbgfi0f4",
+    "postid": "t3_1xootop",
+    "author": "xyzzzzy",
+    "created": "2026-11-05T17:53:00.791000+0000",
+    "score": "42",
+    "depth": "1",
+    "permalink": "/r/claude/comments/1xootop/comment/19s6ssby1abhf/"
+   },
+   "text": "you got some downvotes but you speak truth. I have to check myself to not just implement every crazy idea I come up with. I can do anything now, but \"just because I can, doesn't mean I should\".\n\nThat said some crazy ideas are fun learning opportunities...or at least that's my cope"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s6svfqhg0wz",
+    "parentid": "t1_19s6shbgfi0f4",
+    "postid": "t3_1xootop",
+    "author": "Jon_Henderson_Music",
+    "created": "2026-11-05T17:54:56.826000+0000",
+    "score": "28",
+    "depth": "1",
+    "permalink": "/r/claude/comments/1xootop/comment/19s6svfqhg0wz/"
+   },
+   "text": "Good point. I went into a dopamine maze making this but I'm really happy with it now and have taken a break on updates. Trying to figure out where to take it next- probably making the UI and flow more beginner and user friendly. For music theory nerds out there: Fretbot: Interactive Guitar Theory"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s6zimtfx38i",
+    "parentid": "t1_19s6svfqhg0wz",
+    "postid": "t3_1xootop",
+    "author": "Lynxs_Reddit",
+    "created": "2026-11-05T20:23:54.876000+0000",
+    "score": "3",
+    "depth": "2",
+    "permalink": "/r/claude/comments/1xootop/comment/19s6zimtfx38i/"
+   },
+   "text": "Bro i love the website and the UI, fantastic job, is there any way i can use this to start learning the guitar knowing i can BARELY play the basic chords"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s6zni3x5gv9",
+    "parentid": "t1_19s6zimtfx38i",
+    "postid": "t3_1xootop",
+    "author": "Jon_Henderson_Music",
+    "created": "2026-11-05T20:26:56.823000+0000",
+    "score": "2",
+    "depth": "3",
+    "permalink": "/r/claude/comments/1xootop/comment/19s6zni3x5gv9/"
+   },
+   "text": "Thanks man! Definitely! I would start with the basics like learning the standard major and minor triad chord shapes, minor pentatonic scale, and major scale. You can slow down scales and even see the pick stroke recommendations. I plan on adding some more step phases at some point to better guide folks based on where they are with their current knowledge"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s71p8a33der",
+    "parentid": "t1_19s6svfqhg0wz",
+    "postid": "t3_1xootop",
+    "author": "Duanedrop",
+    "created": "2026-11-05T21:12:51.775000+0000",
+    "score": "1",
+    "depth": "2",
+    "permalink": "/r/claude/comments/1xootop/comment/19s71p8a33der/"
+   },
+   "text": "This is exactly what I was looking for today. Thx gonna use it."
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s8aqinfq751",
+    "parentid": "t1_19s71p8a33der",
+    "postid": "t3_1xootop",
+    "author": "Jon_Henderson_Music",
+    "created": "2026-11-06T14:02:34.359000+0000",
+    "score": "1",
+    "depth": "3",
+    "permalink": "/r/claude/comments/1xootop/comment/19s8aqinfq751/"
+   },
+   "text": "Thanks! Hope it helps!"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s7iwzrcg142",
+    "parentid": "t1_19s6svfqhg0wz",
+    "postid": "t3_1xootop",
+    "author": "Hefty-Measurement508",
+    "created": "2026-11-06T03:38:50.437000+0000",
+    "score": "1",
+    "depth": "2",
+    "permalink": "/r/claude/comments/1xootop/comment/19s7iwzrcg142/"
+   },
+   "text": "Yo this is sick"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s7lrcd87uec",
+    "parentid": "t1_19s7iwzrcg142",
+    "postid": "t3_1xootop",
+    "author": "Jon_Henderson_Music",
+    "created": "2026-11-06T04:42:34.953000+0000",
+    "score": "2",
+    "depth": "3",
+    "permalink": "/r/claude/comments/1xootop/comment/19s7lrcd87uec/"
+   },
+   "text": "Thanks dude- enjoy!"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s7ar574n0dh",
+    "parentid": "t1_19s6shbgfi0f4",
+    "postid": "t3_1xootop",
+    "author": "GoluMoluArun",
+    "created": "2026-11-06T00:35:50.200000+0000",
+    "score": "22",
+    "depth": "1",
+    "permalink": "/r/claude/comments/1xootop/comment/19s7ar574n0dh/"
+   },
+   "text": "Wait is this a real thing?\n\nAs a guy w ADHD claude has helped me explore all those ideas and make things for me but also accelerated by brain a lot - now my brain can't stop thinking and getting this rush I'm gonna do this and I'm gonna do that specially when it understands what say even when I type fastly with lots of error and shocks me with it's own new addition to my work which makes it better.\nLike genuinely I feel happy in the sense wow now I can do all the things I wanted to try, learn or understand and by brain won't stop. I check at the weekly limits very frequently to make sure I'm not running out of creds. Hoping to get by the week\n\nIs this bad chat\n\nEdit: sounds pretty bad tbh now that I read my own msg, but I'd like to talk on it more"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s7bdes0vfs3",
+    "parentid": "t1_19s7ar574n0dh",
+    "postid": "t3_1xootop",
+    "author": "GatePorters",
+    "created": "2026-11-06T00:49:42.217000+0000",
+    "score": "7",
+    "depth": "2",
+    "permalink": "/r/claude/comments/1xootop/comment/19s7bdes0vfs3/"
+   },
+   "text": "It’s only bad if it starts affecting you or those around you in a negative way.\n\nAs long as you are taking care of yourself and your responsibilities, it can just be passion.\n\nThat’s why it’s important to ground yourself in reality"
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19s7fkta6px2a",
+    "parentid": "t1_19s7ar574n0dh",
+    "postid": "t3_1xootop",
+    "author": "-PM_ME_UR_SECRETS-",
+    "created": "2026-11-06T02:23:59.682000+0000",
+    "score": "3",
+    "depth": "2",
+    "permalink": "/r/claude/comments/1xootop/comment/19s7fkta6px2a/"
+   },
+   "text": "Just make sure you get sleep lol"
+  }
+ ]
+}

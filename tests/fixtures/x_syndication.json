@@ -1,0 +1,169 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 9,
+ "lang": "zh",
+ "possibly_sensitive": false,
+ "created_at": "2026-11-04T00:06:00.000Z",
+ "display_text_range": [
+  0,
+  146
+ ],
+ "entities": {
+  "media": [
+   {
+    "display_url": "pic.x.com/klNefwolrr",
+    "expanded_url": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1",
+    "indices": [
+     147,
+     170
+    ],
+    "url": "https://t.co/klNefwolrr"
+   }
+  ]
+ },
+ "id_str": "2117770299454177696",
+ "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住 https://t.co/klNefwolrr",
+ "user": {
+  "id_str": "1865771438671810560",
+  "name": "lumxss",
+  "screen_name": "bkdgiffug",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_normal.jpg"
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2117770299454177696"
+  ],
+  "editable_until_msecs": "1793754360000",
+  "edits_remaining": "5",
+  "is_edit_eligible": true
+ },
+ "mediaDetails": [
+  {
+   "display_url": "pic.x.com/klNefwolrr",
+   "expanded_url": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    147,
+    170
+   ],
+   "media_url_https": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png",
+   "original_info": {
+    "focus_rects": [
+     {
+      "h": 479,
+      "w": 855,
+      "x": 0,
+      "y": 356
+     },
+     {
+      "h": 855,
+      "w": 855,
+      "x": 0,
+      "y": 27
+     },
+     {
+      "h": 882,
+      "w": 774,
+      "x": 40,
+      "y": 0
+     },
+     {
+      "h": 882,
+      "w": 441,
+      "x": 207,
+      "y": 0
+     },
+     {
+      "h": 882,
+      "w": 855,
+      "x": 0,
+      "y": 0
+     }
+    ],
+    "height": 882,
+    "width": 855
+   },
+   "sizes": {
+    "large": {
+     "h": 882,
+     "resize": "fit",
+     "w": 855
+    },
+    "medium": {
+     "h": 882,
+     "resize": "fit",
+     "w": 855
+    },
+    "small": {
+     "h": 680,
+     "resize": "fit",
+     "w": 659
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "photo",
+   "url": "https://t.co/klNefwolrr"
+  }
+ ],
+ "photos": [
+  {
+   "backgroundColor": {
+    "red": 204,
+    "green": 214,
+    "blue": 221
+   },
+   "cropCandidates": [
+    {
+     "h": 479,
+     "w": 855,
+     "x": 0,
+     "y": 356
+    },
+    {
+     "h": 855,
+     "w": 855,
+     "x": 0,
+     "y": 27
+    },
+    {
+     "h": 882,
+     "w": 774,
+     "x": 40,
+     "y": 0
+    },
+    {
+     "h": 882,
+     "w": 441,
+     "x": 207,
+     "y": 0
+    },
+    {
+     "h": 882,
+     "w": 855,
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "expandedUrl": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1",
+   "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png",
+   "width": 855,
+   "height": 882
+  }
+ ],
+ "conversation_count": 14,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false,
+ "note_tweet": {
+  "id": "Tm90ZVR3ZWV0UmVzdWx0czoyMTE3NzcwMjk5MjYxMjg0MzUy"
+ }
+}

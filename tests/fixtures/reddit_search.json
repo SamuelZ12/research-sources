@@ -1,0 +1,242 @@
+{
+ "loads": 1,
+ "url": "https://www.reddit.com/search/?q=claude+code&type=posts&t=month",
+ "title": "claude code - Reddit Search!",
+ "page_text": "claude code - Reddit Search!",
+ "search_page": true,
+ "posts": [
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xootop",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "I thought Claude was just another LLM and then I discovered recently how much you can do with Claude Code and now I'm genuinely addicted"
+    },
+    "profile": {
+     "id": "t2_1yvpekpctp",
+     "name": "StephCurrySauce"
+    },
+    "subreddit": {
+     "id": "t5_2zbza",
+     "name": "claude",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": null,
+   "href": "/r/claude/comments/1xootop/i_thought_claude_was_just_another_llm_and_then_i/",
+   "ts": "2026-11-05T17:34:19.282000+0000",
+   "counts": [
+    [
+     "557",
+     "votes"
+    ],
+    [
+     "159",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xlwzs3",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "Switched from Codex to Claude Code on the same $20 plan, and I'm blown away"
+    },
+    "profile": {
+     "id": "t2_12x87x55jf",
+     "name": "Accomplished-Sky773"
+    },
+    "subreddit": {
+     "id": "t5_2t1qf",
+     "name": "codex",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "I recently switched from Codex to Claude Code, and I am blown away.",
+   "href": "/r/codex/comments/1xlwzs3/switched_from_codex_to_claude_code_on_the_same_20/",
+   "ts": "2026-11-02T13:20:41.504000+0000",
+   "counts": [
+    [
+     "1028",
+     "votes"
+    ],
+    [
+     "382",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xnnqkg",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "Show me Claude Code projects that DON’T look vibecoded"
+    },
+    "profile": {
+     "id": "t2_7hq4s22y",
+     "name": "mullemeeldib"
+    },
+    "subreddit": {
+     "id": "t5_7t8hvt",
+     "name": "ClaudeAI",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "design your UI yourself first in a tool like Figma and then give that to Claude as a reference.",
+   "href": "/r/ClaudeAI/comments/1xnnqkg/show_me_claude_code_projects_that_dont_look/",
+   "ts": "2026-11-04T13:06:41.492000+0000",
+   "counts": [
+    [
+     "1242",
+     "votes"
+    ],
+    [
+     "1253",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xloh1l",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "Apparently, using Claude Code to build something is now considered stealing."
+    },
+    "profile": {
+     "id": "t2_5ziz4chl",
+     "name": "pablojuega"
+    },
+    "subreddit": {
+     "id": "t5_dp6k3k",
+     "name": "ClaudeCode",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "So I used Claude Code to build my own version from scratch, with custom character sheets, vehicle mechanics, and features I always wanted.",
+   "href": "/r/ClaudeCode/comments/1xloh1l/apparently_using_claude_code_to_build_something/",
+   "ts": "2026-11-02T05:05:02.115000+0000",
+   "counts": [
+    [
+     "594",
+     "votes"
+    ],
+    [
+     "529",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xn82hc",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "Goldman Sachs restricted Claude Code to engineers only"
+    },
+    "profile": {
+     "id": "t2_1zscm5uw48",
+     "name": "KookyOky"
+    },
+    "subreddit": {
+     "id": "t5_dp6k3k",
+     "name": "ClaudeCode",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "They probably don't want a bunch of inexperienced people LARPing as engineers because code is liability",
+   "href": "/r/ClaudeCode/comments/1xn82hc/goldman_sachs_restricted_claude_code_to_engineers/",
+   "ts": "2026-11-03T23:02:00.320000+0000",
+   "counts": [
+    [
+     "975",
+     "votes"
+    ],
+    [
+     "235",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1x229rr",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "What is the most ambitious thing you've built with Claude Code?"
+    },
+    "profile": {
+     "id": "t2_2278r9f4ga",
+     "name": "jdottwotack"
+    },
+    "subreddit": {
+     "id": "t5_dp6k3k",
+     "name": "ClaudeCode",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "a developer recently used parallel Claude Opus 5.5 agents to rebuild seven Adobe apps (Photoshop, Premiere, Illustrator, Lightroom, After Effects, InDesign and Acrobat) in Rust",
+   "href": "/r/ClaudeCode/comments/1x229rr/what_is_the_most_ambitious_thing_youve_built_with/",
+   "ts": "2026-10-10T01:07:11.676000+0000",
+   "counts": [
+    [
+     "396",
+     "votes"
+    ],
+    [
+     "600",
+     "comments"
+    ]
+   ]
+  },
+  {
+   "context": {
+    "post": {
+     "id": "t3_1xm1s40",
+     "nsfw": false,
+     "spoiler": false,
+     "title": "What's with the Claude Code obsession lately?"
+    },
+    "profile": {
+     "id": "t2_1692gf",
+     "name": "MikeRoach125"
+    },
+    "subreddit": {
+     "id": "t5_2mz3dr",
+     "name": "ObsidianMD",
+     "nsfw": false,
+     "quarantined": false
+    }
+   },
+   "snippet": "those who really just need a proper memory+recall extension for their Claude code but either don't know about that rabbit hole or just want the lazy plaintext approach",
+   "href": "/r/ObsidianMD/comments/1xm1s40/whats_with_the_claude_code_obsession_lately/",
+   "ts": "2026-11-02T16:26:00.770000+0000",
+   "counts": [
+    [
+     "398",
+     "votes"
+    ],
+    [
+     "145",
+     "comments"
+    ]
+   ]
+  }
+ ],
+ "post": null,
+ "comments": []
+}

@@ -1,0 +1,301 @@
+"""`rsrc reddit`: search and threads, read from real pages in a background Ego tab.
+
+Reddit blocks every non-browser client, with or without a login cookie (and in-page `fetch()`
+of its JSON and fragment endpoints), with "You've been blocked by network security" (tested
+2026-11-06), so each command runs `reddit_page.js` through `ego-browser nodejs`: one page load
+in a throwaway task space, fields copied out of the DOM, one `RSRC_REDDIT <json>` line back.
+This module maps that JSON.
+"""
+
+import json
+import os
+import re
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlencode, quote
+
+from rsrc import checks, proc
+from rsrc import envelope as env
+
+CHANNEL = "reddit"
+BACKEND = "ego-browser"
+SOURCE = "reddit"
+BASE = "https://www.reddit.com"
+TIMEOUT = 120
+MAX_SCROLLS = 4
+MARKER = "RSRC_REDDIT "
+STDERR_TAIL = 200
+SCRIPT = Path(__file__).with_name("reddit_page.js")
+
+TIMES = ("hour", "day", "week", "month", "year", "all")
+SEARCH_SORTS = ("relevance", "hot", "top", "new", "comments")
+READ_SORTS = ("top", "best", "new", "controversial", "old", "qa")
+MAX_LIMIT = 100
+MAX_COMMENTS = 200
+
+# Read by name so the viewer's own fields (user-id, user-logged-in) never reach the output.
+POST_ATTRS = ("id", "permalink", "post-title", "author", "created-timestamp", "score", "comment-count",
+              "subreddit-prefixed-name", "post-type", "domain", "content-href", "upvote-ratio",
+              "item-state", "post-language")
+COMMENT_ATTRS = ("thingid", "parentid", "postid", "author", "created", "score", "depth", "permalink",
+                 "collapsed")
+
+RATE_MARKERS = ("whoa there, pardner", "too many requests")
+NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
+
+_POST_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com/(?:(?:r|u|user)/[^/]+/)?"
+                       r"comments/([a-z0-9]+)", re.IGNORECASE)
+_SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE)
+_SHARE_URL = re.compile(r"^https?://(?:www\.)?reddit\.com/r/[^/]+/s/", re.IGNORECASE)
+_BARE_ID = re.compile(r"^(?:t3_)?([a-z0-9]{4,12})$", re.IGNORECASE)
+_SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{2,21}$")
+
+
+def register(subparsers) -> None:
+    parser = subparsers.add_parser("reddit", help="Reddit search and threads, via a background Ego tab",
+                                   description="Loads real reddit.com pages in Ego Lite (must be running).")
+    actions = parser.add_subparsers(dest="action", metavar="ACTION", required=True)
+
+    search = actions.add_parser("search", help="search posts")
+    search.add_argument("query")
+    search.add_argument("--subreddit", help="search one subreddit (name without r/)")
+    search.add_argument("--time", choices=TIMES, default="month", help="time range (default month)")
+    search.add_argument("--sort", choices=SEARCH_SORTS, default="relevance", help="default relevance")
+    search.add_argument("--limit", type=int, default=25, help=f"results, 1-{MAX_LIMIT} (default 25)")
+    search.set_defaults(run=run_search, action="search")
+
+    read = actions.add_parser("read", help="one thread: the post and its top comments")
+    read.add_argument("post", help="post URL, redd.it link, t3_ID or ID")
+    read.add_argument("--sort", choices=READ_SORTS, default="top", help="comment order (default top)")
+    read.add_argument("--comments", type=int, default=50, help=f"comments, 0-{MAX_COMMENTS} (default 50)")
+    read.set_defaults(run=run_read, action="read")
+
+
+# --- runs ------------------------------------------------------------------------
+
+def run_search(args, ctx) -> dict:
+    input_ = {"query": args.query, "subreddit": args.subreddit, "time": args.time, "sort": args.sort,
+              "limit": args.limit}
+    if not args.query.strip():
+        return env.usage(CHANNEL, "search", "QUERY must not be empty")
+    if not 1 <= args.limit <= MAX_LIMIT:
+        return env.usage(CHANNEL, "search", f"--limit must be between 1 and {MAX_LIMIT}, got {args.limit}")
+    subreddit = (args.subreddit or "").strip().strip("/").removeprefix("r/").removeprefix("R/") or None
+    if subreddit and not _SUBREDDIT.match(subreddit):
+        return env.usage(CHANNEL, "search", f"--subreddit {args.subreddit!r} is not a subreddit name")
+    url = search_url(args.query, subreddit, args.time, args.sort)
+    page, failure, attempt = _load(ctx, {"action": "search", "url": url, "limit": args.limit,
+                                         "max_scrolls": MAX_SCROLLS})
+    meta = {"attempts": [attempt]}
+    if failure:
+        return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta, error=env.error(*failure))
+    records = page.get("posts") or []
+    if not records:
+        if page.get("search_page"):
+            attempt["outcome"] = "no_results"
+            return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta)
+        code, message = page_failure(page, "search")
+        attempt["outcome"] = code
+        return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta, error=env.error(code, message))
+    items, seen = [], set()
+    for record in records:
+        item = search_item(record)
+        if item and item["id"] not in seen:
+            seen.add(item["id"])
+            items.append(item)
+    # Results on the page but none readable: a markup change must fail, not read as an empty search.
+    if not items:
+        code, message = page_failure(page, "search")
+        attempt["outcome"] = code
+        return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta, error=env.error(code, message))
+    items = items[:args.limit]
+    if len(items) < args.limit:
+        why = (f"stopped after {MAX_SCROLLS} scrolls" if page.get("loads", 0) > MAX_SCROLLS
+               else "Reddit loaded no more results")
+        meta["notes"] = [f"{len(items)} of --limit {args.limit}: {why}"]
+    return env.envelope(CHANNEL, "search", input_, BACKEND, items, meta=meta)
+
+
+def run_read(args, ctx) -> dict:
+    input_ = {"post": args.post, "sort": args.sort, "comments": args.comments}
+    if not 0 <= args.comments <= MAX_COMMENTS:
+        return env.usage(CHANNEL, "read", f"--comments must be between 0 and {MAX_COMMENTS}, got {args.comments}")
+    post_id, problem = parse_post(args.post)
+    if problem:
+        return env.usage(CHANNEL, "read", problem)
+    url = f"{BASE}/comments/{post_id}/?{urlencode({'sort': args.sort})}"
+    page, failure, attempt = _load(ctx, {"action": "read", "url": url,
+                                         "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS}})
+    meta = {"attempts": [attempt]}
+    if failure:
+        return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
+    if not page.get("post"):
+        code, message = page_failure(page, "read")
+        attempt["outcome"] = code
+        return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(code, message))
+    post = post_item(page["post"])
+    if post["id"] != f"t3_{post_id}":
+        attempt["outcome"] = "url_mismatch"
+        meta["rejected"] = [{"url": post["url"], "reason": "url_mismatch"}]
+        return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta,
+                            error=env.error("url_mismatch", f"asked for t3_{post_id}, page shows {post['id']}"))
+    comments = [comment_item(c) for c in page.get("comments") or []][:args.comments]
+    return env.envelope(CHANNEL, "read", input_, BACKEND, [post, *comments], meta=meta)
+
+
+# --- inputs ----------------------------------------------------------------------
+
+def search_url(query, subreddit, time_range, sort) -> str:
+    params = {"q": query, "type": "posts", "t": time_range, "sort": sort}
+    if subreddit:
+        params["restrict_sr"] = "1"
+        return f"{BASE}/r/{quote(subreddit)}/search/?{urlencode(params)}"
+    return f"{BASE}/search/?{urlencode(params)}"
+
+
+def parse_post(value: str) -> tuple[str | None, str | None]:
+    """(base36 post id, None) or (None, usage message)."""
+    value = value.strip()
+    if _SHARE_URL.match(value):
+        return None, "share links (/r/…/s/…) are not supported; open it and pass the /comments/ URL"
+    for pattern in (_POST_URL, _SHORT_URL, _BARE_ID):
+        match = pattern.match(value)
+        if match:
+            return match.group(1).lower(), None
+    return None, f"not a Reddit post URL or ID: {value!r}"
+
+
+# --- Ego -------------------------------------------------------------------------
+
+def script(input_: dict) -> str:
+    """The page script with its input as a JSON literal (never string-interpolated)."""
+    return f"const INPUT = {json.dumps(input_)};\n" + SCRIPT.read_text()
+
+
+def _load(ctx, input_: dict) -> tuple[dict | None, tuple[str, str] | None, dict]:
+    """(page JSON, None, attempt) or (None, (code, message), attempt)."""
+    input_ = {**input_, "space": f"rsrc reddit {os.getpid()}-{time.time_ns()}"}
+    started = time.monotonic()
+    try:
+        result = (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", script(input_)], TIMEOUT)
+    except proc.Missing:
+        return None, ("config", "ego-browser not found; install Ego Lite and keep it running"), \
+            env.attempt(BACKEND, "config")
+    except proc.Timeout:
+        # The kill skips the script's `finally`, so its task space stays open in Ego. The script's
+        # own waits total about 80 s, so only a hung Ego gets here.
+        return None, ("timeout", f"ego-browser did not finish within {TIMEOUT} s"), \
+            env.attempt(BACKEND, "timeout", ms=env.elapsed_ms(started))
+    ms = env.elapsed_ms(started)
+    line = result_line(result, MARKER)
+    page = None
+    if line is not None:
+        try:
+            page = json.loads(line[len(MARKER):])
+        except ValueError:
+            page = None
+    if result.code != 0 or not isinstance(page, dict):
+        tail = output_tail(result, MARKER)
+        message = f"ego-browser exited with code {result.code}" if result.code else "ego-browser printed no result"
+        return None, ("upstream_error", f"{message}: {tail}" if tail else message), \
+            env.attempt(BACKEND, "upstream_error", ms=ms)
+    return page, None, env.attempt(BACKEND, "ok", page.get("loads"), ms)
+
+
+def _lines(result: proc.Result) -> list[str]:
+    """Output lines of both streams: ego-browser prints the script's console output on stderr.
+    Split on "\\n" only: JSON.stringify leaves U+2028/U+2029/U+0085 unescaped, and
+    str.splitlines() would cut a result line at them."""
+    return [line.rstrip("\r") for line in (result.stdout + "\n" + result.stderr).split("\n")]
+
+
+def result_line(result: proc.Result, marker: str) -> str | None:
+    """The last output line starting with `marker`."""
+    return next((line for line in reversed(_lines(result)) if line.startswith(marker)), None)
+
+
+def output_tail(result: proc.Result, marker: str) -> str:
+    """Last STDERR_TAIL chars of output, without `marker` lines (a page's worth of JSON)."""
+    lines = [line for line in _lines(result) if line.strip() and not line.startswith(marker)]
+    return "\n".join(lines)[-STDERR_TAIL:]
+
+
+def page_failure(page: dict, action: str) -> tuple[str, str]:
+    """Code and message for a page without the expected structure."""
+    title, text = page.get("title") or "", page.get("page_text") or ""
+    haystack = f"{title}\n{text[:checks.TEXT_WINDOW]}".lower()
+    where = page.get("url") or "the page"
+    if any(marker in haystack for marker in RATE_MARKERS):
+        return "rate_limited", f"Reddit rate-limited the session at {where}; stop and retry later"
+    if checks.is_block_page(title, text):
+        return "blocked", f"Reddit showed a block or login page at {where}"
+    if action == "read" and any(marker in haystack for marker in NOT_FOUND_MARKERS):
+        return "not_found", f"no such post at {where}"
+    return "upstream_error", f"unrecognized {action} page at {where} (title {title!r}); Reddit's markup may have changed"
+
+
+# --- mapping ---------------------------------------------------------------------
+
+def search_item(record: dict) -> dict | None:
+    context = record.get("context") or {}
+    post = context.get("post") or {}
+    if not post.get("id"):
+        return None
+    counts = {}
+    for number, label in record.get("counts") or []:
+        key = {"votes": "score", "vote": "score", "comments": "comments", "comment": "comments"}.get(label)
+        value = _int(number)
+        if key and value is not None:
+            counts[key] = value
+    href = record.get("href")
+    return env.item(id=post["id"], url=_absolute(href), title=post.get("title"),
+                    author=(context.get("profile") or {}).get("name"), published_at=_utc(record.get("ts")),
+                    text=record.get("snippet"), source=SOURCE, engagement=counts or None, raw=record)
+
+
+def post_item(post: dict) -> dict:
+    attrs = post.get("attrs") or {}
+    counts = {k: v for k, v in (("score", _int(attrs.get("score"))),
+                                ("comments", _int(attrs.get("comment-count")))) if v is not None}
+    return env.item(id=attrs.get("id"), url=_absolute(attrs.get("permalink")), title=attrs.get("post-title"),
+                    author=attrs.get("author"), published_at=_utc(attrs.get("created-timestamp")),
+                    text=post.get("text") or None, source=SOURCE, engagement=counts or None, raw=post)
+
+
+def comment_item(comment: dict) -> dict:
+    attrs = comment.get("attrs") or {}
+    score = _int(attrs.get("score"))
+    return env.item(id=attrs.get("thingid"), url=_absolute(attrs.get("permalink")), title=None,
+                    author=attrs.get("author"), published_at=_utc(attrs.get("created")),
+                    text=comment.get("text") or None, source=SOURCE,
+                    engagement={"score": score} if score is not None else None, raw=comment)
+
+
+def _absolute(path):
+    if not path:
+        return None
+    return path if path.startswith("http") else BASE + path
+
+
+def _utc(stamp):
+    """Reddit's `2026-11-05T17:34:19.282000+0000` as `2026-11-05T17:34:19Z`; None if unreadable."""
+    if not stamp:
+        return None
+    try:
+        moment = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%S.%f%z")
+    except ValueError:
+        try:
+            moment = datetime.fromisoformat(stamp)
+        except ValueError:
+            return None
+    if moment.tzinfo is None:
+        return None
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

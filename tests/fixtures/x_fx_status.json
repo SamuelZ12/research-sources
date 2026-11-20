@@ -1,0 +1,222 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/bkdgiffug/status/2117770299454177696",
+  "id": "2117770299454177696",
+  "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://github.com/mem0ai/mem0\nHindsight：保留、回忆，再反思\n🔗 https://github.com/vectorize-io/hindsight\n\nmemU：智能体长期记忆基础设施\n🔗 https://github.com/NevaMind-AI/memU\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://github.com/topoteretes/cognee\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://github.com/getzep/graphiti\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://github.com/volcengine/OpenViking\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://github.com/letta-ai/letta\n\nLetta Code：编程智能体的持久记忆\n🔗 https://github.com/letta-ai/letta-code\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://github.com/mem0ai/openmemory\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://github.com/vectorize-io/agent-memory-benchmark\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+  "raw_text": {
+   "text": "AI 一开新对话就失忆，这毛病挺让人头疼——这 10 个开源项目可以先收着。\n\n用智能体最烦的往往不是它不够聪明，而是记不住。聊过的需求、踩过的坑，新会话一开全清零，还得从头交代一遍。\n\n开源圈早把\"记忆\"卷起来了。10 个 GitHub 项目按用途分成四类，直接抄作业就行。\n\n先让它记得住\n\nMem0：给智能体加持久记忆，66K+ 星\n🔗 https://t.co/FmVPuuMtf8\nHindsight：保留、回忆，再反思\n🔗 https://t.co/TBAoh9JuGB\n\nmemU：智能体长期记忆基础设施\n🔗 https://t.co/in8kSuw3EH\n再把记忆变成知识\n\nCognee：把文档、代码、对话转成知识图谱\n🔗 https://t.co/TRVXg0MuRF\nGraphiti：记住事实，也记住事实怎么随时间变化\n🔗 https://t.co/QBpFIjljh1\n\nOpenViking：智能体的上下文和记忆基础设施\n🔗 https://t.co/l4dg6rTDvO\n\n让智能体有状态\nLetta：跨会话保留记忆和身份\n🔗 https://t.co/R1Ah10ZFjL\n\nLetta Code：编程智能体的持久记忆\n🔗 https://t.co/2W9rysxFWE\n跨整个技术栈都记得住\n\nOpenMemory：AI 应用的开放记忆基础设施\n🔗 https://t.co/gUoBMq4jkv\nAgent Memory Benchmark：测智能体到底记得多好，别光听宣传\n🔗 https://t.co/u7kwDlPl6V\n\n这些项目补的是同一个循环：体验、记住、连接、检索、行动、更新。断一环，智能体就又失忆了。",
+   "display_text_range": [
+    0,
+    737
+   ],
+   "facets": [
+    {
+     "type": "media",
+     "indices": [
+      147,
+      170
+     ],
+     "id": "2117572319254286336",
+     "display": "pic.x.com/klNefwolrr",
+     "original": "https://t.co/klNefwolrr",
+     "replacement": "https://x.com/bkdgiffug/status/2117770299454177696/photo/1"
+    },
+    {
+     "type": "url",
+     "indices": [
+      172,
+      195
+     ],
+     "original": "https://t.co/FmVPuuMtf8",
+     "replacement": "https://github.com/mem0ai/mem0",
+     "display": "github.com/mem0ai/mem0"
+    },
+    {
+     "type": "url",
+     "indices": [
+      218,
+      241
+     ],
+     "original": "https://t.co/TBAoh9JuGB",
+     "replacement": "https://github.com/vectorize-io/hindsight",
+     "display": "github.com/vectorize-io/h…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      262,
+      285
+     ],
+     "original": "https://t.co/in8kSuw3EH",
+     "replacement": "https://github.com/NevaMind-AI/memU",
+     "display": "github.com/NevaMind-AI/me…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      321,
+      344
+     ],
+     "original": "https://t.co/TRVXg0MuRF",
+     "replacement": "https://github.com/topoteretes/cognee",
+     "display": "github.com/topoteretes/co…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      374,
+      397
+     ],
+     "original": "https://t.co/QBpFIjljh1",
+     "replacement": "https://github.com/getzep/graphiti",
+     "display": "github.com/getzep/graphiti"
+    },
+    {
+     "type": "url",
+     "indices": [
+      427,
+      450
+     ],
+     "original": "https://t.co/l4dg6rTDvO",
+     "replacement": "https://github.com/volcengine/OpenViking",
+     "display": "github.com/volcengine/Ope…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      479,
+      502
+     ],
+     "original": "https://t.co/R1Ah10ZFjL",
+     "replacement": "https://github.com/letta-ai/letta",
+     "display": "github.com/letta-ai/letta"
+    },
+    {
+     "type": "url",
+     "indices": [
+      528,
+      551
+     ],
+     "original": "https://t.co/2W9rysxFWE",
+     "replacement": "https://github.com/letta-ai/letta-code",
+     "display": "github.com/letta-ai/letta…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      592,
+      615
+     ],
+     "original": "https://t.co/gUoBMq4jkv",
+     "replacement": "https://github.com/mem0ai/openmemory",
+     "display": "github.com/mem0ai/openmem…"
+    },
+    {
+     "type": "url",
+     "indices": [
+      658,
+      681
+     ],
+     "original": "https://t.co/u7kwDlPl6V",
+     "replacement": "https://github.com/vectorize-io/agent-memory-benchmark",
+     "display": "github.com/vectorize-io/a…"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "bkdgiffug",
+   "url": "https://x.com/bkdgiffug",
+   "id": "1865771438671810560",
+   "followers": 34609,
+   "following": 7316,
+   "likes": 5,
+   "media_count": 2637,
+   "statuses": 2856,
+   "name": "lumxss",
+   "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+   "raw_description": {
+    "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+    "facets": []
+   },
+   "location": "",
+   "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+   "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+   "joined": "Sun Dec 08 14:52:37 +0000 2024",
+   "protected": false,
+   "website": null,
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 14,
+  "reposts": 3,
+  "likes": 9,
+  "bookmarks": 5,
+  "quotes": 0,
+  "embed_card": "summary_large_image",
+  "created_at": "Wed Nov 04 00:06:00 +0000 2026",
+  "created_timestamp": 1793750760,
+  "possibly_sensitive": false,
+  "views": 1140,
+  "is_note_tweet": true,
+  "community_note": null,
+  "lang": "zh",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "type": "photo",
+     "id": "2117572319254286336",
+     "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+     "width": 855,
+     "height": 882
+    }
+   ],
+   "photos": [
+    {
+     "type": "photo",
+     "id": "2117572319254286336",
+     "url": "https://pbs.twimg.com/media/HWMgzhNaEAAwev1.png?name=orig",
+     "width": 855,
+     "height": 882
+    }
+   ]
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "bkdgiffug",
+  "url": "https://x.com/bkdgiffug",
+  "id": "1865771438671810560",
+  "followers": 34609,
+  "following": 7316,
+  "likes": 5,
+  "media_count": 2637,
+  "statuses": 2856,
+  "name": "lumxss",
+  "description": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+  "raw_description": {
+   "text": "web3撸毛，日常分享，Cryptox AI重度用户AI工具分享",
+   "facets": []
+  },
+  "location": "",
+  "banner_url": "https://pbs.twimg.com/profile_banners/1865771438671810560/1733669622",
+  "avatar_url": "https://pbs.twimg.com/profile_images/1865771523463954432/cSwn54mJ_200x200.jpg",
+  "joined": "Sun Dec 08 14:52:37 +0000 2024",
+  "protected": false,
+  "website": null,
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}
