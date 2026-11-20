@@ -2,11 +2,13 @@
 
 `rsrc` is a command-line tool that lets an AI agent read the places web search reaches poorly: X, Reddit, Hacker News, YouTube transcripts, Polymarket odds and GitHub. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit or a block page. It is read-only and needs no API keys.
 
-- **No API keys.** X, Hacker News, Polymarket and YouTube work without a login. GitHub uses your `gh` login; Reddit goes through the Ego Lite browser on your machine.
+**Status:** early, with one maintainer. Developed and tested on macOS only. Since 2026-11-19 FxTwitter's search has answered HTTP 404, so `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional).
+
+- **No API keys.** X, Hacker News, Polymarket and YouTube work without a login. GitHub uses your `gh` login. Reddit runs in [Ego Lite](https://lite.ego.app/), a browser app on your machine, and acts as your Reddit account if that browser is logged in to Reddit.
 - **One output shape.** Six sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
-- **Stops on rate limits.** A 429 ends the command. No retries, and no switching backends to get around it.
-- **No Python dependencies.** Standard library only, about 3,400 lines, with 909 tests that run offline.
+- **Stops on rate limits.** A 429 ends the command. It is never retried, and no other backend is tried to get around it.
+- **No Python dependencies.** Standard library only, about 3,400 lines, with over 900 tests that run offline.
 - **Ships with an agent skill.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
 - **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. [Method and limits](docs/comparisons.md).
 
@@ -54,8 +56,6 @@ On a Mac with Homebrew: `brew install yt-dlp deno gh`.
 
 Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) and `ffmpeg`. The skill uses them to read the videos and GIFs attached to X posts, and `youtube read` tries `vidscribe` on a short video that has no captions at all.
 
-Developed and tested on macOS only.
-
 ## Give it to your agent
 
 `rsrc` is built to be run by an agent. [`SKILL.md`](SKILL.md) is the agent's manual: it maps questions to commands, explains each field of the output, and says when to stop. Put it where your agent loads skills. For Claude Code:
@@ -72,7 +72,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 
 | Channel | Commands |
 |---|---|
-| X | `rsrc x search QUERY --since YYYY-MM-DD`, `rsrc x read URL_OR_ID…`, `rsrc x replies URL_OR_ID` |
+| X | `rsrc x search QUERY [--since YYYY-MM-DD]`, `rsrc x read URL_OR_ID…`, `rsrc x replies URL_OR_ID` |
 | Reddit | `rsrc reddit search QUERY`, `rsrc reddit read URL_OR_ID` |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
@@ -170,7 +170,7 @@ A change is welcome when it keeps these true:
 
 - **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
 - **Runtime dependencies stay empty.** Programs such as `gh` and `yt-dlp` are run as subprocesses, never imported.
-- **A rate limit stops the command.** No retries and no fallback to another backend.
+- **A rate limit stops the command.** A 429 is never retried and never falls back to another backend.
 - **No secrets anywhere.** No cookie, token or account ID in source, fixtures, test output or commit messages. Run `gitleaks dir . --redact --no-banner` before you commit.
 - **A failure never becomes an `ok` result.** No `except` that swallows an error, and a page `rsrc` does not recognize fails instead of reading as empty.
 - **Fixtures hold public data only.** Before saving a recording, remove anything that identifies you: `yt-dlp`'s stream and caption addresses carry your IP address.
@@ -178,4 +178,4 @@ A change is welcome when it keeps these true:
 
 ## License
 
-[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger); the notice is in [`LICENSE`](LICENSE).
+[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger); its notice is in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).

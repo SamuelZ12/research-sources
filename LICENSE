@@ -19,12 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party notice
-
-The request shape, headers and feature flags in src/rsrc/channels/x/search.py
-are ported from @steipete/bird v0.8.0, Copyright (c) 2025 Peter Steinberger,
-released under the MIT License: the permission notice above applies to those
-portions as well, with that copyright line.

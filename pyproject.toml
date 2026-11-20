@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Read-only research sources (X, GitHub, Reddit, Hacker News, Polymarket, YouTube) for agents, as one JSON CLI"
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES"]
 authors = [{ name = "Samuel Zhang" }]
 requires-python = ">=3.11"
 dependencies = []
