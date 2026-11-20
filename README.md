@@ -130,7 +130,7 @@ Every item has the same nine fields. A field the source lacks is `null`, never g
 
 ## X with your own session (optional)
 
-`rsrc x` uses [FxTwitter](https://github.com/FxEmbed/FxEmbed)'s public API by default and needs no login. `rsrc x search --backend x-graphql` runs the same search on X's own web search with your session cookies. It is never used unless you ask for it.
+`rsrc x` uses [FxTwitter](https://github.com/FxEmbed/FxEmbed)'s public API by default and needs no login. `rsrc x search --backend x-graphql` runs the same search on X's own web search with your session cookies. It is never used unless you ask for it or turn on the fallback below.
 
 Create the cookie file with mode 600, then open it in an editor and add the `auth_token` and `ct0` cookies from a logged-in x.com browser session as two lines, `AUTH_TOKEN=…` and `CT0=…`:
 
@@ -142,6 +142,7 @@ install -m 600 /dev/null ~/.config/rsrc/x.env
 Typing the values into a shell command would leave them in your shell history.
 
 - The `AUTH_TOKEN` and `CT0` environment variables win over the file. `RSRC_X_ENV` names another file.
+- `RSRC_X_FALLBACK=x-graphql` in the file or the environment turns on the fallback. A default search that gets `upstream_error` or `network_error` from FxTwitter then reruns on x-graphql, from your account, within the same `--max-requests`. An empty result and a rate limit never fall back. `meta.attempts` lists both runs.
 - The file must be mode 600 or stricter, or the command stops with `config`.
 - Cookie values never appear in output, error messages or files `rsrc` writes.
 - X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.

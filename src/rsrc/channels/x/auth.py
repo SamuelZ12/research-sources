@@ -43,6 +43,23 @@ def load_cookies(environ=os.environ, path=None) -> tuple[str, str]:
     return values["AUTH_TOKEN"], values["CT0"]
 
 
+FALLBACK_KEY = "RSRC_X_FALLBACK"
+FALLBACK_VALUES = ("x-graphql",)
+
+
+def load_fallback(environ=os.environ, path=None) -> str | None:
+    """Backend default search falls back to, or None when off. Same sources and checks as the cookies."""
+    path = Path(path).expanduser() if path else cookie_file(environ)
+    value = environ.get(FALLBACK_KEY, "").strip()
+    if not value and path.exists():
+        value = _read_env_file(path).get(FALLBACK_KEY, "")
+    if not value:
+        return None
+    if value not in FALLBACK_VALUES:
+        raise CookieError(f"{FALLBACK_KEY} must be {' or '.join(FALLBACK_VALUES)} or unset")
+    return value
+
+
 def _read_env_file(path: Path) -> dict[str, str]:
     if stat.S_IMODE(path.stat().st_mode) & 0o077:
         raise CookieError(f"{path} is accessible by other users; run: chmod 600 {path}")

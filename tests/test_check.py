@@ -505,3 +505,24 @@ def test_youtube_probe_failures(rsrc, environ, response, code_):
 
     assert code == 1 and out["meta"]["sources"] == {"youtube": code_} and len(runner.argvs) == 1
     assert out["error"]["code"] == code_ and out["meta"]["attempts"][0]["outcome"] == code_
+
+
+def test_x_reports_the_search_fallback_when_configured(rsrc, tmp_path):
+    environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
+               "RSRC_X_FALLBACK": "x-graphql"}
+    code, out = rsrc(["x"], environ=environ)
+    assert code == 0 and out["items"][0]["raw"]["fallback"] == "x-graphql"
+    assert "falls back to x-graphql" in out["items"][0]["text"]
+
+
+def test_x_fallback_is_null_when_unset(rsrc, tmp_path):
+    environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache")}
+    code, out = rsrc(["x"], environ=environ)
+    assert code == 0 and out["items"][0]["raw"]["fallback"] is None
+
+
+def test_x_bad_fallback_setting_is_config(rsrc, tmp_path):
+    environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
+               "RSRC_X_FALLBACK": "yes"}
+    code, out = rsrc(["x"], environ=environ)
+    assert code == 2 and out["error"]["code"] == "config" and out["meta"]["sources"] == {"x": "config"}

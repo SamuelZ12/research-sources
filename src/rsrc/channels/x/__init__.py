@@ -14,12 +14,16 @@ from datetime import date
 from rsrc import checks
 from rsrc import envelope as env
 from rsrc.channels.x import fx, search
-from rsrc.channels.x.auth import CookieError, load_cookies
+from rsrc.channels.x.auth import CookieError, load_cookies, load_fallback
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "x"
 FX_BACKEND = "fxtwitter"
 BACKENDS = (FX_BACKEND, "x-graphql")
+# Outcomes of a default FxTwitter search (as in meta.attempts) that hand the search to the
+# RSRC_X_FALLBACK backend. Never `rate_limited` (a rate limit stops the run) and never
+# `no_results` (an empty search is an answer; an FxTwitter outage is a 404, so `upstream_error`).
+FALLBACK_ON = frozenset({"upstream_error", "network_error"})
 ENGAGEMENT = ("likes", "reposts", "replies", "quotes", "views")
 
 
@@ -64,9 +68,10 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     p.add_argument("--window-days", type=positive_int, default=7, help="days per window (default 7)")
     p.add_argument("--per-window", type=positive_int, default=20,
                    help="max posts per window, or in total without --since (default 20)")
-    p.add_argument("--backend", choices=BACKENDS, default="fxtwitter",
-                   help="fxtwitter: FxTwitter's public API, no login (default); "
-                        "x-graphql: X's web search with your AUTH_TOKEN/CT0 cookies")
+    p.add_argument("--backend", choices=BACKENDS, default=None,
+                   help="fxtwitter: FxTwitter's public API, no login (default; falls back to x-graphql "
+                        "when RSRC_X_FALLBACK=x-graphql is set); x-graphql: X's web search with your "
+                        "AUTH_TOKEN/CT0 cookies. An explicit --backend never falls back")
     p.add_argument("--top", action="store_true", help="X's Top ranking instead of Latest")
     p.add_argument("--max-requests", type=positive_int, default=25,
                    help="hard cap on HTTP requests for this command (default 25)")
@@ -84,31 +89,49 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
 # --- runs ----------------------------------------------------------------------
 
 def run_search(args, ctx) -> dict:
-    backend = args.backend
+    backend = args.backend or FX_BACKEND
     input = {"query": args.query, "since": _iso(args.since), "until": _iso(args.until),
              "window_days": args.window_days, "per_window": args.per_window, "top": args.top,
              "backend": backend, "max_requests": args.max_requests}
-    client = Client(transport=ctx.transport, max_requests=args.max_requests, sleep=ctx.sleep)
+    try:
+        fallback = None if args.backend else load_fallback(ctx.environ)
+    except CookieError as e:
+        return env.envelope(CHANNEL, "search", input, backend, [], meta={"attempts": []},
+                            error=env.error(e.code, str(e)))
+    run = _search(args, backend, ctx, args.max_requests)
+    remaining = args.max_requests - sum(a["requests"] for a in run["attempts"])
+    if fallback and run["outcome"] in FALLBACK_ON and remaining > 0:
+        first = run["attempts"]
+        run = _search(args, fallback, ctx, remaining)  # partial FxTwitter items are discarded
+        run["attempts"] = first + run["attempts"]
+    return env.envelope(CHANNEL, "search", input, run["backend"], run["items"],
+                        meta={"attempts": run["attempts"], **run["meta"]}, error=run["error"])
+
+
+def _search(args, backend, ctx, max_requests) -> dict:
+    """One backend's search: {"backend", "outcome", "items", "attempts", "meta", "error"}."""
+    client = Client(transport=ctx.transport, max_requests=max_requests, sleep=ctx.sleep)
     items = []
     started = time.monotonic()
+    run = {"backend": backend, "items": items, "meta": {}, "error": None}
     try:
-        dropped, capped = search_posts(args, client, ctx.environ, lambda record: items.append(to_item(record)))
+        dropped, capped = search_posts(args, backend, client, ctx.environ,
+                                       lambda record: items.append(to_item(record)))
     except (UsageError, CookieError, HttpError) as e:
         code = error_code(e)
         # Usage and cookie errors happen before any request: no backend call to report.
         attempts = [] if code in ("usage", "config") else [_attempt(backend, code, client, started)]
-        return env.envelope(CHANNEL, "search", input, backend, items,
-                            meta={"attempts": attempts}, error=env.error(code, str(e)))
-    meta = {"attempts": [_attempt(backend, "ok" if items else "no_results", client, started)]}
+        return {**run, "outcome": code, "attempts": attempts, "error": env.error(code, str(e))}
+    outcome = "ok" if items else "no_results"
     if capped:
-        meta["truncated"] = "request_cap"
+        run["meta"]["truncated"] = "request_cap"
     if dropped:
-        meta["notes"] = [f"{dropped} post(s) outside their date window dropped"]
-    return env.envelope(CHANNEL, "search", input, backend, items, meta=meta)
+        run["meta"]["notes"] = [f"{dropped} post(s) outside their date window dropped"]
+    return {**run, "outcome": outcome, "attempts": [_attempt(backend, outcome, client, started)]}
 
 
-def search_posts(args, client, environ, sink) -> tuple[int, bool]:
-    """Run a search from parsed `search` args, passing each record to `sink(record)`.
+def search_posts(args, backend, client, environ, sink) -> tuple[int, bool]:
+    """Run a search from parsed `search` args on `backend`, passing each record to `sink(record)`.
 
     Returns (posts dropped for falling outside their date window, whether the request cap stopped the search).
     Raises UsageError (bad arguments), CookieError (missing cookies, x-graphql only) and HttpError
@@ -121,7 +144,7 @@ def search_posts(args, client, environ, sink) -> tuple[int, bool]:
     if args.since and args.since >= until:
         raise UsageError("--since must be before --until")
     windowed = search.window_queries(args.query, args.since, until, args.window_days)
-    if args.backend == "x-graphql":
+    if backend == "x-graphql":
         cookies = load_cookies(environ)
         searcher = search.Searcher(client, cookies, search.query_id_cache(environ))
     else:

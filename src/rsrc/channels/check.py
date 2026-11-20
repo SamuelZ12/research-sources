@@ -93,12 +93,16 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
     path = auth.cookie_file(environ)
     raw = {"cookie_file": str(path), "file_exists": path.exists(), "file_mode": None,
            "env_keys": [k for k in auth.KEYS if environ.get(k, "").strip()],
-           "x_graphql": "ready", "query_id_cache": _query_id_cache(environ), "live": None}
+           "x_graphql": "ready", "query_id_cache": _query_id_cache(environ), "fallback": None, "live": None}
     if raw["file_exists"]:
         mode = stat.S_IMODE(path.stat().st_mode)
         raw["file_mode"] = f"{mode:o}"
         if mode & 0o077:
             raise _Failed("config", f"{path} is accessible by other users; run: chmod 600 {path}", raw)
+    try:
+        raw["fallback"] = auth.load_fallback(environ)
+    except auth.CookieError as e:
+        raise _Failed(e.code, str(e), raw) from None
     try:
         auth.load_cookies(environ)  # the values are discarded; only success matters
     except auth.CookieError as e:
@@ -108,7 +112,10 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
         where = "environment" if len(raw["env_keys"]) == len(auth.KEYS) else str(path)
         x_graphql = (f"x-graphql: cookies {', '.join(auth.KEYS)} present ({where}); "
                      f"query-ID cache {raw['query_id_cache']['state']}")
-    text = f"search via fxtwitter (no login); {x_graphql}"
+    searching = "search via fxtwitter (no login)"
+    if raw["fallback"]:
+        searching += f", falls back to {raw['fallback']} on upstream_error or network_error"
+    text = f"{searching}; {x_graphql}"
     if live:
         raw["live"] = _live_read(ctx, attempts, raw)
         text += f"; fxtwitter read of post {LIVE_X_POST} ok"
