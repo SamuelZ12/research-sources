@@ -5,6 +5,10 @@ of its JSON and fragment endpoints), with "You've been blocked by network securi
 2026-11-06), so each command runs `reddit_page.js` through `ego-browser nodejs`: one page load
 in a throwaway task space, fields copied out of the DOM, one `RSRC_REDDIT <json>` line back.
 This module maps that JSON.
+
+A share link (`/r/<sub>/s/<code>`) names no post, so `read` first asks reddit.com where it leads:
+one plain HTTP request that is not followed, which Reddit answered with a 301 to the post for a
+browser user agent and with a 403 for `Mozilla/5.0` alone (probed 2026-11-21).
 """
 
 import json
@@ -13,10 +17,11 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, urljoin, quote
 
 from rsrc import checks, proc
 from rsrc import envelope as env
+from rsrc.http import Client, NetworkError
 
 CHANNEL = "reddit"
 BACKEND = "ego-browser"
@@ -26,6 +31,9 @@ TIMEOUT = 120
 MAX_SCROLLS = 4
 MARKER = "RSRC_REDDIT "
 STDERR_TAIL = 200
+SHARE_BACKEND = "reddit-redirect"
+SHARE_HEADERS = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                               "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"}
 SCRIPT = Path(__file__).with_name("reddit_page.js")
 
 TIMES = ("hour", "day", "week", "month", "year", "all")
@@ -47,7 +55,8 @@ NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
 _POST_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com/(?:(?:r|u|user)/[^/]+/)?"
                        r"comments/([a-z0-9]+)", re.IGNORECASE)
 _SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE)
-_SHARE_URL = re.compile(r"^https?://(?:www\.)?reddit\.com/r/[^/]+/s/", re.IGNORECASE)
+_SHARE_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com(/(?:r|u|user)/[^/]+/s/[A-Za-z0-9]+)",
+                        re.IGNORECASE)
 _BARE_ID = re.compile(r"^(?:t3_)?([a-z0-9]{4,12})$", re.IGNORECASE)
 _SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{2,21}$")
 
@@ -66,7 +75,7 @@ def register(subparsers) -> None:
     search.set_defaults(run=run_search, action="search")
 
     read = actions.add_parser("read", help="one thread: the post and its top comments")
-    read.add_argument("post", help="post URL, redd.it link, t3_ID or ID")
+    read.add_argument("post", help="post URL, share link, redd.it link, t3_ID or ID")
     read.add_argument("--sort", choices=READ_SORTS, default="top", help="comment order (default top)")
     read.add_argument("--comments", type=int, default=50, help=f"comments, 0-{MAX_COMMENTS} (default 50)")
     read.set_defaults(run=run_read, action="read")
@@ -121,13 +130,21 @@ def run_read(args, ctx) -> dict:
     input_ = {"post": args.post, "sort": args.sort, "comments": args.comments}
     if not 0 <= args.comments <= MAX_COMMENTS:
         return env.usage(CHANNEL, "read", f"--comments must be between 0 and {MAX_COMMENTS}, got {args.comments}")
-    post_id, problem = parse_post(args.post)
-    if problem:
-        return env.usage(CHANNEL, "read", problem)
+    meta = {"attempts": []}
+    share = _SHARE_URL.match(args.post.strip())
+    if share:
+        post_id, failure, attempt = share_post(ctx, BASE + share.group(1))
+        meta["attempts"].append(attempt)
+        if failure:
+            return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
+    else:
+        post_id, problem = parse_post(args.post)
+        if problem:
+            return env.usage(CHANNEL, "read", problem)
     url = f"{BASE}/comments/{post_id}/?{urlencode({'sort': args.sort})}"
     page, failure, attempt = _load(ctx, {"action": "read", "url": url,
                                          "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS}})
-    meta = {"attempts": [attempt]}
+    meta["attempts"].append(attempt)
     if failure:
         return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
     if not page.get("post"):
@@ -157,13 +174,33 @@ def search_url(query, subreddit, time_range, sort) -> str:
 def parse_post(value: str) -> tuple[str | None, str | None]:
     """(base36 post id, None) or (None, usage message)."""
     value = value.strip()
-    if _SHARE_URL.match(value):
-        return None, "share links (/r/…/s/…) are not supported; open it and pass the /comments/ URL"
     for pattern in (_POST_URL, _SHORT_URL, _BARE_ID):
         match = pattern.match(value)
         if match:
             return match.group(1).lower(), None
     return None, f"not a Reddit post URL or ID: {value!r}"
+
+
+def share_post(ctx, url: str) -> tuple[str | None, tuple[str, str] | None, dict]:
+    """(post id, None, attempt) or (None, (code, message), attempt): the post a share link leads to."""
+    client = Client(transport=ctx.redirect, sleep=ctx.sleep)
+    started = time.monotonic()
+    try:
+        status, location = client.request("GET", url, SHARE_HEADERS)
+    except NetworkError as e:
+        return None, ("network_error", str(e)), env.attempt(SHARE_BACKEND, "network_error", 1, env.elapsed_ms(started))
+    # Only a redirect to a post URL counts: the header is not user input, so no bare IDs.
+    post = _POST_URL.match(urljoin(url, location.decode("utf-8", "replace"))) if 300 <= status < 400 else None
+    if post:
+        return post.group(1).lower(), None, env.attempt(SHARE_BACKEND, "ok", 1, env.elapsed_ms(started))
+    if status == 429:
+        failure = "rate_limited", "Reddit rate-limited the share-link request (HTTP 429); stop and retry later"
+    elif status == 404:
+        failure = "not_found", f"no such share link: {url}"
+    else:
+        failure = "upstream_error", (f"the share link did not redirect to a post (HTTP {status}); "
+                                     "open it in a browser and pass the /comments/ URL")
+    return None, failure, env.attempt(SHARE_BACKEND, failure[0], 1, env.elapsed_ms(started))
 
 
 # --- Ego -------------------------------------------------------------------------

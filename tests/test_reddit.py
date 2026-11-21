@@ -57,8 +57,9 @@ class FakeEgo:
 def rsrc(monkeypatch, capsys):
     monkeypatch.setattr(cli, "CHANNELS", [reddit])
 
-    def run(argv, fake):
-        code = cli.main(["reddit", *argv], cli.Context(environ={}, runner=fake))
+    def run(argv, fake, redirect=None):
+        ctx = cli.Context(environ={}, runner=fake, redirect=redirect, sleep=lambda s: None)
+        code = cli.main(["reddit", *argv], ctx)
         out = capsys.readouterr().out
         assert len(out.splitlines()) == 1
         return code, json.loads(out)
@@ -251,7 +252,6 @@ def test_read_accepts_post_references(rsrc, ref):
 
 
 @pytest.mark.parametrize("ref, phrase", [
-    ("https://www.reddit.com/r/claude/s/AbCdEf123", "share links"),
     ("https://example.com/r/claude/comments/1xootop/", "not a Reddit post"),
     ("not an id!", "not a Reddit post"),
 ])
@@ -260,6 +260,86 @@ def test_read_rejects_other_references_before_any_call(rsrc, ref, phrase):
     code, out = rsrc(["read", ref], fake)
     assert code == 2 and out["error"]["code"] == "usage" and phrase in out["error"]["message"]
     assert fake.calls == []
+
+
+class FakeRedirect:
+    """Stands in for reddit.com answering a share link: (status, the Location header)."""
+
+    def __init__(self, status=301, location=""):
+        self.response = status, location.encode()
+        self.calls = []
+
+    def __call__(self, method, url, headers, body):
+        self.calls.append((method, url, headers))
+        if isinstance(self.response[0], Exception):
+            raise self.response[0]
+        return self.response
+
+
+SHARED = "https://www.reddit.com/r/claude/comments/1xootop/i_thought/?share_id=abc&utm_source=share"
+
+
+@pytest.mark.parametrize("link", ["https://www.reddit.com/r/claude/s/AbCdEf123",
+                                  "https://reddit.com/r/claude/s/AbCdEf123/",
+                                  "http://old.reddit.com/r/claude/s/AbCdEf123?utm_medium=web"])
+def test_read_follows_a_share_link_to_its_post(rsrc, link):
+    fake, redirect = FakeEgo(printed(THREAD)), FakeRedirect(301, SHARED)
+    code, out = rsrc(["read", link, "--sort", "new"], fake, redirect)
+    assert code == 0 and out["items"][0]["id"] == "t3_1xootop" and len(out["items"]) == 13
+    assert out["input"]["post"] == link
+    assert [(method, url) for method, url, _ in redirect.calls] == [
+        ("GET", "https://www.reddit.com/r/claude/s/AbCdEf123")]
+    assert fake.input()["url"] == "https://www.reddit.com/comments/1xootop/?sort=new"
+    assert [(a["backend"], a["outcome"], a["requests"]) for a in out["meta"]["attempts"]] == [
+        ("reddit-redirect", "ok", 1), ("ego-browser", "ok", 1)]
+
+
+def test_share_link_request_carries_no_cookie(rsrc):
+    redirect = FakeRedirect(301, SHARED)
+    rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], FakeEgo(printed(THREAD)), redirect)
+    [(_, _, headers)] = redirect.calls
+    assert [k.lower() for k in headers] == ["user-agent"]
+
+
+@pytest.mark.parametrize("status, location", [
+    (403, ""),                                               # blocked: no redirect at all
+    (301, "abcd12"),                                         # a bare ID is user input, not a redirect target
+    (301, "https://www.reddit.com/r/claude/"),               # redirects, but not to a post
+    (200, SHARED),                                           # a Location on a non-redirect is not trusted
+])
+def test_share_link_that_leads_to_no_post_fails_before_ego(rsrc, status, location):
+    fake = FakeEgo()
+    code, out = rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], fake, FakeRedirect(status, location))
+    assert code == 1 and out["error"]["code"] == "upstream_error" and fake.calls == []
+    assert f"HTTP {status}" in out["error"]["message"] and "/comments/ URL" in out["error"]["message"]
+    assert [(a["backend"], a["outcome"]) for a in out["meta"]["attempts"]] == [("reddit-redirect", "upstream_error")]
+
+
+def test_share_link_redirect_may_be_relative(rsrc):
+    fake, redirect = FakeEgo(printed(THREAD)), FakeRedirect(302, "/r/claude/comments/1xootop/i_thought/")
+    code, out = rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], fake, redirect)
+    assert code == 0 and fake.input()["url"] == "https://www.reddit.com/comments/1xootop/?sort=top"
+
+
+@pytest.mark.parametrize("status, code_", [(429, "rate_limited"), (404, "not_found")])
+def test_share_link_rate_limit_and_missing_link_have_their_own_codes(rsrc, status, code_):
+    fake = FakeEgo()
+    code, out = rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], fake, FakeRedirect(status))
+    assert code == 1 and out["error"]["code"] == code_ and fake.calls == []
+    assert "browser" not in out["error"]["message"]  # nothing sends the agent on to another Reddit request
+    assert [(a["backend"], a["outcome"]) for a in out["meta"]["attempts"]] == [("reddit-redirect", code_)]
+
+
+def test_share_link_without_a_response_is_a_network_error(rsrc):
+    fake = FakeEgo()
+    code, out = rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], fake, FakeRedirect(OSError("down")))
+    assert code == 1 and out["error"]["code"] == "network_error" and fake.calls == []
+
+
+def test_share_link_to_another_post_than_the_page_shows_is_rejected(rsrc):
+    redirect = FakeRedirect(301, "https://www.reddit.com/r/claude/comments/abc123/other/")
+    code, out = rsrc(["read", "https://www.reddit.com/r/claude/s/AbCdEf123"], FakeEgo(printed(THREAD)), redirect)
+    assert code == 1 and out["error"]["code"] == "url_mismatch"
 
 
 def test_read_rejects_a_different_post(rsrc):

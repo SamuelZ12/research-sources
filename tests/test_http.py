@@ -128,3 +128,18 @@ def test_requests_without_cookies_still_follow_redirects():
         server.shutdown()
     assert status == 200
     assert seen == ["/start", "/landing"]
+
+
+def test_redirect_transport_returns_the_location_without_following_it():
+    from rsrc.http import redirect_transport
+
+    server, seen = serve_redirect()
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        redirected = redirect_transport("GET", f"{base}/start", {}, None)
+        direct = redirect_transport("GET", f"{base}/landing", {}, None)
+    finally:
+        server.shutdown()
+    assert redirected == (302, b"/landing")
+    assert direct == (200, b"")
+    assert seen == ["/start", "/landing"]

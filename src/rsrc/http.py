@@ -59,6 +59,17 @@ def urllib_transport(method, url, headers, body):
         return e.code, e.read()
 
 
+def redirect_transport(method, url, headers, body):
+    """A transport that never follows a redirect: returns (status, the `Location` header as bytes),
+    with empty bytes when the response has no `Location`. For reading where a link points."""
+    request = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+    try:
+        with _no_redirects.open(request, timeout=TIMEOUT_S) as response:
+            return response.status, (response.headers.get("Location") or "").encode()
+    except urllib.error.HTTPError as e:
+        return e.code, (e.headers.get("Location") or "").encode()
+
+
 class Client:
     def __init__(self, max_requests=None, min_interval=1.0, transport=urllib_transport,
                  clock=time.monotonic, sleep=time.sleep):

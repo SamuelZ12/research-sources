@@ -15,7 +15,7 @@ from typing import Callable, Mapping
 from rsrc import envelope as env
 from rsrc import proc
 from rsrc.channels import check, gh, hn, polymarket, reddit, x, youtube
-from rsrc.http import urllib_transport
+from rsrc.http import redirect_transport, urllib_transport
 
 CHANNELS: list = [x, gh, reddit, hn, polymarket, youtube, check]  # channel modules, in help order
 FIXED_ACTIONS = {"check": "check"}  # channels without an action word
@@ -26,6 +26,7 @@ class Context:
     """Everything a channel may touch outside the process; injected in tests."""
     environ: Mapping[str, str] = field(default_factory=lambda: os.environ)
     transport: Callable = urllib_transport
+    redirect: Callable = redirect_transport  # same signature; answers (status, Location) unfollowed
     runner: Callable = proc.run
     sleep: Callable = time.sleep
 
