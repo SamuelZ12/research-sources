@@ -1,5 +1,5 @@
-"""Search, read posts and read replies without login: FxTwitter API v2; `read` falls back to X's
-syndication endpoint.
+"""Search, read posts, read replies and read an account's timeline without login: FxTwitter API
+v2; `read` falls back to X's syndication endpoint.
 
 API: https://github.com/FxEmbed/FxEmbed/blob/main/docs/specs/fxtwitter-openapi.json
 """
@@ -8,7 +8,7 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import NamedTuple
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
 from rsrc.channels.x.search import check_status
@@ -22,6 +22,13 @@ SEARCH_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/search
 FEEDS = {"Latest": "latest", "Top": "top"}
 POST_URL_RE = re.compile(r"(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status)/(\d{2,20})")
 BARE_ID_RE = re.compile(r"^\d{2,20}$")
+TIMELINE_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/profile/{handle}/statuses
+TIMELINE_MAX = 200  # posts per `x timeline`: about 10 requests
+ACCOUNT_RE = re.compile(r"^(?:(?:https?://)?(?:www\.|mobile\.)?(?:x|twitter)\.com/)?@?([A-Za-z0-9_]{1,15})"
+                        r"(?:/(?:with_replies|media|highlights|articles|about))?/?(?:[?#].*)?$", re.IGNORECASE)
+# First path segments of x.com pages that are not accounts.
+NOT_ACCOUNTS = frozenset({"i", "home", "explore", "search", "settings", "notifications", "messages",
+                          "hashtag", "intent", "share", "compose", "login", "signup", "tos", "privacy"})
 
 
 def parse_id(arg: str) -> str | None:
@@ -29,6 +36,14 @@ def parse_id(arg: str) -> str | None:
     if match:
         return match.group(1)
     return arg if BARE_ID_RE.match(arg) else None
+
+
+def parse_handle(arg: str) -> str | None:
+    """The handle in `handle`, `@handle` or an x.com/twitter.com account URL, without the @."""
+    match = ACCOUNT_RE.match(arg.strip())
+    if not match or match.group(1).lower() in NOT_ACCOUNTS:
+        return None
+    return match.group(1)
 
 
 class Failure(NamedTuple):
@@ -97,6 +112,48 @@ def replies(client, post_id, rank="likes", limit=100):
             added += 1
             yield record
             if len(seen) - 1 >= limit:
+                return
+        next_cursor = (data.get("cursor") or {}).get("bottom")
+        if not next_cursor or next_cursor == cursor or added == 0:
+            return
+        cursor = next_cursor
+
+
+def timeline(client, handle, limit=20):
+    """Yield (post record, FxTwitter's status object) for up to `limit` of an account's newest
+    posts, following FxTwitter's timeline cursor.
+
+    A page holds about 20 posts whatever `count` asks for (probed 2026-11-21: 19 for count=100).
+    A repost carries its original author, and `reposted_by` names the account asked for; the
+    record gets that handle as `reposted_by`. Stops on a missing or repeated cursor or a page
+    with no new posts.
+
+    A 404 that outlasts the retries is an HttpError (`upstream_error`), never NotFound: the same
+    body comes back for an unknown handle and for an existing account, and on 2026-11-21 about
+    two in three requests for existing accounts got it (20 of 30; 2 of 6 accounts failed all
+    three tries). `/2/profile/{handle}` did the same, so nothing here can confirm an account.
+    """
+    seen, cursor = set(), None
+    while True:
+        params = {"count": min(limit, TIMELINE_PAGE_MAX)} | ({"cursor": cursor} if cursor else {})
+        url = f"{FX_API}/profile/{quote(handle, safe='')}/statuses?{urlencode(params)}"
+        data, failure = fx_json(client, url, "results")
+        if not data:
+            if failure.status == 404 and not seen:
+                raise HttpError(f"fxtwitter timeline {handle}: HTTP 404, which FxTwitter sends for an unknown "
+                                "account and, often, for a real one. Check the spelling, rerun once after a "
+                                f"minute, then use `rsrc x search 'from:{handle}'`")
+            raise failure.error(f"fxtwitter timeline {handle}")
+        added = 0
+        for status in data["results"] if isinstance(data["results"], list) else []:
+            if not isinstance(status, dict) or status.get("id") in seen:
+                continue
+            seen.add(status.get("id"))
+            added += 1
+            reposter = status.get("reposted_by")
+            reposter = reposter.get("screen_name") if isinstance(reposter, dict) else None
+            yield status_record(status) | ({"reposted_by": reposter} if reposter else {}), status
+            if len(seen) >= limit:
                 return
         next_cursor = (data.get("cursor") or {}).get("bottom")
         if not next_cursor or next_cursor == cursor or added == 0:
@@ -221,6 +278,15 @@ def syndication_record(data: dict) -> dict:
         media=legacy_media(data.get("mediaDetails")),
         source="syndication",
     )
+
+
+def joined_iso(joined) -> str | None:
+    """FxTwitter's `Tue Jan 29 07:56:05 +0000 2008` as `2008-01-29T07:56:05Z`; None if unreadable."""
+    try:
+        moment = datetime.strptime(joined, "%a %b %d %H:%M:%S %z %Y")
+    except (TypeError, ValueError):
+        return None
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _iso_from_timestamp(timestamp) -> str:

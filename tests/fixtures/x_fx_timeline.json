@@ -1,0 +1,796 @@
+{
+ "code": 200,
+ "results": [
+  {
+   "type": "status",
+   "url": "https://x.com/mitchellh/status/2123516770812387809",
+   "id": "2123516770812387809",
+   "text": "This is super cool, and exposes a recently shipped feature I've been meaning to share: Rex now works across SSH, including one command to install over SSH: `rex server install ssh://<address>` and then you're up and running! Works in all our clients too.",
+   "raw_text": {
+    "text": "This is super cool, and exposes a recently shipped feature I've been meaning to share: Rex now works across SSH, including one command to install over SSH: `rex server install ssh://&lt;address&gt;` and then you're up and running! Works in all our clients too.",
+    "display_text_range": [
+     0,
+     260
+    ],
+    "facets": []
+   },
+   "author": {
+    "screen_name": "mitchellh",
+    "url": "https://x.com/mitchellh",
+    "id": "12819682",
+    "followers": 243208,
+    "following": 160,
+    "likes": 23,
+    "media_count": 1994,
+    "statuses": 41297,
+    "name": "Mitchell Hashimoto",
+    "description": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+    "raw_description": {
+     "text": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+     "facets": [
+      {
+       "type": "mention",
+       "indices": [
+        14,
+        27
+       ],
+       "original": "Superlogical",
+       "id": ""
+      },
+      {
+       "type": "mention",
+       "indices": [
+        64,
+        74
+       ],
+       "original": "HashiCorp",
+       "id": ""
+      }
+     ]
+    },
+    "location": "Los Angeles, CA",
+    "banner_url": "https://pbs.twimg.com/profile_banners/12819682/1785420452",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2082830624415698944/bRo7PB2S_200x200.jpg",
+    "joined": "Tue Jan 29 07:56:05 +0000 2008",
+    "protected": false,
+    "website": {
+     "url": "https://mitchellh.com",
+     "display_url": "mitchellh.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 44,
+   "reposts": 41,
+   "likes": 1325,
+   "bookmarks": 560,
+   "quotes": 6,
+   "embed_card": "tweet",
+   "created_at": "Thu Nov 19 20:40:25 +0000 2026",
+   "created_timestamp": 1795120825,
+   "views": 73037,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "quote": {
+    "type": "status",
+    "url": "https://x.com/exedev/status/2123497208389718211",
+    "id": "2123497208389718211",
+    "text": "Use Rex to connect to your exe VMs: https://blog.exe.dev/rex",
+    "raw_text": {
+     "text": "Use Rex to connect to your exe VMs: https://t.co/B6CGOHh5gU",
+     "display_text_range": [
+      0,
+      59
+     ],
+     "facets": [
+      {
+       "type": "url",
+       "indices": [
+        36,
+        59
+       ],
+       "original": "https://t.co/B6CGOHh5gU",
+       "replacement": "https://blog.exe.dev/rex",
+       "display": "blog.exe.dev/rex"
+      }
+     ]
+    },
+    "author": {
+     "screen_name": "exedev",
+     "url": "https://x.com/exedev",
+     "id": "1956129725635813377",
+     "followers": 4128,
+     "following": 29,
+     "likes": 188,
+     "media_count": 18,
+     "statuses": 169,
+     "name": "exe.dev",
+     "description": "Computers for developers and agents.",
+     "raw_description": {
+      "text": "Computers for developers and agents.",
+      "facets": []
+     },
+     "location": "",
+     "banner_url": "",
+     "avatar_url": "https://pbs.twimg.com/profile_images/1956130086358540292/fI91btxv_200x200.jpg",
+     "joined": "Thu Aug 14 23:05:17 +0000 2025",
+     "protected": false,
+     "website": {
+      "url": "http://exe.dev",
+      "display_url": "exe.dev"
+     },
+     "verification": {
+      "verified": true,
+      "verified_at": null,
+      "type": "organization"
+     },
+     "type": "profile"
+    },
+    "replies": 8,
+    "reposts": 18,
+    "likes": 328,
+    "bookmarks": 294,
+    "quotes": 8,
+    "embed_card": "tweet",
+    "created_at": "Thu Nov 19 19:22:41 +0000 2026",
+    "created_timestamp": 1795116161,
+    "possibly_sensitive": false,
+    "views": 90449,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "media": {},
+    "card": {
+     "url": "https://blog.exe.dev/rex",
+     "title": "Rex-on-exe - exe.dev blog",
+     "description": "Use Rex to connect to your VMs. Plus, how Rex works under the hood.",
+     "domain": "blog.exe.dev",
+     "image": {
+      "width": 800,
+      "height": 419,
+      "url": "https://pbs.twimg.com/card_img/2123496630586630144/cmQO-779?format=jpg&name=800x419"
+     }
+    },
+    "provider": "twitter",
+    "reposted_by": null
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/mitchellh/status/2123499707867766977",
+   "id": "2123499707867766977",
+   "text": "I shared a terminal specification proposal with a group of people today including people working on Claude Code and totally forgot its their IPO day so this is the current status of Slack.",
+   "raw_text": {
+    "text": "I shared a terminal specification proposal with a group of people today including people working on Claude Code and totally forgot its their IPO day so this is the current status of Slack. https://t.co/u7artSGdx3",
+    "display_text_range": [
+     0,
+     188
+    ],
+    "facets": [
+     {
+      "type": "media",
+      "indices": [
+       189,
+       212
+      ],
+      "id": "2123499104127074304",
+      "display": "pic.x.com/u7artSGdx3",
+      "original": "https://t.co/u7artSGdx3",
+      "replacement": "https://x.com/mitchellh/status/2123499707867766977/photo/1"
+     }
+    ]
+   },
+   "author": {
+    "screen_name": "mitchellh",
+    "url": "https://x.com/mitchellh",
+    "id": "12819682",
+    "followers": 243208,
+    "following": 160,
+    "likes": 23,
+    "media_count": 1994,
+    "statuses": 41297,
+    "name": "Mitchell Hashimoto",
+    "description": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+    "raw_description": {
+     "text": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+     "facets": [
+      {
+       "type": "mention",
+       "indices": [
+        14,
+        27
+       ],
+       "original": "Superlogical",
+       "id": ""
+      },
+      {
+       "type": "mention",
+       "indices": [
+        64,
+        74
+       ],
+       "original": "HashiCorp",
+       "id": ""
+      }
+     ]
+    },
+    "location": "Los Angeles, CA",
+    "banner_url": "https://pbs.twimg.com/profile_banners/12819682/1785420452",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2082830624415698944/bRo7PB2S_200x200.jpg",
+    "joined": "Tue Jan 29 07:56:05 +0000 2008",
+    "protected": false,
+    "website": {
+     "url": "https://mitchellh.com",
+     "display_url": "mitchellh.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 84,
+   "reposts": 35,
+   "likes": 3810,
+   "bookmarks": 259,
+   "quotes": 5,
+   "embed_card": "summary_large_image",
+   "created_at": "Thu Nov 19 19:32:37 +0000 2026",
+   "created_timestamp": 1795116757,
+   "possibly_sensitive": false,
+   "views": 190700,
+   "is_note_tweet": false,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {
+    "all": [
+     {
+      "type": "photo",
+      "id": "2123499104127074304",
+      "url": "https://pbs.twimg.com/media/HXgvLzZawAAnJnm.jpg?name=orig",
+      "width": 1128,
+      "height": 282
+     }
+    ],
+    "photos": [
+     {
+      "type": "photo",
+      "id": "2123499104127074304",
+      "url": "https://pbs.twimg.com/media/HXgvLzZawAAnJnm.jpg?name=orig",
+      "width": 1128,
+      "height": 282
+     }
+    ]
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/mitchellh/status/2123167959686496690",
+   "id": "2123167959686496690",
+   "text": "Rex has really powerful Lua scripting that our beta group has been using to huge effect. We expanded it today with `rex.ui`: a way to build automations that require user interaction. \n\nThe way this works with multiple clients: the choice pops up on all attached clients. The first client to respond wins (and hides the prompt from the rest). \n\nIf any client is already showing a prompt, we respond with a \"busy\" error code and let the Lua script decide what it wants to do (sleep, try again, force it, etc.). This will surely improve, but the API gives us flexibility to improve it later.\n\nIf no clients exist, another error code Lua can detect is returned noting that no user is attached, and it can decide what it wants to do.",
+   "raw_text": {
+    "text": "Rex has really powerful Lua scripting that our beta group has been using to huge effect. We expanded it today with `rex.ui`: a way to build automations that require user interaction. \n\nThe way this works with multiple clients: the choice pops up on all attached clients. The first client to respond wins (and hides the prompt from the rest). \n\nIf any client is already showing a prompt, we respond with a \"busy\" error code and let the Lua script decide what it wants to do (sleep, try again, force it, etc.). This will surely improve, but the API gives us flexibility to improve it later.\n\nIf no clients exist, another error code Lua can detect is returned noting that no user is attached, and it can decide what it wants to do.",
+    "display_text_range": [
+     0,
+     728
+    ],
+    "facets": []
+   },
+   "author": {
+    "screen_name": "mitchellh",
+    "url": "https://x.com/mitchellh",
+    "id": "12819682",
+    "followers": 243208,
+    "following": 160,
+    "likes": 23,
+    "media_count": 1994,
+    "statuses": 41297,
+    "name": "Mitchell Hashimoto",
+    "description": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+    "raw_description": {
+     "text": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+     "facets": [
+      {
+       "type": "mention",
+       "indices": [
+        14,
+        27
+       ],
+       "original": "Superlogical",
+       "id": ""
+      },
+      {
+       "type": "mention",
+       "indices": [
+        64,
+        74
+       ],
+       "original": "HashiCorp",
+       "id": ""
+      }
+     ]
+    },
+    "location": "Los Angeles, CA",
+    "banner_url": "https://pbs.twimg.com/profile_banners/12819682/1785420452",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2082830624415698944/bRo7PB2S_200x200.jpg",
+    "joined": "Tue Jan 29 07:56:05 +0000 2008",
+    "protected": false,
+    "website": {
+     "url": "https://mitchellh.com",
+     "display_url": "mitchellh.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 51,
+   "reposts": 13,
+   "likes": 681,
+   "bookmarks": 290,
+   "quotes": 2,
+   "embed_card": "player",
+   "created_at": "Wed Nov 18 21:34:22 +0000 2026",
+   "created_timestamp": 1795037662,
+   "views": 42629,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "quote": {
+    "type": "status",
+    "url": "https://x.com/almonk/status/2123044473873588226",
+    "id": "2123044473873588226",
+    "text": "posted this into our Rex discord today... the new `𝚛𝚎𝚡.𝚞𝚒` primitives provides a new set of simple but powerful methods to build interactive scripts within Rex that require user interaction.\n\nNow you can build the workflow of your dreams, that little action you always wanted or just a pizza topping selector.\n\nI wrote some docs up that go into detail about how this feature works https://www.superlogical.com/rex/docs/customize/custom-ui",
+    "raw_text": {
+     "text": "posted this into our Rex discord today... the new `𝚛𝚎𝚡.𝚞𝚒` primitives provides a new set of simple but powerful methods to build interactive scripts within Rex that require user interaction.\n\nNow you can build the workflow of your dreams, that little action you always wanted or just a pizza topping selector.\n\nI wrote some docs up that go into detail about how this feature works https://t.co/4UXo1zSrBt",
+     "display_text_range": [
+      0,
+      409
+     ],
+     "facets": [
+      {
+       "type": "media",
+       "indices": [
+        276,
+        299
+       ],
+       "id": "2123043561985765377",
+       "display": "pic.x.com/yUMBk5LLPG",
+       "original": "https://t.co/yUMBk5LLPG",
+       "replacement": "https://x.com/almonk/status/2123044473873588226/video/1"
+      },
+      {
+       "type": "url",
+       "indices": [
+        381,
+        404
+       ],
+       "original": "https://t.co/4UXo1zSrBt",
+       "replacement": "https://www.superlogical.com/rex/docs/customize/custom-ui",
+       "display": "superlogical.com/rex/docs/custo…"
+      }
+     ]
+    },
+    "author": {
+     "screen_name": "almonk",
+     "url": "https://x.com/almonk",
+     "id": "8091942",
+     "followers": 24281,
+     "following": 965,
+     "likes": 17542,
+     "media_count": 1293,
+     "statuses": 19665,
+     "name": "almonk",
+     "description": "Fan of design",
+     "raw_description": {
+      "text": "Fan of design",
+      "facets": []
+     },
+     "location": "London",
+     "banner_url": "https://pbs.twimg.com/profile_banners/8091942/1785859435",
+     "avatar_url": "https://pbs.twimg.com/profile_images/2066502629593686016/SeDPrfD9_200x200.jpg",
+     "joined": "Thu Aug 09 23:43:50 +0000 2007",
+     "protected": false,
+     "website": {
+      "url": "https://alasdairmonk.com",
+      "display_url": "alasdairmonk.com"
+     },
+     "verification": {
+      "verified": true,
+      "verified_at": null,
+      "type": "individual"
+     },
+     "type": "profile"
+    },
+    "replies": 42,
+    "reposts": 37,
+    "likes": 1219,
+    "bookmarks": 708,
+    "quotes": 18,
+    "embed_card": "player",
+    "created_at": "Wed Nov 18 13:23:41 +0000 2026",
+    "created_timestamp": 1795008221,
+    "possibly_sensitive": false,
+    "views": 124802,
+    "is_note_tweet": true,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "media": {
+     "all": [
+      {
+       "id": "2123043561985765377",
+       "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/3040x1710/sQuHssfHn3a-4lkb.mp4?tag=29",
+       "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2123043561985765377/img/ExjNTsFbWc870vHz.jpg",
+       "duration": 247.2,
+       "width": 3040,
+       "height": 1710,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/pl/eaLSYIJVkZkiwneg.m3u8?tag=29&v=425",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/478x270/BLgpUpB6v65vcuSR.mp4?tag=29",
+         "bitrate": 256000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/640x360/759uDyQ_NtzHH1H1.mp4?tag=29",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/1280x720/rsQMWwviWcle4qlW.mp4?tag=29",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/1918x1080/v6_cs8p0waEOvT3Q.mp4?tag=29",
+         "bitrate": 10368000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/3040x1710/sQuHssfHn3a-4lkb.mp4?tag=29",
+         "bitrate": 25128000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ],
+     "videos": [
+      {
+       "id": "2123043561985765377",
+       "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/3040x1710/sQuHssfHn3a-4lkb.mp4?tag=29",
+       "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2123043561985765377/img/ExjNTsFbWc870vHz.jpg",
+       "duration": 247.2,
+       "width": 3040,
+       "height": 1710,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/pl/eaLSYIJVkZkiwneg.m3u8?tag=29&v=425",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/478x270/BLgpUpB6v65vcuSR.mp4?tag=29",
+         "bitrate": 256000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/640x360/759uDyQ_NtzHH1H1.mp4?tag=29",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/1280x720/rsQMWwviWcle4qlW.mp4?tag=29",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/1918x1080/v6_cs8p0waEOvT3Q.mp4?tag=29",
+         "bitrate": 10368000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2123043561985765377/vid/avc1/3040x1710/sQuHssfHn3a-4lkb.mp4?tag=29",
+         "bitrate": 25128000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ]
+    },
+    "provider": "twitter",
+    "reposted_by": null
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  },
+  {
+   "type": "status",
+   "url": "https://x.com/mitchellh/status/2122731286175580550",
+   "id": "2122731286175580550",
+   "text": "The Rex for Windows alpha begins today! I think this is a better terminal than Windows Terminal, and I think WT is pretty good. Nick did an amazing job here, I think you’re about to feel one of the snappiest, most beautifully rendered Windows apps ever. \n\nThis is all Nicks amazing work but some cool tech details: this is written in Odin! And it’s built on a completely custom GUI framework that leverages native widgets where possible but does plenty of fully custom drawing. The renderer is completely custom and built on DirectX, highly optimized to draw the full UI in one pass and supports things like animation and cursor shaders.\n\nOverall its one hell of a piece of software and I can’t wait for people to feel it.",
+   "raw_text": {
+    "text": "The Rex for Windows alpha begins today! I think this is a better terminal than Windows Terminal, and I think WT is pretty good. Nick did an amazing job here, I think you’re about to feel one of the snappiest, most beautifully rendered Windows apps ever. \n\nThis is all Nicks amazing work but some cool tech details: this is written in Odin! And it’s built on a completely custom GUI framework that leverages native widgets where possible but does plenty of fully custom drawing. The renderer is completely custom and built on DirectX, highly optimized to draw the full UI in one pass and supports things like animation and cursor shaders.\n\nOverall its one hell of a piece of software and I can’t wait for people to feel it.",
+    "display_text_range": [
+     0,
+     722
+    ],
+    "facets": []
+   },
+   "author": {
+    "screen_name": "mitchellh",
+    "url": "https://x.com/mitchellh",
+    "id": "12819682",
+    "followers": 243208,
+    "following": 160,
+    "likes": 23,
+    "media_count": 1994,
+    "statuses": 41297,
+    "name": "Mitchell Hashimoto",
+    "description": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+    "raw_description": {
+     "text": "Co-founder of @Superlogical. Creator of Ghostty. 👻 Prev founded @HashiCorp, created Vagrant, Terraform, Vault, and others.",
+     "facets": [
+      {
+       "type": "mention",
+       "indices": [
+        14,
+        27
+       ],
+       "original": "Superlogical",
+       "id": ""
+      },
+      {
+       "type": "mention",
+       "indices": [
+        64,
+        74
+       ],
+       "original": "HashiCorp",
+       "id": ""
+      }
+     ]
+    },
+    "location": "Los Angeles, CA",
+    "banner_url": "https://pbs.twimg.com/profile_banners/12819682/1785420452",
+    "avatar_url": "https://pbs.twimg.com/profile_images/2082830624415698944/bRo7PB2S_200x200.jpg",
+    "joined": "Tue Jan 29 07:56:05 +0000 2008",
+    "protected": false,
+    "website": {
+     "url": "https://mitchellh.com",
+     "display_url": "mitchellh.com"
+    },
+    "verification": {
+     "verified": true,
+     "verified_at": null,
+     "type": "individual"
+    },
+    "type": "profile"
+   },
+   "replies": 101,
+   "reposts": 53,
+   "likes": 1290,
+   "bookmarks": 214,
+   "quotes": 26,
+   "embed_card": "player",
+   "created_at": "Tue Nov 17 16:39:11 +0000 2026",
+   "created_timestamp": 1794933551,
+   "views": 111771,
+   "is_note_tweet": true,
+   "community_note": null,
+   "lang": "en",
+   "replying_to": null,
+   "media": {},
+   "quote": {
+    "type": "status",
+    "url": "https://x.com/nickaversano/status/2122717352055742576",
+    "id": "2122717352055742576",
+    "text": "Here's what I've been working on at @superlogical: Introducing Rex for Windows. We're starting to roll out the Alpha today!",
+    "raw_text": {
+     "text": "Here's what I've been working on at @superlogical: Introducing Rex for Windows. We're starting to roll out the Alpha today! https://t.co/lIB4iI4mtC",
+     "display_text_range": [
+      0,
+      123
+     ],
+     "facets": [
+      {
+       "type": "mention",
+       "indices": [
+        36,
+        49
+       ],
+       "original": "superlogical",
+       "id": "2062534051173384192"
+      },
+      {
+       "type": "media",
+       "indices": [
+        124,
+        147
+       ],
+       "id": "2122714417162825728",
+       "display": "pic.x.com/lIB4iI4mtC",
+       "original": "https://t.co/lIB4iI4mtC",
+       "replacement": "https://x.com/nickaversano/status/2122717352055742576/video/1"
+      }
+     ]
+    },
+    "author": {
+     "screen_name": "nickaversano",
+     "url": "https://x.com/nickaversano",
+     "id": "181759222",
+     "followers": 669,
+     "following": 253,
+     "likes": 5406,
+     "media_count": 5,
+     "statuses": 255,
+     "name": "Nick Aversano",
+     "description": "Software @superlogical",
+     "raw_description": {
+      "text": "Software @superlogical",
+      "facets": [
+       {
+        "type": "mention",
+        "indices": [
+         9,
+         22
+        ],
+        "original": "superlogical",
+        "id": ""
+       }
+      ]
+     },
+     "location": "",
+     "banner_url": "https://pbs.twimg.com/profile_banners/181759222/1792936127",
+     "avatar_url": "https://pbs.twimg.com/profile_images/2114353264783233024/vxj0fMrA_200x200.jpg",
+     "joined": "Mon Aug 23 00:20:57 +0000 2010",
+     "protected": false,
+     "website": {
+      "url": "http://nickav.co",
+      "display_url": "nickav.co"
+     },
+     "verification": {
+      "verified": false,
+      "verified_at": null,
+      "type": null
+     },
+     "type": "profile"
+    },
+    "replies": 38,
+    "reposts": 24,
+    "likes": 419,
+    "bookmarks": 63,
+    "quotes": 8,
+    "embed_card": "player",
+    "created_at": "Tue Nov 17 15:43:49 +0000 2026",
+    "created_timestamp": 1794930229,
+    "possibly_sensitive": false,
+    "views": 67113,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "media": {
+     "all": [
+      {
+       "id": "2122714417162825728",
+       "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/1152x720/Mdnk2WaxqVRscCE2.mp4?tag=14",
+       "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2122714417162825728/img/xhBXuBm0KyCxDnki.jpg",
+       "duration": 147,
+       "width": 3456,
+       "height": 2160,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/pl/NrwJu2Vj3ZtCWAc9.m3u8?tag=14&v=f8d",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/432x270/dxNGjFpFOT0G0_1Z.mp4?tag=14",
+         "bitrate": 288000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/576x360/pPTIaDkZJov42dkz.mp4?tag=14",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/1152x720/Mdnk2WaxqVRscCE2.mp4?tag=14",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ],
+     "videos": [
+      {
+       "id": "2122714417162825728",
+       "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/1152x720/Mdnk2WaxqVRscCE2.mp4?tag=14",
+       "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2122714417162825728/img/xhBXuBm0KyCxDnki.jpg",
+       "duration": 147,
+       "width": 3456,
+       "height": 2160,
+       "format": "video/mp4",
+       "type": "video",
+       "formats": [
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/pl/NrwJu2Vj3ZtCWAc9.m3u8?tag=14&v=f8d",
+         "container": "m3u8"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/432x270/dxNGjFpFOT0G0_1Z.mp4?tag=14",
+         "bitrate": 288000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/576x360/pPTIaDkZJov42dkz.mp4?tag=14",
+         "bitrate": 832000,
+         "container": "mp4",
+         "codec": "h264"
+        },
+        {
+         "url": "https://video.twimg.com/amplify_video/2122714417162825728/vid/avc1/1152x720/Mdnk2WaxqVRscCE2.mp4?tag=14",
+         "bitrate": 2176000,
+         "container": "mp4",
+         "codec": "h264"
+        }
+       ],
+       "publisher": null
+      }
+     ]
+    },
+    "provider": "twitter",
+    "reposted_by": null
+   },
+   "provider": "twitter",
+   "reposted_by": null
+  }
+ ],
+ "cursor": {
+  "top": "DAAHCgABHXq5dPgAJxELAAIAAAATMjEyMzUxNjc3MDgxMjM4NzgwOQgAAwAAAAEAAA",
+  "bottom": "DAAHCgABHXq5dPf__-wLAAIAAAATMjExNjI5NjMzMzUwNjM1OTY0NggAAwAAAAIAAA"
+ }
+}

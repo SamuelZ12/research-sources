@@ -1,4 +1,5 @@
-"""`rsrc x`: search, read posts and read replies on X, wrapped in the envelope.
+"""`rsrc x`: search, read posts, read replies and read an account's timeline on X, wrapped in the
+envelope.
 
 `fx` (FxTwitter, no login) and `search` (X's web GraphQL, session cookies) do the fetching; this
 module parses the arguments, runs the action and maps records and exceptions into envelopes.
@@ -15,6 +16,7 @@ from rsrc import checks
 from rsrc import envelope as env
 from rsrc.channels.x import fx, search
 from rsrc.channels.x.auth import CookieError, load_cookies, load_fallback
+from rsrc.channels.x.record import to_int
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "x"
@@ -32,10 +34,10 @@ class UsageError(Exception):
 
 
 def register(subparsers) -> None:
-    parser = subparsers.add_parser("x", help="X posts: search, read, replies (no login by default)",
-                                   description="X: search, read posts, replies.")
+    parser = subparsers.add_parser("x", help="X posts: search, read, replies, timeline (no login by default)",
+                                   description="X: search, read posts, replies, an account's timeline.")
     commands = parser.add_subparsers(dest="x_command", required=True, metavar="ACTION")
-    runners = {"search": run_search, "read": run_read, "replies": run_replies}
+    runners = {"search": run_search, "read": run_read, "replies": run_replies, "timeline": run_timeline}
     for name, sub in add_commands(commands).items():
         sub.set_defaults(run=runners[name], action=name)
 
@@ -57,7 +59,7 @@ def iso_date(value):
 
 
 def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
-    """Add search/read/replies to a subparsers object; return {"search": p, "read": p, "replies": p}."""
+    """Add the actions to a subparsers object; return {action name: its parser}."""
     parsers = {}
     parsers["search"] = p = commands.add_parser(
         "search", help="search X posts (FxTwitter, no login; --backend x-graphql uses X session cookies)")
@@ -83,6 +85,12 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     p.add_argument("post", metavar="URL_OR_ID", help="x.com/twitter.com status URL or numeric ID")
     p.add_argument("--rank", choices=("likes", "recency"), default="likes", help="reply order (default likes)")
     p.add_argument("--limit", type=positive_int, default=100, help="max replies (default 100)")
+
+    parsers["timeline"] = p = commands.add_parser(
+        "timeline", help="one account: its profile, then its newest posts (no login)")
+    p.add_argument("account", metavar="HANDLE_OR_URL", help="handle, @handle or x.com/twitter.com account URL")
+    p.add_argument("--limit", type=positive_int, default=20,
+                   help=f"max posts, 1-{fx.TIMELINE_MAX} (default 20); about 20 per request")
     return parsers
 
 
@@ -222,6 +230,37 @@ def run_replies(args, ctx) -> dict:
     return env.envelope(CHANNEL, "replies", input, FX_BACKEND, items, meta=meta)
 
 
+def run_timeline(args, ctx) -> dict:
+    input = {"account": args.account, "limit": args.limit}
+    handle = fx.parse_handle(args.account)
+    problem = None
+    if fx.POST_URL_RE.search(args.account):
+        problem = f"{args.account} is a post; read it with `rsrc x read`"
+    elif not handle:
+        problem = f"not a handle or account URL: {args.account}"
+    elif args.limit > fx.TIMELINE_MAX:
+        problem = f"--limit must be between 1 and {fx.TIMELINE_MAX}, got {args.limit}"
+    if problem:
+        return env.envelope(CHANNEL, "timeline", input, FX_BACKEND, error=env.error("usage", problem))
+    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    posts, account, error = [], None, None
+    started = time.monotonic()
+    try:
+        for record, status in fx.timeline(client, handle, args.limit):
+            posts.append(to_item(record))
+            author = status.get("author")
+            if not account and isinstance(author, dict) and str(author.get("screen_name")).lower() == handle.lower():
+                account = account_item(author)
+    except HttpError as e:
+        error = env.error(error_code(e), str(e))
+    outcome = error["code"] if error else "ok" if posts else "no_results"
+    meta = {"attempts": [_attempt(FX_BACKEND, outcome, client, started)]}
+    if posts and not account and not error:
+        meta["notes"] = [f"none of the {len(posts)} posts is by @{handle} (reposts only), so there is no account item"]
+    return env.envelope(CHANNEL, "timeline", input, FX_BACKEND, [account, *posts] if account else posts,
+                        meta=meta, error=error)
+
+
 # --- mapping -------------------------------------------------------------------
 
 def to_item(record: dict) -> dict:
@@ -229,6 +268,17 @@ def to_item(record: dict) -> dict:
     return env.item(id=record["id"], url=record["url"], title=None, author=record["author"],
                     published_at=record["created_at"], text=record["text"], source=record["source"],
                     engagement=counts or None, raw=record)
+
+
+def account_item(author: dict) -> dict:
+    """The account an `x timeline` was asked for, from FxTwitter's `author` object."""
+    handle = author.get("screen_name")
+    counts = {k: to_int(author.get(field))
+              for k, field in (("followers", "followers"), ("following", "following"), ("posts", "statuses"))}
+    counts = {k: v for k, v in counts.items() if v is not None}
+    return env.item(id=author.get("id"), url=f"https://x.com/{handle}", title=author.get("name"), author=handle,
+                    published_at=fx.joined_iso(author.get("joined")), text=author.get("description"),
+                    source="fxtwitter", engagement=counts or None, raw=author)
 
 
 def error_code(e: Exception) -> str:
