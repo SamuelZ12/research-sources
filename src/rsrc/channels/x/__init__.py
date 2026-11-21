@@ -3,6 +3,7 @@ envelope.
 
 `fx` (FxTwitter, no login) and `search` (X's web GraphQL, session cookies) do the fetching; this
 module parses the arguments, runs the action and maps records and exceptions into envelopes.
+A default search tries the backends of `auth.load_search_order` in turn.
 Their exception messages never contain cookies or request headers, so they are passed through
 as `error.message` unchanged.
 """
@@ -15,16 +16,15 @@ from datetime import date
 from rsrc import checks
 from rsrc import envelope as env
 from rsrc.channels.x import fx, search
-from rsrc.channels.x.auth import CookieError, load_cookies, load_fallback
+from rsrc.channels.x.auth import BACKENDS, FX_BACKEND, CookieError, load_cookies, load_search_order
 from rsrc.channels.x.record import to_int
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "x"
-FX_BACKEND = "fxtwitter"
-BACKENDS = (FX_BACKEND, "x-graphql")
-# Outcomes of a default FxTwitter search (as in meta.attempts) that hand the search to the
-# RSRC_X_FALLBACK backend. Never `rate_limited` (a rate limit stops the run) and never
-# `no_results` (an empty search is an answer; an FxTwitter outage is a 404, so `upstream_error`).
+# Outcomes of one backend's search (as in meta.attempts) that hand the search to the next backend
+# of the order. Never `rate_limited` (a rate limit stops the run), never `auth_failed` or `config`
+# (the user has to fix the session) and never `no_results` (an empty search is an answer; an
+# FxTwitter outage is a 404 or 503, so `upstream_error`).
 FALLBACK_ON = frozenset({"upstream_error", "network_error"})
 ENGAGEMENT = ("likes", "reposts", "replies", "quotes", "views")
 
@@ -62,7 +62,7 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     """Add the actions to a subparsers object; return {action name: its parser}."""
     parsers = {}
     parsers["search"] = p = commands.add_parser(
-        "search", help="search X posts (FxTwitter, no login; --backend x-graphql uses X session cookies)")
+        "search", help="search X posts in RSRC_X_SEARCH order (default: fxtwitter, no login)")
     p.add_argument("query", help='X search query, e.g. \'"Letta Code" -filter:replies min_faves:5\'')
     p.add_argument("--since", type=iso_date, help="start date YYYY-MM-DD (inclusive); enables date windows")
     p.add_argument("--until", type=iso_date,
@@ -71,9 +71,8 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     p.add_argument("--per-window", type=positive_int, default=20,
                    help="max posts per window, or in total without --since (default 20)")
     p.add_argument("--backend", choices=BACKENDS, default=None,
-                   help="fxtwitter: FxTwitter's public API, no login (default; falls back to x-graphql "
-                        "when RSRC_X_FALLBACK=x-graphql is set); x-graphql: X's web search with your "
-                        "AUTH_TOKEN/CT0 cookies. An explicit --backend never falls back")
+                   help="use only this backend, ignoring RSRC_X_SEARCH. fxtwitter needs no login; "
+                        "x-graphql uses your X session cookies")
     p.add_argument("--top", action="store_true", help="X's Top ranking instead of Latest")
     p.add_argument("--max-requests", type=positive_int, default=25,
                    help="hard cap on HTTP requests for this command (default 25)")
@@ -97,23 +96,32 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
 # --- runs ----------------------------------------------------------------------
 
 def run_search(args, ctx) -> dict:
-    backend = args.backend or FX_BACKEND
     input = {"query": args.query, "since": _iso(args.since), "until": _iso(args.until),
              "window_days": args.window_days, "per_window": args.per_window, "top": args.top,
-             "backend": backend, "max_requests": args.max_requests}
+             "backend": args.backend, "max_requests": args.max_requests}
     try:
-        fallback = None if args.backend else load_fallback(ctx.environ)
+        order = (args.backend,) if args.backend else load_search_order(ctx.environ)
     except CookieError as e:
-        return env.envelope(CHANNEL, "search", input, backend, [], meta={"attempts": []},
+        return env.envelope(CHANNEL, "search", input, None, [], meta={"attempts": []},
                             error=env.error(e.code, str(e)))
-    run = _search(args, backend, ctx, args.max_requests)
-    remaining = args.max_requests - sum(a["requests"] for a in run["attempts"])
-    if fallback and run["outcome"] in FALLBACK_ON and remaining > 0:
-        first = run["attempts"]
-        run = _search(args, fallback, ctx, remaining)  # partial FxTwitter items are discarded
-        run["attempts"] = first + run["attempts"]
-    return env.envelope(CHANNEL, "search", input, run["backend"], run["items"],
-                        meta={"attempts": run["attempts"], **run["meta"]}, error=run["error"])
+    input["backend"] = order[0]
+    runs, remaining = [], args.max_requests
+    for backend in order:
+        runs.append(_search(args, backend, ctx, remaining))
+        remaining -= sum(a["requests"] for a in runs[-1]["attempts"])
+        if runs[-1]["outcome"] not in FALLBACK_ON or remaining <= 0:
+            break
+    # The result is the last run: the one that answered, or that stopped for a reason the user must
+    # act on. When it too only failed to answer, the result is the first run's, whose backend the
+    # user put first and whose partial items would otherwise be lost. Every other run goes in a note.
+    result = runs[0] if runs[-1]["outcome"] in FALLBACK_ON else runs[-1]
+    at = runs.index(result)
+    notes = [f"{run['backend']} was tried {'first' if i < at else 'next'} and failed: {run['error']['message']}"
+             for i, run in enumerate(runs) if i != at]
+    meta = {**result["meta"], "attempts": [a for run in runs for a in run["attempts"]],
+            "notes": notes + result["meta"].get("notes", [])}
+    return env.envelope(CHANNEL, "search", input, result["backend"], result["items"], meta=meta,
+                        error=result["error"])
 
 
 def _search(args, backend, ctx, max_requests) -> dict:

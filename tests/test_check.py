@@ -202,7 +202,7 @@ def test_live_x_sends_no_cookie_even_with_cookies_configured(rsrc, environ):
         sent.append({k.lower(): v for k, v in (headers or {}).items()})
         return (200, FX_STATUS) if "/status/" in url else (404, b"")
 
-    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "fxtwitter,x-graphql"}, transport=transport)
     assert code == 0 and len(sent) == 2
     assert all(set(headers) == {"user-agent"} for headers in sent)
 
@@ -218,32 +218,37 @@ def test_live_x_dead_search_fails_x_after_one_search_request(rsrc, environ):
     code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
     assert code == 1 and out["error"]["code"] == "upstream_error"
     assert out["meta"]["sources"] == {"x": "upstream_error"} and len(transport.urls) == 2
-    assert "fxtwitter search: HTTP 404" in out["error"]["message"] and "fallback" in out["error"]["message"]
+    assert "fxtwitter search: HTTP 404" in out["error"]["message"] and "RSRC_X_SEARCH" in out["error"]["message"]
     assert out["items"][0]["raw"]["live"]["search"] == "upstream_error"
 
 
-def test_live_x_dead_search_with_a_usable_fallback_leaves_x_ok_and_says_so(rsrc, environ):
+@pytest.mark.parametrize(("order", "role"), [("fxtwitter,x-graphql", "so searches fall back to x-graphql"), ("x-graphql,fxtwitter", "the fallback here")])
+def test_live_x_dead_search_with_a_usable_session_leaves_x_ok(rsrc, environ, order, role):
     transport = FakeTransport((200, FX_STATUS), (404, b""))
-    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": order}, transport=transport)
     [item] = out["items"]
     assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
-    assert "fxtwitter search is failing (fxtwitter search: HTTP 404)" in item["text"]
-    assert "searches run on x-graphql" in item["text"] and "did not try" in item["text"]
+    assert "fxtwitter search: HTTP 404" in item["text"] and role in item["text"]
+    assert "which this check did not try" in item["text"]
     assert item["raw"]["live"]["search"] == "upstream_error"
     assert all("api.fxtwitter.com" in url for url in transport.urls)  # nothing is sent to x.com
 
 
 def test_live_x_dead_search_with_a_fallback_but_no_cookies_fails_x(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
-               "RSRC_X_FALLBACK": "x-graphql"}
+               "RSRC_X_SEARCH": "fxtwitter,x-graphql"}
     transport = FakeTransport((200, FX_STATUS), (404, b""))
     code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
     assert code == 1 and out["meta"]["sources"] == {"x": "upstream_error"}
+    message = out["error"]["message"] if out.get("error") else out["items"][0]["text"]
+    assert "x-graphql is in RSRC_X_SEARCH but cannot take over" in message and "missing AUTH_TOKEN, CT0" in message
+    assert "put x-graphql in RSRC_X_SEARCH" not in message
 
 
-def test_live_x_rate_limited_search_fails_x_even_with_a_fallback(rsrc, environ):
+@pytest.mark.parametrize("order", ["fxtwitter,x-graphql", "x-graphql,fxtwitter"])
+def test_live_x_rate_limited_search_fails_x_even_with_a_fallback(rsrc, environ, order):
     transport = FakeTransport((200, FX_STATUS), (429, b"{}"))
-    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": order}, transport=transport)
     assert code == 1 and out["meta"]["sources"] == {"x": "rate_limited"} and len(transport.urls) == 2
 
 
@@ -606,20 +611,40 @@ def test_youtube_probe_failures(rsrc, environ, response, code_):
 
 def test_x_reports_the_search_fallback_when_configured(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
-               "RSRC_X_FALLBACK": "x-graphql"}
+               "RSRC_X_SEARCH": "fxtwitter,x-graphql"}
     code, out = rsrc(["x"], environ=environ)
-    assert code == 0 and out["items"][0]["raw"]["fallback"] == "x-graphql"
-    assert "falls back to x-graphql" in out["items"][0]["text"]
+    assert code == 0 and out["items"][0]["raw"]["search_order"] == ["fxtwitter", "x-graphql"]
+    assert "then x-graphql with your X session" in out["items"][0]["text"]
 
 
-def test_x_fallback_is_null_when_unset(rsrc, tmp_path):
+def test_x_defaults_to_fxtwitter_when_unset(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache")}
     code, out = rsrc(["x"], environ=environ)
-    assert code == 0 and out["items"][0]["raw"]["fallback"] is None
+    assert code == 0 and out["items"][0]["raw"]["search_order"] == ["fxtwitter"]
 
 
 def test_x_bad_fallback_setting_is_config(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
-               "RSRC_X_FALLBACK": "yes"}
+               "RSRC_X_SEARCH": "yes"}
     code, out = rsrc(["x"], environ=environ)
     assert code == 2 and out["error"]["code"] == "config" and out["meta"]["sources"] == {"x": "config"}
+
+
+@pytest.mark.parametrize("order", ["x-graphql", "x-graphql,fxtwitter"])
+def test_x_session_first_requires_cookies_even_without_live_probe(rsrc, tmp_path, order):
+    transport = FakeTransport()
+    environ = {"RSRC_X_SEARCH": order, "RSRC_X_ENV": str(tmp_path / "absent")}
+    code, out = rsrc(["x"], environ=environ, transport=transport)
+    assert code == 2 and out["error"]["code"] == "config"
+    assert out["meta"]["sources"] == {"x": "config"}
+    assert out["items"][0]["raw"]["search_order"] == order.split(",")
+    assert out["meta"]["attempts"] == [] and transport.urls == []
+
+
+def test_live_x_session_only_reads_the_public_post(rsrc, environ):
+    transport = FakeTransport((200, FX_STATUS))
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "x-graphql"}, transport=transport)
+    assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
+    assert out["items"][0]["raw"]["search_order"] == ["x-graphql"]
+    assert "searches run on x-graphql with your X session, which this check did not try" in out["items"][0]["text"]
+    assert transport.urls == ["https://api.fxtwitter.com/2/status/20"]

@@ -1,4 +1,4 @@
-"""Load X session cookies: process environment first, then a mode-600 env file.
+"""Load the X search order and session cookies: process environment first, then a mode-600 env file.
 
 Cookie values never appear in error messages.
 """
@@ -43,21 +43,28 @@ def load_cookies(environ=os.environ, path=None) -> tuple[str, str]:
     return values["AUTH_TOKEN"], values["CT0"]
 
 
-FALLBACK_KEY = "RSRC_X_FALLBACK"
-FALLBACK_VALUES = ("x-graphql",)
+FX_BACKEND = "fxtwitter"
+BACKENDS = (FX_BACKEND, "x-graphql")
 
 
-def load_fallback(environ=os.environ, path=None) -> str | None:
-    """Backend default search falls back to, or None when off. Same sources and checks as the cookies."""
-    path = Path(path).expanduser() if path else cookie_file(environ)
-    value = environ.get(FALLBACK_KEY, "").strip()
-    if not value and path.exists():
-        value = _read_env_file(path).get(FALLBACK_KEY, "")
-    if not value:
-        return None
-    if value not in FALLBACK_VALUES:
-        raise CookieError(f"{FALLBACK_KEY} must be {' or '.join(FALLBACK_VALUES)} or unset")
-    return value
+def load_search_order(environ) -> tuple[str, ...]:
+    """The backends a default `x search` tries, first to last: RSRC_X_SEARCH from the environment,
+    else from the cookie file, else FxTwitter alone. A blank value counts as unset, like a cookie.
+
+    RSRC_X_FALLBACK (the setting this replaced) is an error rather than ignored: ignoring it would
+    silently turn a fallback off.
+    """
+    path = cookie_file(environ)
+    settings = _read_env_file(path) if path.exists() else {}
+    if environ.get("RSRC_X_FALLBACK", "").strip() or settings.get("RSRC_X_FALLBACK"):
+        raise CookieError("RSRC_X_FALLBACK was replaced: remove it and set RSRC_X_SEARCH=fxtwitter,x-graphql "
+                          f"(in {path} or the environment)")
+    value = environ.get("RSRC_X_SEARCH", "").strip() or settings.get("RSRC_X_SEARCH", "").strip() or FX_BACKEND
+    order = tuple(part.strip() for part in value.split(","))
+    if any(backend not in BACKENDS for backend in order) or len(order) != len(set(order)):
+        raise CookieError("RSRC_X_SEARCH must list fxtwitter or x-graphql, separated by commas, "
+                          "with no duplicates or empty entries")
+    return order
 
 
 def _read_env_file(path: Path) -> dict[str, str]:

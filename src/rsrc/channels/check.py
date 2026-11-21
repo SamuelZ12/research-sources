@@ -1,13 +1,13 @@
 """`rsrc check`: one cheap probe per channel (x, gh, reddit, hn, polymarket, youtube), one item
 per channel.
 
-x is checked locally unless `--live-x`, which makes one `fx.read` of a fixed public post (one
-request, up to four when it has to retry) and one FxTwitter search request, both without login. A failing FxTwitter search fails x unless the
-x-graphql fallback is configured and its cookies load; that fallback is reported, never run,
-because it would search from the user's own X session. Search defaults to FxTwitter (no login),
-so missing or malformed cookies only make `--backend x-graphql` unavailable; a cookie file
-readable by other users still fails x. Cookie values are never read into the output: only which
-keys are set and where. gh runs `gh auth status` and `gh api rate_limit`; its token is never read.
+x checks the search order (RSRC_X_SEARCH) and the session cookies locally. Missing or malformed
+cookies fail x only when x-graphql comes first in the order; a cookie file readable by other users
+always does. `--live-x` adds one `fx.read` of a fixed public post (one request, up to four when it
+has to retry) and, when FxTwitter is in the order, one FxTwitter search request, both without
+login. A failing FxTwitter search fails x unless x-graphql is in the order and its cookies load;
+x-graphql is reported, never run, because it would search from the user's own X session. Cookie
+values are never read into the output: only which keys are set and where. gh runs `gh auth status` and `gh api rate_limit`; its token is never read.
 reddit runs a local ego-browser script (no Reddit request) unless `--live-reddit`, which also
 loads one Reddit search page in Ego and reads one result from it. hn makes one keyless request for the top front-page story. polymarket makes one
 keyless request for the first page of a fixed search. youtube looks for `yt-dlp` and `deno`, then
@@ -48,8 +48,9 @@ def register(subparsers) -> None:
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
     parser.add_argument("--live-x", action="store_true",
-                        help=f"also read one public post ({LIVE_X_POST}) and run one search through "
-                             "FxTwitter (no login; 2 requests, up to 5 when the read has to retry)")
+                        help=f"also read one public post ({LIVE_X_POST}) and, when fxtwitter is in the search order, "
+                             "run one FxTwitter search (no login; 1 request for the read, up to 4 when it "
+                             "has to retry, and 1 for the search)")
     parser.add_argument("--live-reddit", action="store_true",
                         help="also load one Reddit search page in Ego (1 page load, in your browser)")
     parser.set_defaults(run=run, action="check")
@@ -102,33 +103,40 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
     path = auth.cookie_file(environ)
     raw = {"cookie_file": str(path), "file_exists": path.exists(), "file_mode": None,
            "env_keys": [k for k in auth.KEYS if environ.get(k, "").strip()],
-           "x_graphql": "ready", "query_id_cache": _query_id_cache(environ), "fallback": None, "live": None}
+           "x_graphql": "ready", "query_id_cache": _query_id_cache(environ), "search_order": [], "live": None}
     if raw["file_exists"]:
         mode = stat.S_IMODE(path.stat().st_mode)
         raw["file_mode"] = f"{mode:o}"
         if mode & 0o077:
             raise _Failed("config", f"{path} is accessible by other users; run: chmod 600 {path}", raw)
     try:
-        raw["fallback"] = auth.load_fallback(environ)
+        order = auth.load_search_order(environ)
+        raw["search_order"] = list(order)
     except auth.CookieError as e:
         raise _Failed(e.code, str(e), raw) from None
+    labels = {"fxtwitter": "fxtwitter (no login)", "x-graphql": "x-graphql with your X session"}
+    searching = f"search via {labels[order[0]]}"
+    if len(order) > 1:
+        searching += f", then {labels[order[1]]} on upstream_error or network_error"
     try:
         auth.load_cookies(environ)  # the values are discarded; only success matters
     except auth.CookieError as e:
         raw["x_graphql"] = "unavailable"
         x_graphql = f"x-graphql unavailable: {e}"
+        if order[0] == "x-graphql":
+            raise _Failed(e.code, f"{searching}; {x_graphql}", raw) from None
     else:
         where = "environment" if len(raw["env_keys"]) == len(auth.KEYS) else str(path)
         x_graphql = (f"x-graphql: cookies {', '.join(auth.KEYS)} present ({where}); "
                      f"query-ID cache {raw['query_id_cache']['state']}")
-    searching = "search via fxtwitter (no login)"
-    if raw["fallback"]:
-        searching += f", falls back to {raw['fallback']} on upstream_error or network_error"
     text = f"{searching}; {x_graphql}"
     if live:
         raw["live"] = _live_read(ctx, attempts, raw)
         text += f"; fxtwitter read of post {LIVE_X_POST} ok"
-        text += "; " + _live_search(ctx, attempts, raw)
+        if xc.FX_BACKEND in order:
+            text += "; " + _live_search(ctx, attempts, raw, x_graphql)
+        else:
+            text += "; searches run on x-graphql with your X session, which this check did not try"
     return text, raw
 
 
@@ -166,12 +174,13 @@ def _live_read(ctx, attempts: list, raw: dict) -> dict:
     return {"post": LIVE_X_POST, "source": record["source"], "requests": client.requests_made}
 
 
-def _live_search(ctx, attempts: list, raw: dict) -> str:
-    """One FxTwitter search request; returns the sentence for the item text.
+def _live_search(ctx, attempts: list, raw: dict, x_graphql: str) -> str:
+    """One FxTwitter search request; returns the sentence for the item text. `x_graphql` is the
+    sentence on the session cookies, repeated in the failure when x-graphql is in the order.
 
     The request cap of 1 turns the retries a real search makes into the failure they would retry.
-    A failing search fails x, except when searches have somewhere else to go: the configured
-    fallback with loadable cookies. A rate limit always fails x.
+    A failing search fails x, except when searches have somewhere else to go: x-graphql in the
+    order with loadable cookies. A rate limit always fails x.
     """
     client = Client(transport=ctx.transport, sleep=ctx.sleep, max_requests=1)
     started = time.monotonic()
@@ -184,12 +193,20 @@ def _live_search(ctx, attempts: list, raw: dict) -> str:
     raw["live"] |= {"search": code, "search_error": message, "requests": raw["live"]["requests"] + client.requests_made}
     if code == "ok":
         return "fxtwitter search ok"
-    covered = raw["fallback"] and raw["x_graphql"] == "ready" and code in xc.FALLBACK_ON
-    if not covered:
-        fix = "" if code == "rate_limited" else "; `rsrc x search` fails until FxTwitter recovers or a fallback is set (README)"
-        raise _Failed(code, f"{message}{fix}", raw)
-    return (f"fxtwitter search is failing ({message}), so searches run on {raw['fallback']} with your X session, "
-            "which this check did not try")
+    order = raw["search_order"]
+    if code in xc.FALLBACK_ON and "x-graphql" in order and raw["x_graphql"] == "ready":
+        if order[0] == xc.FX_BACKEND:
+            return (f"fxtwitter search is failing ({message}), so searches fall back to x-graphql with your "
+                    "X session, which this check did not try")
+        return (f"fxtwitter search, the fallback here, is failing ({message}); searches run on x-graphql "
+                "with your X session, which this check did not try")
+    fix = ""
+    if code in xc.FALLBACK_ON and "x-graphql" in order:
+        fix = f"; x-graphql is in RSRC_X_SEARCH but cannot take over ({x_graphql})"
+    elif code in xc.FALLBACK_ON:
+        fix = ("; `rsrc x search` fails until FxTwitter recovers, or put x-graphql in RSRC_X_SEARCH with your "
+               "X session cookies (README)")
+    raise _Failed(code, f"{message}{fix}", raw)
 
 
 # --- gh ----------------------------------------------------------------------------

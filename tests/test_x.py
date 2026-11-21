@@ -437,9 +437,10 @@ def test_answer_from_x_that_mentions_a_network_error_is_upstream_error(run, resp
     assert "network error" in env["error"]["message"] and len(fake.urls) == 1
 
 
-# --- search: opt-in fallback from FxTwitter to x-graphql -------------------------
+# --- search: configured backend order -------------------------
 
-FALLBACK = {"RSRC_X_FALLBACK": "x-graphql"}
+FX_FIRST = {"RSRC_X_SEARCH": "fxtwitter,x-graphql"}
+SESSION_FIRST = {"RSRC_X_SEARCH": "x-graphql,fxtwitter"}
 
 
 def attempts(env):
@@ -448,11 +449,13 @@ def attempts(env):
 
 def test_fallback_after_fxtwitter_upstream_error_returns_x_graphql_results(run, environ):
     fake = FakeTransport(fx=[(404, b"")] * 3, x=[(200, load("x_graphql_latest.json"))])
-    code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={**environ, **FX_FIRST})
 
     assert code == 0 and env["ok"] is True and env["error"] is None
     assert env["backend"] == "x-graphql" and env["input"]["backend"] == "fxtwitter"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3), ("x-graphql", "ok", 1)]
+    assert env["meta"]["notes"] == ["fxtwitter was tried first and failed: fxtwitter search: HTTP 404"]
+    assert [urlsplit(u).hostname for u in fake.urls] == ["api.fxtwitter.com"] * 3 + ["x.com"]
     expected = [r["id"] for r in parse_page(load("x_graphql_latest.json"))[0]]
     assert [i["id"] for i in env["items"]] == expected
     assert all(i["source"] == "x-graphql" for i in env["items"])
@@ -460,7 +463,7 @@ def test_fallback_after_fxtwitter_upstream_error_returns_x_graphql_results(run, 
 
 def test_no_fallback_after_fxtwitter_no_results(run, environ):
     fake = FakeTransport(fx=[(200, FX_EMPTY)], x=[(200, load("x_graphql_latest.json"))])
-    code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={**environ, **FX_FIRST})
     assert code == 66 and env["ok"] is True and env["backend"] == "fxtwitter" and env["items"] == []
     assert attempts(env) == [("fxtwitter", "no_results", 1)]
     assert all(u.startswith("https://api.fxtwitter.com/") for u in fake.urls)
@@ -468,7 +471,7 @@ def test_no_fallback_after_fxtwitter_no_results(run, environ):
 
 def test_fallback_never_follows_a_fxtwitter_rate_limit(run, environ):
     fake = FakeTransport(fx=[(429, b"")], x=[(200, load("x_graphql_latest.json"))])
-    code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={**environ, **FX_FIRST})
     assert code == 1 and env["error"]["code"] == "rate_limited" and env["backend"] == "fxtwitter"
     assert all(u.startswith("https://api.fxtwitter.com/") for u in fake.urls)
     assert attempts(env) == [("fxtwitter", "rate_limited", 1)]
@@ -476,7 +479,7 @@ def test_fallback_never_follows_a_fxtwitter_rate_limit(run, environ):
 
 def test_fxtwitter_results_are_kept_without_fallback(run, environ):
     fake = FakeTransport(fx=[(200, load("x_fx_search_latest.json")), (200, FX_EMPTY)])
-    code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={**environ, **FX_FIRST})
     assert code == 0 and env["backend"] == "fxtwitter" and len(env["items"]) == 11
     assert [a["backend"] for a in env["meta"]["attempts"]] == ["fxtwitter"]
 
@@ -488,9 +491,10 @@ def test_no_fallback_when_setting_is_off(run, environ):
     assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
 
 
-def test_explicit_fxtwitter_backend_ignores_the_setting(run, environ):
+@pytest.mark.parametrize("settings", [FX_FIRST, {"RSRC_X_SEARCH": "invalid", "RSRC_X_FALLBACK": "x-graphql"}])
+def test_explicit_fxtwitter_backend_ignores_the_setting(run, environ, settings):
     fake = FakeTransport(fx=[(404, b"")] * 3)
-    code, env, _ = run(["search", "q", "--backend", "fxtwitter"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q", "--backend", "fxtwitter"], fake, env=environ | settings)
     assert code == 1 and env["error"]["code"] == "upstream_error"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
 
@@ -499,7 +503,7 @@ def test_fallback_shares_the_request_cap(run, environ):
     page2 = load("x_graphql_latest.json")
     fake = FakeTransport(fx=[(404, b"")] * 3, x=[(200, page2), (200, page2)])
     code, env, _ = run(["search", "q", "--per-window", "40", "--max-requests", "4"], fake,
-                       env={**environ, **FALLBACK})
+                       env={**environ, **FX_FIRST})
     assert code == 0 and env["backend"] == "x-graphql" and env["meta"]["truncated"] == "request_cap"
     assert len(fake.urls) == 4
     assert attempts(env) == [("fxtwitter", "upstream_error", 3), ("x-graphql", "ok", 1)]
@@ -507,21 +511,28 @@ def test_fallback_shares_the_request_cap(run, environ):
 
 def test_no_fallback_when_fxtwitter_used_the_whole_cap(run, environ):
     fake = FakeTransport(fx=[(404, b"")] * 3)
-    code, env, _ = run(["search", "q", "--max-requests", "3"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q", "--max-requests", "3"], fake, env={**environ, **FX_FIRST})
     assert code == 1 and env["error"]["code"] == "upstream_error" and len(fake.urls) == 3
     assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
 
 
-def test_bad_fallback_setting_is_config_with_zero_requests(run, environ):
+@pytest.mark.parametrize("value", ["reddit", "x-graphql,x-graphql", "fxtwitter,", ",x-graphql"])
+def test_bad_search_order_is_config_with_zero_requests(run, environ, value):
     fake = FakeTransport()
-    code, env, _ = run(["search", "q"], fake, env={**environ, "RSRC_X_FALLBACK": "reddit"})
+    code, env, _ = run(["search", "q"], fake, env={**environ, "RSRC_X_SEARCH": value})
     assert code == 2 and env["error"]["code"] == "config"
     assert fake.urls == [] and env["meta"]["attempts"] == []
 
 
+def test_blank_search_order_is_the_default(run, environ):
+    fake = FakeTransport(fx=[(200, load("x_fx_search_latest.json")), (200, FX_EMPTY)])
+    code, env, _ = run(["search", "q"], fake, env={**environ, "RSRC_X_SEARCH": " ", "RSRC_X_FALLBACK": ""})
+    assert code == 0 and env["backend"] == "fxtwitter" and [a["backend"] for a in env["meta"]["attempts"]] == ["fxtwitter"]
+
+
 def test_fallback_setting_is_read_from_the_cookie_file(run, environ, tmp_path):
     path = tmp_path / "x.env"
-    path.write_text(f"AUTH_TOKEN={AUTH_TOKEN}\nCT0={CT0}\nRSRC_X_FALLBACK=x-graphql\n")
+    path.write_text(f"AUTH_TOKEN={AUTH_TOKEN}\nCT0={CT0}\nRSRC_X_SEARCH=fxtwitter,x-graphql\n")
     path.chmod(0o600)
     fake = FakeTransport(fx=[(404, b"")] * 3, x=[(200, load("x_graphql_latest.json"))])
     code, env, _ = run(["search", "q"], fake, env={"RSRC_X_ENV": str(path), "XDG_CACHE_HOME": environ["XDG_CACHE_HOME"]})
@@ -531,14 +542,15 @@ def test_fallback_setting_is_read_from_the_cookie_file(run, environ, tmp_path):
 
 def test_fallback_without_cookies_is_config_after_the_fxtwitter_attempt(run, environ):
     fake = FakeTransport(fx=[(404, b"")] * 3)
-    code, env, _ = run(["search", "q"], fake, env={"RSRC_X_ENV": environ["RSRC_X_ENV"], **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={"RSRC_X_ENV": environ["RSRC_X_ENV"], **FX_FIRST})
     assert code == 2 and env["error"]["code"] == "config" and len(fake.urls) == 3
-    assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
+    assert env["backend"] == "x-graphql" and attempts(env) == [("fxtwitter", "upstream_error", 3)]
+    assert env["meta"]["notes"] == ["fxtwitter was tried first and failed: fxtwitter search: HTTP 404"]
 
 
 def test_fallback_401_is_auth_failed_with_both_attempts(run, environ):
     fake = FakeTransport(fx=[(404, b"")] * 3, x=[(401, b"")])
-    code, env, _ = run(["search", "q"], fake, env={**environ, **FALLBACK})
+    code, env, _ = run(["search", "q"], fake, env={**environ, **FX_FIRST})
     assert code == 1 and env["error"]["code"] == "auth_failed" and env["backend"] == "x-graphql"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3), ("x-graphql", "auth_failed", 1)]
 
@@ -549,3 +561,103 @@ def test_fxtwitter_404_cut_short_by_the_cap_is_upstream_error(run):
     code, env, _ = run(["search", "q", "--max-requests", "1"], fake)
     assert code == 1 and env["ok"] is False and env["error"]["code"] == "upstream_error"
     assert attempts(env) == [("fxtwitter", "upstream_error", 1)] and len(fake.urls) == 1
+
+@pytest.mark.parametrize(("response", "exit_code", "outcome"), [
+    ((200, page(tweet("11"))), 0, "ok"), ((200, page()), 66, "no_results"),
+    ((401, b""), 1, "auth_failed"), ((429, b""), 1, "rate_limited"),
+])
+def test_session_first_stops_on_answer_or_account_error(run, environ, response, exit_code, outcome):
+    fake = FakeTransport(x=[response])
+    code, env, _ = run(["search", "q"], fake, env=environ | SESSION_FIRST)
+    assert code == exit_code and env["backend"] == env["input"]["backend"] == "x-graphql"
+    assert (env["error"]["code"] if env["error"] else None) == (outcome if code == 1 else None)
+    assert [item["id"] for item in env["items"]] == (["11"] if outcome == "ok" else [])
+    assert attempts(env) == [("x-graphql", outcome, 1)] and env["meta"]["notes"] == []
+    assert [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
+
+
+def test_session_first_missing_cookies_stops_before_requests(run, environ):
+    fake = FakeTransport()
+    code, env, _ = run(["search", "q"], fake, env={"RSRC_X_ENV": environ["RSRC_X_ENV"], **SESSION_FIRST})
+    assert code == 2 and env["error"]["code"] == "config" and env["backend"] == "x-graphql"
+    assert attempts(env) == env["meta"]["notes"] == fake.urls == []
+
+
+@pytest.mark.parametrize(("fx_status", "exit_code", "outcome"), [(200, 0, "ok"), (404, 1, "upstream_error")])
+def test_session_error_passes_remaining_request_to_fxtwitter(run, environ, fx_status, exit_code, outcome):
+    fake = FakeTransport(x=[(500, b"session outage")], fx=[(fx_status, load("x_fx_search_latest.json"))])
+    code, env, _ = run(["search", "q", "--max-requests", "2"], fake, env=environ | SESSION_FIRST)
+    assert code == exit_code and env["input"]["backend"] == "x-graphql"
+    if fx_status == 200:
+        assert env["backend"] == "fxtwitter" and env["error"] is None
+        assert {item["source"] for item in env["items"]} == {"fxtwitter"}
+        assert env["meta"]["truncated"] == "request_cap"
+        assert env["meta"]["notes"] == ["x-graphql was tried first and failed: HTTP 500: session outage"]
+    else:  # nothing answered: the result is the first backend's, the fallback's failure is a note
+        assert env["backend"] == "x-graphql" and env["items"] == []
+        assert env["error"] == {"code": "upstream_error", "message": "HTTP 500: session outage"}
+        assert env["meta"]["notes"] == ["fxtwitter was tried next and failed: fxtwitter search: HTTP 404"]
+    assert attempts(env) == [("x-graphql", "upstream_error", 1), ("fxtwitter", outcome, 1)]
+    assert [urlsplit(u).hostname for u in fake.urls] == ["x.com", "api.fxtwitter.com"]
+
+
+def test_session_first_keeps_its_posts_and_error_when_fxtwitter_fails_too(run, environ):
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (500, b"page two")], fx=[(404, b"")] * 3)
+    code, env, _ = run(["search", "q", "--per-window", "100"], fake, env=environ | SESSION_FIRST)
+    assert code == 1 and env["backend"] == "x-graphql" and env["error"]["code"] == "upstream_error"
+    assert "page two" in env["error"]["message"]
+    assert len(env["items"]) == len(parse_page(load("x_graphql_latest.json"))[0]) > 0
+    assert attempts(env) == [("x-graphql", "upstream_error", 2), ("fxtwitter", "upstream_error", 3)]
+    assert env["meta"]["notes"] == ["fxtwitter was tried next and failed: fxtwitter search: HTTP 404"]
+
+
+def test_fxtwitter_first_keeps_its_error_when_the_session_fails_too(run, environ):
+    fake = FakeTransport(fx=[(404, b"")] * 3, x=[(500, b"session outage")])
+    code, env, _ = run(["search", "q", "--max-requests", "4"], fake, env=environ | FX_FIRST)
+    assert code == 1 and env["backend"] == "fxtwitter"
+    assert env["error"] == {"code": "upstream_error", "message": "fxtwitter search: HTTP 404"}
+    assert env["meta"]["notes"] == ["x-graphql was tried next and failed: HTTP 500: session outage"]
+
+
+def test_session_first_does_not_reach_fxtwitter_once_the_cap_is_used(run, environ):
+    fake = FakeTransport(x=[(500, b"session outage")])
+    code, env, _ = run(["search", "q", "--max-requests", "1"], fake, env=environ | SESSION_FIRST)
+    assert code == 1 and env["backend"] == "x-graphql" and env["error"]["code"] == "upstream_error"
+    assert attempts(env) == [("x-graphql", "upstream_error", 1)] and env["meta"]["notes"] == []
+    assert [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
+
+
+def test_blank_environment_value_falls_through_to_the_file(run, environ):
+    path = Path(environ["RSRC_X_ENV"])
+    path.write_text("RSRC_X_SEARCH=x-graphql\n")
+    path.chmod(0o600)
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json"))])
+    code, env, _ = run(["search", "q", "--max-requests", "1"], fake, env=environ | {"RSRC_X_SEARCH": ""})
+    assert code == 0 and env["backend"] == "x-graphql" and [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
+
+
+@pytest.mark.parametrize("in_file", [True, False])
+def test_old_setting_requires_migration_even_with_search_order(run, environ, in_file):
+    settings = environ | SESSION_FIRST
+    if in_file:
+        path = Path(settings["RSRC_X_ENV"])
+        path.write_text("RSRC_X_FALLBACK=x-graphql\n")
+        path.chmod(0o600)
+    else:
+        settings["RSRC_X_FALLBACK"] = "x-graphql"
+    fake = FakeTransport()
+    code, env, _ = run(["search", "q"], fake, env=settings)
+    assert code == 2 and env["error"]["code"] == "config"
+    assert "RSRC_X_SEARCH=fxtwitter,x-graphql" in env["error"]["message"]
+    assert attempts(env) == env["meta"]["notes"] == fake.urls == []
+
+
+def test_environment_search_order_overrides_file(run, environ):
+    path = Path(environ["RSRC_X_ENV"])
+    path.write_text("RSRC_X_SEARCH=fxtwitter\n")
+    path.chmod(0o600)
+    fake = FakeTransport(x=[(200, page(tweet("11")))])
+    code, env, _ = run(["search", "q"], fake, env=environ | {"RSRC_X_SEARCH": "x-graphql"})
+    assert code == 0 and env["error"] is None and env["backend"] == "x-graphql"
+    assert attempts(env) == [("x-graphql", "ok", 1)] and env["meta"]["notes"] == []
+    assert [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
