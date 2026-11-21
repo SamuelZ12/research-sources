@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, to_int
-from rsrc.http import AuthError, HttpError, RateLimited
+from rsrc.http import AuthError, CapReached, HttpError, RateLimited
 
 API = "https://x.com/i/api/graphql"
 QUERY_IDS = ("6AAys3t42mosm_yTI_QENg", "M1jEez78PEfVfbQLvlWMvQ", "5h0kNbk3ii97rmfY6CdgAA", "Tp1sewRU1AsZpBWhqCZicQ")
@@ -94,6 +94,12 @@ class Searcher:
         for query_id in candidates:
             try:
                 result = fetch_page(self.client, self.cookies, query, product, cursor, query_id, count)
+            except CapReached:
+                if rejected is None:
+                    raise
+                raise SearchError(
+                    f"{rejected}. --max-requests stopped rotation before all SearchTimeline query IDs were tried."
+                ) from rejected
             except SearchError as e:
                 if not e.query_id_rejected:
                     raise

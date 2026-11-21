@@ -10,7 +10,7 @@ from rsrc import cli
 from rsrc.channels import x
 from rsrc.envelope import ITEM_KEYS
 from rsrc.channels.x.fx import status_record
-from rsrc.channels.x.search import parse_page
+from rsrc.channels.x.search import QUERY_IDS, parse_page
 
 GQL = ["search", "--backend", "x-graphql"]  # the cookie-authenticated X web search
 
@@ -188,12 +188,24 @@ def test_missing_cookies_is_config_with_zero_requests(run, environ):
     assert fake.urls == [] and env["meta"]["attempts"] == []
 
 
+def test_cap_during_query_id_rotation_reports_rejection(run):
+    fake = FakeTransport(x=[(404, b"")])
+    code, env, _ = run([*GQL, "q", "--max-requests", "1"], fake)
+    assert code == 1 and env["ok"] is False and env["items"] == []
+    assert env["error"]["code"] == "upstream_error"
+    assert f"HTTP 404 for query ID {QUERY_IDS[0]}" in env["error"]["message"]
+    assert "--max-requests stopped rotation before all SearchTimeline query IDs were tried" in env["error"]["message"]
+    assert env["meta"]["truncated"] is None and attempts(env) == [("x-graphql", "upstream_error", 1)]
+    assert [u.partition("?")[0] for u in fake.urls] == [f"https://x.com/i/api/graphql/{QUERY_IDS[0]}/SearchTimeline"]
+
+
 def test_request_cap_is_ok_and_truncated(run):
     fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, load("x_graphql_top.json"))])
     code, env, _ = run([*GQL, "q", "--per-window", "40", "--max-requests", "1"], fake)
     assert code == 0 and env["ok"] is True and env["error"] is None
     assert env["meta"]["truncated"] == "request_cap"
-    assert len(env["items"]) == 20 and len(fake.urls) == 1
+    assert len(env["items"]) == 20 and attempts(env) == [("x-graphql", "ok", 1)]
+    assert [u.partition("?")[0] for u in fake.urls] == [f"https://x.com/i/api/graphql/{QUERY_IDS[0]}/SearchTimeline"]
 
 
 def test_bad_date_range_is_usage_with_zero_requests(run):
@@ -497,6 +509,19 @@ def test_explicit_fxtwitter_backend_ignores_the_setting(run, environ, settings):
     code, env, _ = run(["search", "q", "--backend", "fxtwitter"], fake, env=environ | settings)
     assert code == 1 and env["error"]["code"] == "upstream_error"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
+
+
+def test_fallback_reports_both_failures_when_cap_stops_query_id_rotation(run, environ):
+    fake = FakeTransport(fx=[(404, b"")] * 3, x=[(404, b"")])
+    code, env, _ = run(["search", "q", "--max-requests", "4"], fake, env=environ | FX_FIRST)
+    assert code == 1 and env["backend"] == "fxtwitter" and env["items"] == []
+    assert env["error"] == {"code": "upstream_error", "message": "fxtwitter search: HTTP 404"}
+    assert env["meta"]["notes"] == [f"x-graphql was tried next and failed: HTTP 404 for query ID {QUERY_IDS[0]}. "
+                                    "--max-requests stopped rotation before all SearchTimeline query IDs were tried."]
+    assert env["meta"]["truncated"] is None
+    assert attempts(env) == [("fxtwitter", "upstream_error", 3), ("x-graphql", "upstream_error", 1)]
+    assert [u.partition("?")[0] for u in fake.urls] == [
+        "https://api.fxtwitter.com/2/search"] * 3 + [f"https://x.com/i/api/graphql/{QUERY_IDS[0]}/SearchTimeline"]
 
 
 def test_fallback_shares_the_request_cap(run, environ):
