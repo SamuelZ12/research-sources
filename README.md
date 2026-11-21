@@ -2,13 +2,13 @@
 
 `rsrc` is a command-line tool that lets an AI agent read the places web search reaches poorly: X, Reddit, Hacker News, YouTube transcripts, Polymarket odds and GitHub. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit or a block page. It is read-only and needs no API keys.
 
-**Status:** early, with one maintainer. Developed and tested on macOS only. Since 2026-11-19 FxTwitter's search has answered HTTP 404, so `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional).
+**Status:** early, with one maintainer. Developed and tested on macOS only. FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification now lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional). `rsrc x read`, `rsrc x replies` and `rsrc x timeline` still work without a login.
 
 - **No API keys.** X, Hacker News, Polymarket and YouTube work without a login. GitHub uses your `gh` login. Reddit runs in [Ego Lite](https://lite.ego.app/), a browser app on your machine, and acts as your Reddit account if that browser is logged in to Reddit.
 - **One output shape.** Six sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
 - **Stops on rate limits.** A 429 ends the command. It is never retried, and no other backend is tried to get around it.
-- **No Python dependencies.** Standard library only, about 3,400 lines, with over 900 tests that run offline.
+- **No Python dependencies.** Standard library only, about 3,600 lines, with over 900 tests that run offline.
 - **Ships with an agent skill.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
 - **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. [Method and limits](docs/comparisons.md).
 
@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels and reports each under `meta.sources`: `ok`, or the error code that stopped it.
+That `check` makes one request to each of the two channels and reports each under `meta.sources`: `ok`, or the error code that stopped it. A bare `rsrc check` sends nothing to FxTwitter or Reddit. `--live-x` adds one post read and one search through FxTwitter, and `--live-reddit` loads one Reddit search page in Ego Lite.
 
 `x`, `hn` and `polymarket` work right away. The other channels run a program you install yourself:
 
@@ -72,13 +72,13 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 
 | Channel | Commands |
 |---|---|
-| X | `rsrc x search QUERY [--since YYYY-MM-DD]`, `rsrc x read URL_OR_ID…`, `rsrc x replies URL_OR_ID` |
-| Reddit | `rsrc reddit search QUERY`, `rsrc reddit read URL_OR_ID` |
+| X | `rsrc x search QUERY [--since YYYY-MM-DD]`, `rsrc x read URL_OR_ID…`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL` (profile and newest posts) |
+| Reddit | `rsrc reddit search QUERY`, `rsrc reddit read URL_OR_ID` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
 | GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues QUERY` |
-| All | `rsrc check [CHANNEL…]` |
+| All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
 
 `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
 

@@ -1,6 +1,6 @@
 ---
 name: research-sources
-description: Research sources web search reaches poorly. Use for X/Twitter sentiment or a specific x.com post; Reddit discussion or a specific Reddit thread; Hacker News stories or a specific Hacker News thread; Polymarket prediction markets and their current odds on a topic; YouTube videos on a topic, or one video's details and transcript; a GitHub repo, its issues, or repo search; or checking which of these sources work.
+description: Research sources web search reaches poorly. Use for X/Twitter sentiment, a specific x.com post, or one X account's profile and posts; Reddit discussion or a specific Reddit thread; Hacker News stories or a specific Hacker News thread; Polymarket prediction markets and their current odds on a topic; YouTube videos on a topic, or one video's details and transcript; a GitHub repo, its issues, or repo search; or checking which of these sources work.
 ---
 
 # research-sources (`rsrc`)
@@ -16,6 +16,7 @@ Run `rsrc …`; if `rsrc` is not on PATH, ask the user to install it (`uv tool i
 | What people on X think about a topic | `rsrc x search QUERY --since YYYY-MM-DD` (loop below) |
 | A specific x.com/twitter.com post | `rsrc x read URL_OR_ID [URL_OR_ID …]` (then "One X post" below) |
 | Replies to a post | `rsrc x replies URL_OR_ID [--rank likes\|recency] [--limit 100]` |
+| Who an X account is and what it posts | `rsrc x timeline HANDLE_OR_URL [--limit 20]` (then "One X account" below) |
 | What people on Reddit say about a topic | `rsrc reddit search QUERY [--subreddit NAME] [--time hour\|day\|week\|month\|year\|all] [--sort relevance\|hot\|top\|new\|comments] [--limit 25]` (default past month, relevance) |
 | One Reddit thread: the post and its top comments | `rsrc reddit read URL_OR_ID [--sort top\|best\|new\|controversial\|old\|qa] [--comments 50]` |
 | Hacker News stories on a topic | `rsrc hn search QUERY --since YYYY-MM-DD [--until YYYY-MM-DD] [--sort relevance\|date] [--limit 30]` (without `--since` it searches all time) |
@@ -27,9 +28,9 @@ Run `rsrc …`; if `rsrc` is not on PATH, ask the user to install it (`uv tool i
 | Find repositories | `rsrc gh search QUERY [--limit 20]` |
 | Issues and PRs | `rsrc gh issues QUERY [--repo OWNER/REPO] [--state open\|closed\|all] [--limit 30]` (default `--state open`) |
 | Recent discussion of a topic across several sites | No single command: see "Discussion across sites" below |
-| Which channels work right now | `rsrc check [x\|gh\|reddit\|hn\|polymarket\|youtube …]` (`--live-x` adds one public post read) |
+| Which channels work right now | `rsrc check [x\|gh\|reddit\|hn\|polymarket\|youtube …]` (`--live-x` adds one post read and one search through FxTwitter; `--live-reddit` adds one Reddit search page load) |
 
-`reddit` loads real reddit.com pages in a background Ego Lite tab (Reddit blocks every non-browser client), so Ego Lite must be running. A thread read takes 2–25 s, depending on how long Reddit's page takes to load; a search takes about 5 s, up to about 40 s when Reddit stops loading more results. Search returns what Reddit's own search page shows: title, a snippet, score and comment count, not full post bodies; use `reddit read` on the threads that matter. `read` returns the post first, then comments in page order with `raw.attrs.depth` and `raw.attrs.parentid` (replies Reddit folded behind "more replies" are not included). Share links (`reddit.com/r/…/s/…`) are rejected: open them first to get the `/comments/` URL.
+`reddit` loads real reddit.com pages in a background Ego Lite tab (Reddit blocks every non-browser client), so Ego Lite must be running. A thread read takes 2–25 s, depending on how long Reddit's page takes to load; a search takes about 5 s, up to about 40 s when Reddit stops loading more results. Search returns what Reddit's own search page shows: title, a snippet, score and comment count, not full post bodies; use `reddit read` on the threads that matter. `read` returns the post first, then comments in page order with `raw.attrs.depth` and `raw.attrs.parentid` (replies Reddit folded behind "more replies" are not included). A share link (`reddit.com/r/…/s/…`) costs one extra request, which finds the post it leads to; when that request fails with `upstream_error`, open the link in Ego and pass the `/comments/` URL it lands on. A `rate_limited` from it stops Reddit like any other.
 
 `hn` asks the Algolia Hacker News API directly: one request, about a second, no login. `hn search` returns stories only, in Algolia's order (`--sort date` for newest first), and `--until` is exclusive. An item's `url` is the Hacker News discussion; the linked article is `raw.url` on a search item and `raw.item.url` on a read item (absent on an Ask HN or Tell HN text post). `hn read` returns the requested item first, then comments depth-first in posting order, with `raw.depth` and `raw.item.parent_id`. Posting order is not a ranking and Hacker News publishes no comment scores: weigh a comment by what it says, whatever its position. Comments without text (deleted) are left out, and `meta.notes` says `N of M comments returned` when `--comments` cut the thread short.
 
@@ -67,11 +68,17 @@ Every command prints exactly one JSON object on stdout:
 
 Done when every entry is opened, or named in your answer as unopened with the reason.
 
-`x search` and `x replies` items carry the same `raw.media`.
+`x search`, `x replies` and `x timeline` items carry the same `raw.media`.
+
+## One X account
+
+`x timeline` takes a handle, `@handle` or an x.com account URL, needs no login, and returns the account first, then its timeline: posts, reposts and its replies to itself, newest first. A repost sits where the account reposted it, keeps the original post's date, and has the reposting handle in `raw.reposted_by`. On the account item, `title` is the display name, `text` the bio, `published_at` the join date, `engagement` has `followers`, `following` and `posts`, and `raw` has `location`, `website` and `verification`. A repost's `author` is the account that wrote it, not the one you asked for. When `meta.notes` says none of the posts is by the handle, there is no account item.
+
+A request returns about 20 posts, and a larger `--limit` (at most 200) costs one more request per 20. For an account's replies to others, its posts on one topic or a date range, use `rsrc x search 'from:HANDLE …' --since YYYY-MM-DD` instead. `x timeline` never answers `not_found`. FxTwitter sends the same 404 for an unknown handle and, on 2026-11-21, for about two in three requests about real accounts, so after three tries the result is `upstream_error`. Never report from it that an account does not exist: check the spelling, rerun once after a minute, then run `rsrc x search 'from:HANDLE'`, which returns posts only for a real account.
 
 ## X sentiment loop
 
-`x search` runs on FxTwitter's public API by default (no login). Keep volume low anyway: per question, one windowed Latest search plus at most one `--top` pass, each within the default `--max-requests 25`. `--backend x-graphql` runs the same search on the user's own logged-in X session. If the user configured it, a default search falls back to x-graphql on its own after an FxTwitter `upstream_error` or `network_error` (never after an empty result or a rate limit); `meta.attempts` then lists an `x-graphql` attempt and `backend` is `x-graphql`. When it already ran, do not rerun with `--backend x-graphql`. Otherwise reach for `--backend x-graphql` only after FxTwitter search returns `upstream_error` or `network_error` twice in a row. `x read` and `x replies` need no login either.
+`x search` runs on FxTwitter's public API by default (no login). Keep volume low anyway: per question, one windowed Latest search plus at most one `--top` pass, each within the default `--max-requests 25`. `--backend x-graphql` runs the same search on the user's own logged-in X session. If the user configured it, a default search falls back to x-graphql on its own after an FxTwitter `upstream_error` or `network_error` (never after an empty result or a rate limit); `meta.attempts` then lists an `x-graphql` attempt and `backend` is `x-graphql`. When it already ran, do not rerun with `--backend x-graphql`. Otherwise reach for `--backend x-graphql` only after FxTwitter search returns `upstream_error` or `network_error` twice in a row. `x read`, `x replies` and `x timeline` need no login either.
 
 1. **Search the whole period in windows.** An unwindowed search returns only the newest ~20 posts, often under two days on a busy topic.
    ```
@@ -86,7 +93,7 @@ Done when every claim traces to a post URL from `items`, and each window searche
 
 Query operators pass through to X: `"exact phrase"`, `from:` / `to:` / `@handle`, `filter:replies` / `-filter:replies`, `min_faves:10` / `min_replies:5` / `min_retweets:5`, `lang:en`, `url:github.com`, `A OR B`, `-word`. Give dates only through `--since`/`--until` (YYYY-MM-DD, UTC; `--until` is exclusive, so `--until 2026-11-01` covers October 31); a query that already contains `since:`/`until:` is rejected with `usage`.
 
-X item `source` is `fxtwitter` (search, `read`, `replies`), `x-graphql` (search with `--backend x-graphql` or after the fallback), or `syndication` (`read` fallback: text cut short on long posts, likes only; say so if you quote one).
+X item `source` is `fxtwitter` (search, `read`, `replies`, `timeline`), `x-graphql` (search with `--backend x-graphql` or after the fallback), or `syndication` (`read` fallback: text cut short on long posts, likes only; say so if you quote one).
 
 ## Reddit
 
@@ -118,11 +125,11 @@ No command sweeps several sites at once. For "what are people saying about TOPIC
 | `rate_limited` | Stop that channel (scope below) for the rest of the session; never retry or route around it |
 | `blocked` | The page was a block or login wall; treat the resource as unreadable and say so. On X (`x read`, `check --live-x`) it covers that one post only; on Reddit it stops all Reddit access, and on YouTube all `rsrc youtube` (scope below); `gh` never returns it |
 | `url_mismatch` | The source returned a different post or video than asked; do not use it |
-| `not_found` | The post, Hacker News item, video or repo does not exist or is not public; report it as such |
+| `not_found` | The post, Hacker News item, video, repo or Reddit share link does not exist or is not public; report it as such |
 | `upstream_error` | Rerun once; if it repeats, report the channel as failing (for `x search`, `--backend x-graphql` is the one alternative unless `meta.attempts` shows it already ran). A message containing `every SearchTimeline query ID was rejected` (x-graphql) needs the user's logged-in browser: stop using x-graphql (pass `--backend fxtwitter` to every further `x search`) and pass them the printed fix. A reddit message containing `markup may have changed` will not fix itself: report it, do not rerun. A reddit message containing `is Ego Lite running?` or `ego-browser exited`: ask the user to open Ego Lite. A youtube message containing `age-restricted video` will not fix itself: that video needs a login, which rsrc never uses; report it, do not rerun |
 | `network_error` | Rerun once; if it repeats, report the channel as unreachable (for `x search`, `--backend x-graphql` is the one alternative unless `meta.attempts` shows it already ran) |
 | `timeout` | Report it; rerun once only if the question needs that channel |
 
-**Stop scope.** On X, a stop from FxTwitter (default search, `read`, `replies` share it) ends all `rsrc x` for the session, x-graphql included, since a `rate_limited` is never routed around; a stop from x-graphql (`--backend x-graphql` or the fallback, envelope `backend` `x-graphql`) ends only that backend, so pass `--backend fxtwitter` to every further `x search` to keep the fallback from reaching it. `x read`/`x replies` may verify specific URLs, never stand in for a search. On Reddit, `rate_limited` or `blocked` stops all Reddit access for the session: `rsrc reddit` and any Reddit page in Ego, which share the same browser and account. On `gh`, `hn` and `polymarket`, stop the whole channel. On `youtube`, `rate_limited` or `blocked` (from a command, or as a `source_blocked` transcript status) stops all `rsrc youtube` for the session, search and `check youtube` included.
+**Stop scope.** On X, a stop from FxTwitter (default search, `read`, `replies`, `timeline` share it) ends all `rsrc x` for the session, x-graphql included, since a `rate_limited` is never routed around; a stop from x-graphql (`--backend x-graphql` or the fallback, envelope `backend` `x-graphql`) ends only that backend, so pass `--backend fxtwitter` to every further `x search` to keep the fallback from reaching it. `x read`/`x replies` may verify specific URLs, never stand in for a search. On Reddit, `rate_limited` or `blocked` stops all Reddit access for the session: `rsrc reddit` and any Reddit page in Ego, which share the same browser and account. On `gh`, `hn` and `polymarket`, stop the whole channel. On `youtube`, `rate_limited` or `blocked` (from a command, or as a `source_blocked` transcript status) stops all `rsrc youtube` for the session, search and `check youtube` included.
 
-Run `rsrc check` after an unexpected `config` or `upstream_error`, to see which channels still work; not before every question. A bare `rsrc check` makes one request to each of Hacker News, Polymarket and YouTube: after a stop on one of them, name the other channels instead (`rsrc check x gh reddit`).
+Run `rsrc check` after an unexpected `config` or `upstream_error`, to see which channels still work; not before every question. It proves X search or Reddit's page markup only with `--live-x` or `--live-reddit`: add the one that matches the failing channel. A bare `rsrc check` makes one request to each of Hacker News, Polymarket and YouTube: after a stop on one of them, name the other channels instead (`rsrc check x gh reddit`).
