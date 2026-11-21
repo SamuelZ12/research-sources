@@ -1,12 +1,15 @@
 """`rsrc check`: one cheap probe per channel (x, gh, reddit, hn, polymarket, youtube), one item
 per channel.
 
-x is checked locally unless `--live-x`, which makes one `fx.read` of a fixed public post. Search
-defaults to FxTwitter (no login), so missing or malformed cookies only make `--backend x-graphql`
-unavailable; a cookie file readable by other users still fails x. Cookie values are never read
-into the output: only which keys are set and where. gh runs `gh auth status` and
-`gh api rate_limit`; its token is never read. reddit runs a local ego-browser script (no
-Reddit request). hn makes one keyless request for the top front-page story. polymarket makes one
+x is checked locally unless `--live-x`, which makes one `fx.read` of a fixed public post (one
+request, up to four when it has to retry) and one FxTwitter search request, both without login. A failing FxTwitter search fails x unless the
+x-graphql fallback is configured and its cookies load; that fallback is reported, never run,
+because it would search from the user's own X session. Search defaults to FxTwitter (no login),
+so missing or malformed cookies only make `--backend x-graphql` unavailable; a cookie file
+readable by other users still fails x. Cookie values are never read into the output: only which
+keys are set and where. gh runs `gh auth status` and `gh api rate_limit`; its token is never read.
+reddit runs a local ego-browser script (no Reddit request) unless `--live-reddit`, which also
+loads one Reddit search page in Ego and reads one result from it. hn makes one keyless request for the top front-page story. polymarket makes one
 keyless request for the first page of a fixed search. youtube looks for `yt-dlp` and `deno`, then
 makes one yt-dlp metadata run for a fixed public video.
 """
@@ -15,6 +18,7 @@ import argparse
 import json
 import stat
 import time
+from types import SimpleNamespace
 
 from rsrc import checks, proc
 from rsrc import envelope as env
@@ -30,6 +34,8 @@ from rsrc.http import CapReached, Client, HttpError
 CHANNEL = "check"
 NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
+LIVE_X_QUERY = "hello"
+LIVE_REDDIT_QUERY = "python"
 HN_PROBE = "search?tags=front_page&hitsPerPage=1"
 POLYMARKET_QUERY = "bitcoin"
 YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to YouTube: 19 s, public since 2005
@@ -37,12 +43,15 @@ YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to Yo
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
-                                   description="One cheap probe per channel. No x.com request "
-                                               "unless --live-x.")
+                                   description="One cheap probe per channel. No FxTwitter request "
+                                               "unless --live-x, no Reddit request unless --live-reddit.")
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
     parser.add_argument("--live-x", action="store_true",
-                        help=f"also read one public post ({LIVE_X_POST}) through FxTwitter")
+                        help=f"also read one public post ({LIVE_X_POST}) and run one search through "
+                             "FxTwitter (no login; 2 requests, up to 5 when the read has to retry)")
+    parser.add_argument("--live-reddit", action="store_true",
+                        help="also load one Reddit search page in Ego (1 page load, in your browser)")
     parser.set_defaults(run=run, action="check")
 
 
@@ -63,10 +72,10 @@ class _Failed(Exception):
 
 def run(args, ctx) -> dict:
     names = list(dict.fromkeys(args.channels)) or list(NAMES)
-    input_ = {"channels": names, "live_x": args.live_x}
+    input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
     probes = {"x": lambda attempts: probe_x(ctx, args.live_x, attempts),
               "gh": lambda attempts: probe_gh(ctx, attempts),
-              "reddit": lambda attempts: probe_reddit(ctx, attempts),
+              "reddit": lambda attempts: probe_reddit(ctx, args.live_reddit, attempts),
               "hn": lambda attempts: probe_hn(ctx, attempts),
               "polymarket": lambda attempts: probe_polymarket(ctx, attempts),
               "youtube": lambda attempts: probe_youtube(ctx, attempts)}
@@ -119,6 +128,7 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
     if live:
         raw["live"] = _live_read(ctx, attempts, raw)
         text += f"; fxtwitter read of post {LIVE_X_POST} ok"
+        text += "; " + _live_search(ctx, attempts, raw)
     return text, raw
 
 
@@ -154,6 +164,32 @@ def _live_read(ctx, attempts: list, raw: dict) -> dict:
         code = "blocked" if rejection["reason"] == "blocked_page" else "url_mismatch"
         raise _Failed(code, f"post {LIVE_X_POST}: {rejection['reason']}", raw)
     return {"post": LIVE_X_POST, "source": record["source"], "requests": client.requests_made}
+
+
+def _live_search(ctx, attempts: list, raw: dict) -> str:
+    """One FxTwitter search request; returns the sentence for the item text.
+
+    The request cap of 1 turns the retries a real search makes into the failure they would retry.
+    A failing search fails x, except when searches have somewhere else to go: the configured
+    fallback with loadable cookies. A rate limit always fails x.
+    """
+    client = Client(transport=ctx.transport, sleep=ctx.sleep, max_requests=1)
+    started = time.monotonic()
+    code, message = "ok", None
+    try:
+        fx.Searcher(client).page(LIVE_X_QUERY, count=1)
+    except HttpError as e:
+        code, message = e.code, str(e)
+    attempts.append(env.attempt(xc.FX_BACKEND, code, client.requests_made, env.elapsed_ms(started)))
+    raw["live"] |= {"search": code, "search_error": message, "requests": raw["live"]["requests"] + client.requests_made}
+    if code == "ok":
+        return "fxtwitter search ok"
+    covered = raw["fallback"] and raw["x_graphql"] == "ready" and code in xc.FALLBACK_ON
+    if not covered:
+        fix = "" if code == "rate_limited" else "; `rsrc x search` fails until FxTwitter recovers or a fallback is set (README)"
+        raise _Failed(code, f"{message}{fix}", raw)
+    return (f"fxtwitter search is failing ({message}), so searches run on {raw['fallback']} with your X session, "
+            "which this check did not try")
 
 
 # --- gh ----------------------------------------------------------------------------
@@ -201,8 +237,9 @@ REDDIT_PROBE = 'const s = await listTaskSpaces(); console.log("RSRC_REDDIT_OK " 
 REDDIT_PROBE_TIMEOUT = 20  # listing task spaces is local; a hung Ego should not hold check for 2 min
 
 
-def probe_reddit(ctx, attempts: list) -> tuple[str, dict]:
-    """ego-browser answers and reaches the running app; no page is opened, nothing hits Reddit."""
+def probe_reddit(ctx, live: bool, attempts: list) -> tuple[str, dict]:
+    """ego-browser answers and reaches the running app. Unless `live`, no page is opened and
+    nothing hits Reddit; with it, one search page is loaded and one result read from it."""
     started = time.monotonic()
     try:
         result = (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", REDDIT_PROBE], REDDIT_PROBE_TIMEOUT)
@@ -219,7 +256,19 @@ def probe_reddit(ctx, attempts: list) -> tuple[str, dict]:
         what = f"ego-browser exited with code {result.code}" if result.code else "ego-browser printed no answer"
         raise _Failed("upstream_error", what + (f": {tail}" if tail else "") + "; is Ego Lite running?")
     attempts.append(env.attempt(rc.BACKEND, "ok", ms=env.elapsed_ms(started)))
-    return "ego-browser answered (no Reddit request made)", {"ego_browser": "ok"}
+    if not live:
+        return "ego-browser answered (no Reddit request made)", {"ego_browser": "ok"}
+    search = rc.run_search(SimpleNamespace(query=LIVE_REDDIT_QUERY, subreddit=None, time="month",
+                                           sort="relevance", limit=1), ctx)
+    attempts.extend(search["meta"]["attempts"])
+    raw = {"ego_browser": "ok", "live": {"query": LIVE_REDDIT_QUERY, "posts": len(search["items"])}}
+    if search["error"]:
+        raise _Failed(search["error"]["code"], search["error"]["message"], raw)
+    if not search["items"]:
+        # A common word with no results in the past month is a page rsrc could not read.
+        attempts[-1]["outcome"] = "upstream_error"
+        raise _Failed("upstream_error", f"Reddit search for {LIVE_REDDIT_QUERY!r} returned no results", raw)
+    return "ego-browser answered; one Reddit search page read (1 page load in Ego)", raw
 
 
 # --- hn ----------------------------------------------------------------------------

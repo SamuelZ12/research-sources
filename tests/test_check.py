@@ -20,6 +20,7 @@ FX_STATUS = json.dumps({"code": 200, "message": "OK", "status": {
     "id": "20", "url": "https://x.com/jack/status/20", "text": "just setting up my twttr",
     "author": {"screen_name": "jack"}, "created_timestamp": 1142974214,
     "likes": 300000, "reposts": 120000, "replies": 20000}}).encode()
+FX_SEARCH = (Path(__file__).parent / "fixtures" / "x_fx_search_latest.json").read_bytes()
 HN_PROBE_URL = "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=1"
 HN_FRONT_PAGE = json.dumps({"hits": json.loads(
     (Path(__file__).parent / "fixtures" / "hn_search.json").read_text())["hits"][:1]}).encode()
@@ -130,7 +131,8 @@ def test_all_healthy_checks_six_channels_without_any_x_or_reddit_request(rsrc, e
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"]) == ("check", "check")
-    assert out["input"] == {"channels": ["x", "gh", "reddit", "hn", "polymarket", "youtube"], "live_x": False}
+    assert out["input"] == {"channels": ["x", "gh", "reddit", "hn", "polymarket", "youtube"], "live_x": False,
+                            "live_reddit": False}
     assert [i["id"] for i in out["items"]] == ["x", "gh", "reddit", "hn", "polymarket", "youtube"]
     assert all(set(i) == set(ITEM_KEYS) and i["source"] == i["id"] for i in out["items"])
     assert out["meta"]["sources"] == {"x": "ok", "gh": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
@@ -177,17 +179,72 @@ def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
 
 # x
 
-def test_live_x_makes_exactly_one_fxtwitter_request(rsrc, environ):
-    transport, runner = FakeTransport((200, FX_STATUS)), FakeGh()
+def test_live_x_reads_one_post_and_runs_one_search(rsrc, environ):
+    transport, runner = FakeTransport((200, FX_STATUS), (200, FX_SEARCH)), FakeGh()
     code, out = rsrc(["x", "--live-x"], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
-    assert transport.urls == ["https://api.fxtwitter.com/2/status/20"]
+    assert [url.split("?")[0] for url in transport.urls] == ["https://api.fxtwitter.com/2/status/20",
+                                                             "https://api.fxtwitter.com/2/search"]
     assert runner.argvs == []
     [item] = out["items"]
-    assert item["raw"]["live"] == {"post": "20", "source": "fxtwitter", "requests": 1}
-    assert out["meta"]["attempts"] == [{"backend": "fxtwitter", "outcome": "ok", "requests": 1,
-                                        "ms": out["meta"]["attempts"][0]["ms"]}]
+    assert item["raw"]["live"] == {"post": "20", "source": "fxtwitter", "requests": 2, "search": "ok",
+                                   "search_error": None}
+    assert "fxtwitter search ok" in item["text"]
+    assert [(a["backend"], a["outcome"], a["requests"]) for a in out["meta"]["attempts"]] == [
+        ("fxtwitter", "ok", 1), ("fxtwitter", "ok", 1)]
+
+
+def test_live_x_sends_no_cookie_even_with_cookies_configured(rsrc, environ):
+    sent = []
+
+    def transport(method, url, headers, body):
+        sent.append({k.lower(): v for k, v in (headers or {}).items()})
+        return (200, FX_STATUS) if "/status/" in url else (404, b"")
+
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    assert code == 0 and len(sent) == 2
+    assert all(set(headers) == {"user-agent"} for headers in sent)
+
+
+def test_live_x_search_with_no_results_is_still_a_working_search(rsrc, environ):
+    transport = FakeTransport((200, FX_STATUS), (200, b'{"code": 200, "results": []}'))
+    code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
+    assert code == 0 and out["items"][0]["raw"]["live"]["search"] == "ok"
+
+
+def test_live_x_dead_search_fails_x_after_one_search_request(rsrc, environ):
+    transport = FakeTransport((200, FX_STATUS), (404, b""))
+    code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
+    assert code == 1 and out["error"]["code"] == "upstream_error"
+    assert out["meta"]["sources"] == {"x": "upstream_error"} and len(transport.urls) == 2
+    assert "fxtwitter search: HTTP 404" in out["error"]["message"] and "fallback" in out["error"]["message"]
+    assert out["items"][0]["raw"]["live"]["search"] == "upstream_error"
+
+
+def test_live_x_dead_search_with_a_usable_fallback_leaves_x_ok_and_says_so(rsrc, environ):
+    transport = FakeTransport((200, FX_STATUS), (404, b""))
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    [item] = out["items"]
+    assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
+    assert "fxtwitter search is failing (fxtwitter search: HTTP 404)" in item["text"]
+    assert "searches run on x-graphql" in item["text"] and "did not try" in item["text"]
+    assert item["raw"]["live"]["search"] == "upstream_error"
+    assert all("api.fxtwitter.com" in url for url in transport.urls)  # nothing is sent to x.com
+
+
+def test_live_x_dead_search_with_a_fallback_but_no_cookies_fails_x(rsrc, tmp_path):
+    environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
+               "RSRC_X_FALLBACK": "x-graphql"}
+    transport = FakeTransport((200, FX_STATUS), (404, b""))
+    code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
+    assert code == 1 and out["meta"]["sources"] == {"x": "upstream_error"}
+
+
+def test_live_x_rate_limited_search_fails_x_even_with_a_fallback(rsrc, environ):
+    transport = FakeTransport((200, FX_STATUS), (429, b"{}"))
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_FALLBACK": "x-graphql"}, transport=transport)
+    assert code == 1 and out["meta"]["sources"] == {"x": "rate_limited"} and len(transport.urls) == 2
 
 
 def test_live_x_rate_limit_fails_the_x_probe(rsrc, environ):
@@ -313,6 +370,46 @@ def test_reddit_probe_failures(rsrc, environ, response, code_):
     code, out = rsrc(["reddit"], environ=environ, runner=FakeGh(response))
     assert out["error"]["code"] == code_ and out["meta"]["sources"] == {"reddit": code_}
     assert code == (2 if code_ == "config" else 1)
+
+
+def reddit_page(**fields) -> proc.Result:
+    """What reddit_page.js prints for one loaded page."""
+    page = {"loads": 1, "url": "https://www.reddit.com/search/", "title": "", "page_text": "",
+            "search_page": True, "posts": [], "post": None, "comments": []}
+    return proc.Result(0, "", "RSRC_REDDIT " + json.dumps({**page, **fields}) + "\n")
+
+
+REDDIT_OK = proc.Result(0, "", "RSRC_REDDIT_OK 3\n")
+REDDIT_POSTS = json.loads((Path(__file__).parent / "fixtures" / "reddit_search.json").read_text())["posts"]
+
+
+def test_live_reddit_loads_one_search_page_after_the_local_probe(rsrc, environ):
+    runner = FakeGh(REDDIT_OK, reddit_page(posts=REDDIT_POSTS))
+    code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=runner)
+    [item] = out["items"]
+    assert code == 0 and out["meta"]["sources"] == {"reddit": "ok"} and out["input"]["live_reddit"] is True
+    assert len(runner.argvs) == 2 and "reddit.com/search/" in runner.argvs[1][3]
+    assert item["raw"] == {"ego_browser": "ok", "live": {"query": "python", "posts": 1}}
+    assert "1 page load" in item["text"]
+    assert [(a["backend"], a["outcome"]) for a in out["meta"]["attempts"]] == [("ego-browser", "ok")] * 2
+
+
+@pytest.mark.parametrize("page, code_", [
+    (reddit_page(search_page=False, page_text="You've been blocked by network security."), "blocked"),
+    (reddit_page(search_page=False, title="Too Many Requests", page_text="whoa there, pardner!"), "rate_limited"),
+    (reddit_page(search_page=False, title="reddit"), "upstream_error"),   # markup rsrc cannot read
+    (reddit_page(), "upstream_error"),                                     # a search page with no results
+])
+def test_live_reddit_fails_like_a_search_would(rsrc, environ, page, code_):
+    code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=FakeGh(REDDIT_OK, page))
+    assert code == 1 and out["meta"]["sources"] == {"reddit": code_}
+    assert out["meta"]["attempts"][-1]["outcome"] == code_
+
+
+def test_live_reddit_is_skipped_when_ego_does_not_answer(rsrc, environ):
+    runner = FakeGh(proc.Timeout("slow"))
+    code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=runner)
+    assert out["meta"]["sources"] == {"reddit": "timeout"} and len(runner.argvs) == 1
 
 
 # hn
