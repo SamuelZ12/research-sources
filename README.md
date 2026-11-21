@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels and reports each under `meta.sources`: `ok`, or the error code that stopped it. A bare `rsrc check` sends nothing to FxTwitter or Reddit. `--live-x` adds one post read and one search through FxTwitter, and `--live-reddit` loads one Reddit search page in Ego Lite.
+That `check` makes one request to each of the two channels and reports each under `meta.sources`: `ok`, or the error code that stopped it. A bare `rsrc check` sends nothing to FxTwitter or Reddit. `--live-x` reads one public post and probes FxTwitter search only if the search order includes it, and `--live-reddit` loads one Reddit search page in Ego Lite.
 
 `x`, `hn` and `polymarket` work right away. The other channels run a program you install yourself:
 
@@ -130,24 +130,36 @@ Every item has the same nine fields. A field the source lacks is `null`, never g
 
 ## X with your own session (optional)
 
-`rsrc x` uses [FxTwitter](https://github.com/FxEmbed/FxEmbed)'s public API by default and needs no login. `rsrc x search --backend x-graphql` runs the same search on X's own web search with your session cookies. It is never used unless you ask for it or turn on the fallback below.
+`rsrc x` uses [FxTwitter](https://github.com/FxEmbed/FxEmbed)'s public API by default and needs no login. The `x-graphql` backend runs a search on X's own web search with your session cookies. It is never used unless you name it in `--backend` or in `RSRC_X_SEARCH`.
 
-Create the cookie file with mode 600, then open it in an editor and add the `auth_token` and `ct0` cookies from a logged-in x.com browser session as two lines, `AUTH_TOKEN=…` and `CT0=…`:
+Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose the backends `rsrc x search` tries, in order. The environment takes precedence.
+
+| Search order | When to use it |
+|---|---|
+| `fxtwitter` (default) | You want to search without logging in. FxTwitter's search is currently unavailable, so today this order fails with `upstream_error`. |
+| `x-graphql,fxtwitter` | You want every search to start from your logged-in X account, with FxTwitter second. |
+| `fxtwitter,x-graphql` | You prefer public search and want to use your account only if FxTwitter has an upstream or network error. |
+| `x-graphql` | You want to search only from your account. |
+
+Search tries the next backend only after `upstream_error` or `network_error`, within the same `--max-requests` budget. An empty result, a rate limit, or a cookie error ends the search. `meta.attempts` lists the backends that made requests in order. The result comes from the last backend that ran, unless it also failed with one of those two codes: then the first backend's error and posts are kept. `meta.notes` has the error of each other backend that ran. Pass `--backend fxtwitter` or `--backend x-graphql` to use only that backend for one search.
+
+`RSRC_X_FALLBACK=x-graphql`, the earlier name for the third row, now stops the command with `config`: replace that line with `RSRC_X_SEARCH=fxtwitter,x-graphql`.
+
+If the cookie file does not exist, create it with mode 600:
 
 ```sh
 mkdir -p ~/.config/rsrc
 install -m 600 /dev/null ~/.config/rsrc/x.env
 ```
 
-Typing the values into a shell command would leave them in your shell history.
+Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged-in x.com browser session as two lines, `AUTH_TOKEN=…` and `CT0=…`. Typing the values into a shell command would leave them in your shell history.
 
 - The `AUTH_TOKEN` and `CT0` environment variables win over the file. `RSRC_X_ENV` names another file.
-- `RSRC_X_FALLBACK=x-graphql` in the file or the environment turns on the fallback. A default search that gets `upstream_error` or `network_error` from FxTwitter then reruns on x-graphql, from your account, within the same `--max-requests`. An empty result and a rate limit never fall back. `meta.attempts` lists both runs.
 - The file must be mode 600 or stricter, or the command stops with `config`.
 - Cookie values never appear in output, error messages or files `rsrc` writes.
 - X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.
 
-This backend acts as your logged-in account, and so does `reddit` when your Ego Lite profile is logged in to Reddit. Keep volume low: the risk to those accounts is yours.
+The x-graphql backend acts as your logged-in account, and so does `reddit` when your Ego Lite profile is logged in to Reddit. Keep volume low: the risk to those accounts is yours.
 
 ## What it does not do
 
