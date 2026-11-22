@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
 from rsrc import envelope as env
-from rsrc.http import Client, HttpError, RateLimited
+from rsrc.http import Client, HttpError, raise_refusal
 
 CHANNEL = "polymarket"
 BACKEND = "gamma"
@@ -81,8 +81,7 @@ def fetch_page(client: Client, query: str, page: int, limit: int | None = None) 
     if limit is not None:
         params["limit_per_type"] = limit
     status, body = client.request("GET", f"{API}?{urlencode(params)}", headers=HEADERS)
-    if status == 429:
-        raise RateLimited("Polymarket API rate limit (HTTP 429); stopped without retrying")
+    raise_refusal(status, body, "Polymarket API")
     if status != 200:
         raise HttpError(f"Polymarket API answered HTTP {status}")
     try:

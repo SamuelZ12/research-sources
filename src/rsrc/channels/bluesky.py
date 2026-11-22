@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 from urllib.parse import urlencode
 
 from rsrc import envelope as env
-from rsrc.http import CapReached, Client, HttpError
+from rsrc.http import CapReached, Client, HttpError, raise_refusal
 
 PUBLIC = "public.api.bsky.app"
 SEARCH = "api.bsky.app"
@@ -70,11 +70,7 @@ def fetch(client, host, method, **params):
     query = urlencode({k: v for k, v in params.items() if v is not None})
     status, body = client.request("GET", f"https://{host}/xrpc/app.bsky.{method}?{query}")
     label = f"{host} {method}"
-    if status in (401, 403, 429):
-        code = {401: "auth_failed", 403: "blocked", 429: "rate_limited"}[status]
-        raise Failure(code, f"{label} returned HTTP {status}")
-    if body.lstrip().startswith(b"<"):
-        raise Failure("blocked", f"{label} returned HTML instead of JSON (HTTP {status})")
+    raise_refusal(status, body, label)
     try:
         data = json.loads(body)
     except (UnicodeError, ValueError):

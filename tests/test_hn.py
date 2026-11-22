@@ -295,7 +295,6 @@ def test_search_without_a_response_is_network_error(rsrc, failure):
     (503, b""),
     (400, b'{"message": "invalid numericFilters"}'),
     (404, b'{"message": "not found"}'),  # only `read` has a missing item to report
-    (200, b"<html>maintenance</html>"),
     (200, b"\xff\xfe"),
     (200, b'{"message": "no hits key"}'),
     (200, b'["not", "an", "object"]'),
@@ -520,8 +519,6 @@ def test_read_without_a_response_is_network_error(rsrc):
 
 @pytest.mark.parametrize("status, body", [
     (500, b"Internal Server Error"),
-    (403, b"Forbidden"),
-    (200, b"<html>maintenance</html>"),
     (200, b"null"),
     (200, b'{"children": [], "title": "an item without id"}'),
     (200, b'{"id": 50148855, "title": "an item without children"}'),
@@ -537,6 +534,16 @@ def test_read_bad_answers_are_upstream_error_naming_the_status(rsrc, status, bod
 
     assert code == 1
     assert_failed(out, "upstream_error")
+    assert f"HTTP {status}" in out["error"]["message"]
+
+
+@pytest.mark.parametrize("argv", [["search", "Claude Code"], ["read", "50148855"]])
+@pytest.mark.parametrize("status, body", [(403, b"Forbidden"), (200, b"<html>maintenance</html>")])
+def test_refusals_and_pages_are_blocked_naming_the_status(rsrc, argv, status, body):
+    code, out = rsrc(argv, FakeTransport((status, body)))
+
+    assert code == 1
+    assert_failed(out, "blocked")
     assert f"HTTP {status}" in out["error"]["message"]
 
 

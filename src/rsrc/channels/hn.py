@@ -12,7 +12,7 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from rsrc import envelope as env
-from rsrc.http import Client, HttpError, NotFound, RateLimited
+from rsrc.http import Client, HttpError, NotFound, raise_refusal
 
 CHANNEL = "hn"
 BACKEND = "algolia"
@@ -141,10 +141,9 @@ def fetch(ctx, path: str, parse, attempts: list, *, missing: str | None = None):
     started = time.monotonic()
     try:
         status, body = client.request("GET", f"{API}/{path}")
-        if status == 429:
-            raise RateLimited("Hacker News API rate limit (HTTP 429); stopped without retrying")
         if status == 404 and missing:
             raise NotFound(f"{missing} (HTTP 404)")
+        raise_refusal(status, body, "Hacker News API")
         if status != 200:
             raise HttpError(f"Hacker News API answered HTTP {status}")
         try:

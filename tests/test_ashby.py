@@ -51,7 +51,7 @@ def test_read(run, args):
 
 @pytest.mark.parametrize(("status", "body", "error"), [
     (404, b"Not found", "not_found"), (403, b"Forbidden", "blocked"), (429, b"", "rate_limited"),
-    (200, b"<html>Challenge</html>", "upstream_error"), (200, b"", "upstream_error"),
+    (200, b"<html>Challenge</html>", "blocked"), (200, b"", "upstream_error"),
     (200, b"{}", "upstream_error"), (200, b'{"jobs":[{}]}', "upstream_error"),
     (200, BOARD.replace(b"/quartz/", b"/other/"), "url_mismatch"),
 ])

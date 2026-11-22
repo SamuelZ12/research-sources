@@ -446,7 +446,7 @@ def test_hn_probe_makes_exactly_one_keyless_request(rsrc, environ):
 @pytest.mark.parametrize("response, code_", [
     ((429, b"Too Many Requests"), "rate_limited"),
     ((503, b""), "upstream_error"),
-    ((200, b"<html>maintenance</html>"), "upstream_error"),
+    ((200, b"<html>maintenance</html>"), "blocked"),
     ((200, b'{"hits": []}'), "upstream_error"),  # an empty front page is not a working API
 ])
 def test_hn_probe_failures(rsrc, environ, response, code_):
@@ -498,7 +498,7 @@ def test_polymarket_probe_is_ok_when_the_search_matches_nothing(rsrc, environ, b
 @pytest.mark.parametrize("response, code_", [
     ((429, b"Too Many Requests"), "rate_limited"),
     ((503, b""), "upstream_error"),
-    ((200, b"<html>maintenance</html>"), "upstream_error"),
+    ((200, b"<html>maintenance</html>"), "blocked"),
     ((200, b'{"pagination": {"hasMore": false}}'), "upstream_error"),
 ])
 def test_polymarket_probe_failures(rsrc, environ, response, code_):

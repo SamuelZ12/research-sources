@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 from rsrc import envelope as env
-from rsrc.http import CapReached, Client, HttpError
+from rsrc.http import CapReached, Client, HttpError, raise_refusal
 
 CHANNEL = "producthunt"
 BACKEND = "producthunt-mcp"
@@ -70,9 +70,7 @@ def tool(client, name, **arguments):
     headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
                "MCP-Protocol-Version": VERSION, "Mcp-Method": "tools/call", "Mcp-Name": name}
     status, body = client.request("POST", ENDPOINT, headers, json.dumps(payload).encode())
-    if status in (401, 403, 429) or body.lstrip().startswith(b"<"):
-        code = {401: "auth_failed", 429: "rate_limited"}.get(status, "blocked")
-        raise Failure(code, f"Product Hunt MCP HTTP {status} ({code}) during {name}")
+    raise_refusal(status, body, f"Product Hunt MCP during {name}")
     if status != 200:
         raise HttpError(f"Product Hunt MCP HTTP {status} during {name} (protocol {VERSION})")
     try:

@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urlsplit
 
 from rsrc import envelope as env
-from rsrc.http import Client, HttpError, single_hop_transport, urllib_transport
+from rsrc.http import Client, HttpError, raise_refusal, single_hop_transport, urllib_transport
 
 BACKEND = "ashby-posting-api"
 API = "https://api.ashbyhq.com/posting-api/job-board/"
@@ -85,10 +85,7 @@ def fetch(board, ctx):
     status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
     if status == 404:
         raise Failure("not_found", f"Ashby board {board!r} was not found. {GUIDANCE}")
-    if status == 429:
-        raise Failure("rate_limited", "Ashby returned HTTP 429")
-    if status in (401, 403):
-        raise Failure("blocked", f"Ashby returned HTTP {status} for board {board!r}. {GUIDANCE}")
+    raise_refusal(status, data, f"Ashby board {board!r}", GUIDANCE)
     if status != 200:
         raise HttpError(f"Ashby returned HTTP {status}")
     try:

@@ -8,7 +8,7 @@ from html import unescape
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from rsrc import envelope as env
-from rsrc.http import AuthError, CapReached, Client, HttpError, NotFound, RateLimited
+from rsrc.http import CapReached, Client, HttpError, NotFound, raise_refusal
 
 BACKEND = "itunes"
 ROOT = "https://itunes.apple.com"
@@ -24,10 +24,6 @@ class Mismatch(HttpError):
 
 class Ambiguous(HttpError):
     code = "usage"
-
-
-class Blocked(HttpError):
-    code = "blocked"
 
 
 def register(subparsers):
@@ -47,14 +43,7 @@ def register(subparsers):
 
 def get(client, url, headers=None):
     status, body = client.request("GET", url, headers=headers)
-    if status == 429:
-        raise RateLimited("Apple rate limit (HTTP 429)")
-    if status == 403:
-        raise Blocked("Apple refused access (HTTP 403)")
-    if status == 401:
-        raise AuthError("Apple requires authentication (HTTP 401)")
-    if body.lstrip().startswith(b"<"):
-        raise Blocked(f"Apple returned a page instead of JSON (HTTP {status})")
+    raise_refusal(status, body, "Apple")
     if status != 200:
         raise HttpError(f"Apple answered HTTP {status}")
     try:

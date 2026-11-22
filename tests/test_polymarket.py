@@ -521,9 +521,7 @@ def without(event_id: str, field: str) -> dict:
 @pytest.mark.parametrize("status, body", [
     (500, b"Internal Server Error"),
     (503, b""),
-    (403, b"<html>Forbidden</html>"),
     (404, b"{}"),
-    (200, b"<html>not json</html>"),
     (200, b"\xff\xfe"),
     (200, b"[]"),
     (200, b"{}"),
@@ -551,6 +549,15 @@ def test_other_statuses_and_unexpected_bodies_are_upstream_errors_naming_the_sta
     assert out["error"]["code"] == "upstream_error" and f"HTTP {status}" in out["error"]["message"]
     [attempt] = out["meta"]["attempts"]
     assert (attempt["outcome"], attempt["requests"]) == ("upstream_error", 1)
+
+
+@pytest.mark.parametrize("status, body", [(403, b"<html>Forbidden</html>"), (200, b"<html>not json</html>")])
+def test_refusals_and_pages_are_blocked_naming_the_status(rsrc, status, body):
+    code, out = rsrc(["search", "Claude"], FakeTransport((status, body)))
+    assert code == 1 and out["ok"] is False and out["items"] == []
+    assert out["error"]["code"] == "blocked" and f"HTTP {status}" in out["error"]["message"]
+    [attempt] = out["meta"]["attempts"]
+    assert (attempt["outcome"], attempt["requests"]) == ("blocked", 1)
 
 
 @pytest.mark.parametrize("failure, code_", [

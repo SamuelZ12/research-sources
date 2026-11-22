@@ -10,7 +10,7 @@ import zlib
 from datetime import UTC, datetime
 from urllib.parse import urlencode, urljoin, urlsplit
 
-from rsrc.http import CapReached, Client, NetworkError, single_hop_transport, urllib_transport
+from rsrc.http import CapReached, Client, HttpError, NetworkError, raise_refusal, single_hop_transport, urllib_transport
 from rsrc import proc
 from rsrc import envelope as env
 
@@ -204,8 +204,11 @@ def _rest_error(status, headers, body, path):
         elif re.fullmatch(r"[0-9]{1,10}", headers.get("retry-after", "")):
             when = "retry after " + headers["retry-after"] + " seconds"
         return _Failed("rate_limited", f"GitHub public rate limit ({when}). Run `gh auth login` for a higher limit.")
-    code = {401: "auth_failed", 403: "blocked", 404: "not_found"}.get(status, "upstream_error")
-    return _Failed(code, f"GitHub returned HTTP {status}")
+    try:
+        raise_refusal(status, body, "GitHub")
+    except HttpError as refusal:
+        return _Failed(refusal.code, str(refusal))
+    return _Failed("not_found" if status == 404 else "upstream_error", f"GitHub returned HTTP {status}")
 
 
 def classify(result: proc.Result) -> tuple[str, str]:

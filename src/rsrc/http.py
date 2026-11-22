@@ -35,6 +35,24 @@ class NotFound(HttpError):
     code = "not_found"
 
 
+class Blocked(HttpError):
+    code = "blocked"
+
+
+def raise_refusal(status: int, body: bytes, source: str, hint: str = "") -> None:
+    """Raise the error for an answer that means the same from every JSON source: HTTP 429, 401 or 403,
+    or an HTML page in place of data. Handle a source's own statuses, such as a 404, before calling."""
+    hint = f". {hint}" if hint else ""
+    if status == 429:
+        raise RateLimited(f"{source} rate limit (HTTP 429); stopped without retrying{hint}")
+    if status == 401:
+        raise AuthError(f"{source} requires authentication (HTTP 401){hint}")
+    if status == 403:
+        raise Blocked(f"{source} refused access (HTTP 403){hint}")
+    if body.lstrip()[:1] == b"<":
+        raise Blocked(f"{source} returned a page instead of data (HTTP {status}){hint}")
+
+
 class CapReached(Exception):
     pass
 
