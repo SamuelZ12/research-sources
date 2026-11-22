@@ -71,7 +71,7 @@ def run_search(args, ctx) -> dict:
     except HttpError as e:
         return env.envelope(CHANNEL, "search", input_, BACKEND, meta={"attempts": attempts},
                             error=env.error(e.code, str(e)))
-    return env.envelope(CHANNEL, "search", input_, BACKEND, [_story_item(h) for h in hits],
+    return env.envelope(CHANNEL, "search", input_, BACKEND, [_story_item(h) for h in hits[:args.limit]],
                         meta={"attempts": attempts})
 
 

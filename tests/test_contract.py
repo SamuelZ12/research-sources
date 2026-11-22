@@ -9,7 +9,8 @@ import pytest
 from rsrc import cli, proc
 from rsrc.channels import appstore, ashby, bluesky, check, gh, hn, polymarket, producthunt, reddit, x, youtube
 
-LOGIN_WALL = (Path(__file__).parent / "fixtures" / "login_wall.html").read_bytes()
+FIXTURES = Path(__file__).parent / "fixtures"
+LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
 
 # One command per channel that reads a JSON API through rsrc.http.Client.
 HTTP_COMMANDS = {
@@ -109,3 +110,89 @@ def test_the_cap_never_hides_a_failure(capsys, tmp_path, command, cap, answer):
         f"every answer failed, but the cap ended the run as {out['error'] or 'a result'} "
         f"(truncated={out['meta']['truncated']}). A retry loop must iterate client.tries(...) and then "
         "raise the failure it was retrying")
+
+
+def recorded(name):
+    return json.loads((FIXTURES / name).read_text())
+
+
+def answer(data):
+    return 200, json.dumps(data).encode()
+
+
+def twice(data, *path):
+    """`data` with the list at `path` holding each of its rows twice: more rows than --limit 1 asks for."""
+    rows = data
+    for key in path:
+        rows = rows[key]
+    rows.extend(json.loads(json.dumps(rows)))
+    return data
+
+
+def mcp(name):
+    data = twice(recorded(f"producthunt/{name}.json"), "result", "structuredContent", "data", "results")
+    return {**data, "id": 1}
+
+
+def repositories():
+    first = recorded("gh_repo.json")
+    first["owner"]["node_id"] = "O_kgDOExample1"
+    second = json.loads(json.dumps(first))
+    second["full_name"] += "-two"
+    second["html_url"] += "-two"
+    return {"total_count": 2, "incomplete_results": False, "items": [first, second]}
+
+
+def issues():
+    data = recorded("gh_public_issues.json")
+    second = json.loads(json.dumps(data["items"][0]))
+    second["number"] += 1
+    second["html_url"] = second["html_url"].rsplit("/", 1)[0] + f"/{second['number']}"
+    data["items"].append(second)
+    return data
+
+
+# Commands where --limit counts every item, with an answer holding more rows than --limit 1.
+LIMITED_COMMANDS = {
+    ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
+    ("polymarket", "search"): (["polymarket", "search", "q"], lambda: [recorded("polymarket_search_p1.json")]),
+    ("appstore", "search"): (["appstore", "search", "q"],
+                             lambda: [{**twice(recorded("appstore/wiki.json"), "results"), "resultCount": 2}]),
+    ("bluesky", "search"): (["bluesky", "search", "q"], lambda: [twice(recorded("bluesky_search.json"), "posts")]),
+    ("producthunt", "search"): (["producthunt", "search", "q"], lambda: [mcp("search")]),
+    ("producthunt", "leaderboard"): (["producthunt", "leaderboard", "--date", "2026-11-21"], lambda: [mcp("board")]),
+    ("ashby", "search"): (["ashby", "search", "quartz"], lambda: [recorded("ashby/board.json")]),
+    ("gh", "search"): (["gh", "search", "q"], lambda: [repositories()]),
+    ("gh", "issues"): (["gh", "issues", "q", "--repo", "cli/cli"], lambda: [issues()]),
+}
+LIMIT_COUNTS_PART = {
+    ("x", "search"): "unique posts across date windows; test_x_windows.py covers --limit",
+    ("x", "replies"): "replies after the post itself",
+    ("x", "timeline"): "posts after the account item",
+    ("bluesky", "replies"): "replies after the post itself",
+    ("bluesky", "timeline"): "posts after the profile item",
+    ("appstore", "read"): "reviews after the app item",
+    ("reddit", "search"): "posts; --with-comments adds comments",
+}
+NO_FIXTURE = {
+    ("youtube", "search"): "yt-dlp is asked for exactly N results (ytsearchN)",
+}
+
+
+def test_every_limited_command_is_in_the_contract():
+    listed = LIMITED_COMMANDS.keys() | LIMIT_COUNTS_PART.keys() | NO_FIXTURE.keys()
+    unlisted = [c for c in commands_with("--limit") if c not in listed]
+    assert not unlisted, (f"{unlisted}: add each to LIMITED_COMMANDS in tests/test_contract.py with an answer "
+                          "holding more rows than --limit 1, or say what its limit counts")
+
+
+@pytest.mark.parametrize("command", LIMITED_COMMANDS, ids="-".join)
+def test_limit_holds_when_the_source_sends_more(capsys, command):
+    argv, answers = LIMITED_COMMANDS[command]
+    replies = iter(map(answer, answers()))
+    ctx = cli.Context(environ={}, transport=lambda *request: next(replies), runner=no_gh, sleep=lambda s: None)
+    cli.main([*argv, "--limit", "1"], ctx)
+    out = json.loads(capsys.readouterr().out)
+    assert out["ok"], out["error"]
+    assert len(out["items"]) == 1, (f"{len(out['items'])} items for --limit 1: the source sent more rows than "
+                                    "asked for, so slice the rows to the limit before building items")
