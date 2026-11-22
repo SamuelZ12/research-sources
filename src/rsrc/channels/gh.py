@@ -1,12 +1,13 @@
-"""GitHub via the `gh` CLI: `repo`, `search` (repositories) and `issues`.
+"""GitHub repositories and issues via gh or the anonymous REST API."""
 
-Every call goes through `ctx.runner or proc.run`. rsrc never reads or prints the gh
-token; `gh` uses its own stored login. A rate-limit reply stops the command at once.
-"""
-
+import http.client
 import json
 import re
 import time
+import urllib.error
+import urllib.request
+from datetime import UTC, datetime
+from urllib.parse import urlencode
 
 from rsrc import proc
 from rsrc import envelope as env
@@ -26,7 +27,7 @@ _OWNER_REPO = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9._
 
 
 def register(subparsers) -> None:
-    gh = subparsers.add_parser("gh", help="GitHub repositories and issues via the gh CLI")
+    gh = subparsers.add_parser("gh", help="GitHub repositories and issues")
     actions = gh.add_subparsers(dest="gh_action", metavar="ACTION", required=True)
 
     repo = actions.add_parser("repo", help="one repository: stats, latest release, README")
@@ -53,10 +54,16 @@ class _Failed(Exception):
         self.message = message
 
 
+class _NoLogin(_Failed):
+    """No local gh credentials. An upstream rejection never selects public reads."""
+
+
 class _Gh:
     """Runs gh calls and records one meta.attempts entry per call."""
 
     def __init__(self, ctx):
+        self.backend = BACKEND
+        self.allow_public = ctx.environ.get("GH_HOST", "github.com").lower() == "github.com"
         self.runner = ctx.runner or proc.run
         self.attempts: list[dict] = []
 
@@ -70,7 +77,7 @@ class _Gh:
             result = self.runner(argv, TIMEOUT)
         except proc.Missing:
             self._record("config", None)
-            raise _Failed("config", "gh not installed (brew install gh)") from None
+            raise _NoLogin("config", "gh not installed (brew install gh)") from None
         except proc.Timeout:
             self._record("timeout", env.elapsed_ms(start))
             raise _Failed("timeout", f"gh did not answer within {TIMEOUT} s") from None
@@ -81,6 +88,8 @@ class _Gh:
                 self._record("no_results", ms)
                 return None
             self._record(code, ms)
+            if code == "config" and result.code == 4 and "http " not in result.stderr.lower():
+                raise _NoLogin(code, message)
             raise _Failed(code, message)
         try:
             value = parse(result.stdout)
@@ -89,6 +98,56 @@ class _Gh:
             raise _Failed("upstream_error", "gh returned malformed or unexpected JSON") from None
         self._record("no_results" if value == [] else "ok", ms)
         return value
+
+    def public(self, path, parse, *, raw=False, missing_ok=False):
+        self.backend = "github-rest"
+        started = time.monotonic()
+        outcome = "upstream_error"
+        try:
+            request = urllib.request.Request("https://api.github.com/" + path, headers={
+                "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
+                "User-Agent": "research-sources",
+            })
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+                if response.headers.get_content_type() == "text/html":
+                    raise _Failed("blocked", "GitHub returned an HTML page")
+                value = parse(response.read().decode())
+            outcome = "no_results" if value == (0, []) else "ok"
+            return value
+        except urllib.error.HTTPError as exc:
+            with exc:
+                if exc.code == 404 and missing_ok:
+                    outcome = "no_results"
+                    return None
+                failure = _public_error(exc)
+                outcome = failure.code
+                raise failure from None
+        except (ValueError, TypeError, KeyError, AttributeError):
+            raise _Failed(outcome, "GitHub returned an incomplete or malformed response") from None
+        except (OSError, http.client.HTTPException):
+            outcome = "network_error"
+            raise _Failed(outcome, "Could not read GitHub API response") from None
+        except _Failed as failure:
+            outcome = failure.code
+            raise
+        finally:
+            self.attempts.append(env.attempt(self.backend, outcome, requests=1, ms=env.elapsed_ms(started)))
+
+
+def _public_error(exc):
+    limited = exc.code == 429 or (exc.code == 403 and (
+        exc.headers.get("X-RateLimit-Remaining") == "0" or
+        "Retry-After" in exc.headers or b"rate limit" in exc.read().lower()))
+    if limited:
+        reset = exc.headers.get("X-RateLimit-Reset", "")
+        when = "reset time unavailable"
+        if reset.isdigit() and len(reset) <= 11:
+            when = "resets at " + datetime.fromtimestamp(int(reset), UTC).isoformat()
+        elif exc.headers.get("Retry-After"):
+            when = "retry after " + exc.headers["Retry-After"] + " seconds"
+        return _Failed("rate_limited", f"GitHub public rate limit ({when}). Run `gh auth login` for a higher limit.")
+    code = {401: "auth_failed", 403: "blocked", 404: "not_found"}.get(exc.code, "upstream_error")
+    return _Failed(code, f"GitHub returned HTTP {exc.code}")
 
 
 def classify(result: proc.Result) -> tuple[str, str]:
@@ -116,20 +175,32 @@ def run_repo(args, ctx) -> dict:
     notes: list[str] = []
     data = readme = release = None
     try:
-        data = gh.call(["gh", "api", f"repos/{requested}"], parse=_repo_record)
+        path = f"repos/{requested}"
+        try:
+            data = gh.call(["gh", "api", path], parse=_repo_record)
+        except _NoLogin:
+            if not gh.allow_public:
+                raise
+            data = gh.public(path, _repo_record)
         name = data["full_name"]
         if name.lower() != requested.lower():
             notes.append(f"renamed: {requested} -> {name}")
-        readme = gh.call(["gh", "api", "-H", "Accept: application/vnd.github.raw", f"repos/{name}/readme"],
-                         parse=str, missing_ok=True)
-        release = gh.call(["gh", "api", f"repos/{name}/releases/latest"], missing_ok=True)
+        readme_path = f"repos/{name}/readme"
+        release_path = f"repos/{name}/releases/latest"
+        if gh.backend == BACKEND:
+            readme = gh.call(["gh", "api", "-H", "Accept: application/vnd.github.raw", readme_path],
+                             parse=str, missing_ok=True)
+            release = gh.call(["gh", "api", release_path], parse=_release_record, missing_ok=True)
+        else:
+            readme = gh.public(readme_path, str, raw=True, missing_ok=True)
+            release = gh.public(release_path, _release_record, missing_ok=True)
     except _Failed as failure:
         items = [] if data is None else [_repo_item(data, readme, release)]
-        return env.envelope(CHANNEL, "repo", input_, BACKEND, items,
+        return env.envelope(CHANNEL, "repo", input_, gh.backend, items,
                             meta={"attempts": gh.attempts, "notes": notes},
                             error=env.error(failure.code, failure.message))
 
-    return env.envelope(CHANNEL, "repo", input_, BACKEND, [_repo_item(data, readme, release)],
+    return env.envelope(CHANNEL, "repo", input_, gh.backend, [_repo_item(data, readme, release)],
                         meta={"attempts": gh.attempts, "notes": notes})
 
 
@@ -185,9 +256,82 @@ def _check_query(query: str, limit: int) -> str | None:
 
 def _repo_record(stdout: str) -> dict:
     data = json.loads(stdout)
-    if not isinstance(data, dict) or not isinstance(data.get("full_name"), str):
+    required = {"html_url", "description", "owner", "stargazers_count", "forks_count", "open_issues_count", "pushed_at"}
+    if not isinstance(data, dict) or not required.issubset(data) or not isinstance(data.get("full_name"), str):
+        raise ValueError("incomplete repository record")
+    if not _OWNER_REPO.fullmatch(data["full_name"]) or data["full_name"].split("/")[1] in (".", ".."):
         raise ValueError("not a repository record")
     return data
+
+
+def _release_record(stdout):
+    release = json.loads(stdout)
+    if not isinstance(release, dict) or not release.get("tag_name"):
+        raise ValueError("not a release")
+    return release
+
+
+def _user(user):
+    if user is None:
+        return None
+    return {"id": user["node_id"], "login": user["login"], "type": user["type"],
+            "is_bot": user["type"] == "Bot", "url": user["html_url"]}
+
+
+def _public_repo(r):
+    return dict(fullName=r["full_name"], url=r["html_url"], description=r["description"] or "",
+                owner=_user(r["owner"]), pushedAt=r["pushed_at"], stargazersCount=r["stargazers_count"],
+                forksCount=r["forks_count"], openIssuesCount=r["open_issues_count"], watchersCount=r["watchers_count"],
+                language=r["language"] or "", isArchived=r["archived"], isFork=r["fork"],
+                createdAt=r["created_at"], updatedAt=r["updated_at"])
+
+
+def _public_issue(r):
+    repo = r["repository_url"].removeprefix("https://api.github.com/repos/")
+    if not _OWNER_REPO.fullmatch(repo) or r["html_url"] != f"https://github.com/{repo}/issues/{r['number']}":
+        raise ValueError("not a GitHub issue")
+    labels = [dict(id=label["node_id"], name=label["name"], color=label["color"], description=label["description"] or "")
+              for label in r["labels"]]
+    return dict(repository={"name": repo.split("/")[1], "nameWithOwner": repo},
+                number=r["number"], url=r["html_url"], title=r["title"], author=_user(r["user"]),
+                createdAt=r["created_at"], updatedAt=r["updated_at"], closedAt=r["closed_at"] or "0001-01-01T00:00:00Z",
+                state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=False)
+
+
+def _public_search(gh, action, args):
+    query = args["query"]
+    limit = args["limit"]
+    endpoint, convert = "repositories", _public_repo
+    if action == "issues":
+        endpoint, convert = "issues", _public_issue
+        query += " is:issue"
+        if args["repo"]:
+            query += " repo:" + args["repo"]
+        if args["state"] != "all":
+            query += " state:" + args["state"]
+
+    def page(stdout):
+        data = json.loads(stdout)
+        if data["incomplete_results"] is not False or not isinstance(data["items"], list):
+            raise ValueError("incomplete search")
+        total = data["total_count"]
+        if type(total) is not int or total < 0:
+            raise ValueError("invalid total")
+        return total, [convert(r) for r in data["items"]]
+
+    records = []
+    seen = set()
+    size = min(100, limit)
+    for number in range(1, (limit + size - 1) // size + 1):
+        params = urlencode({"q": query, "per_page": size, "page": number})
+        total, rows = gh.public(f"search/{endpoint}?{params}", page)
+        records.extend(rows)
+        seen.update(r["url"] for r in rows)
+        if len(seen) != len(records) or len(records) > total or len(records) < min(number * size, total, limit):
+            raise _Failed("upstream_error", "GitHub returned an incomplete search page")
+        if len(records) >= min(total, limit):
+            break
+    return records[:limit]
 
 
 def _record_list(stdout: str) -> list[dict]:
@@ -200,11 +344,16 @@ def _record_list(stdout: str) -> list[dict]:
 def _search(ctx, action, input_, argv, to_item) -> dict:
     gh = _Gh(ctx)
     try:
-        records = gh.call(argv, parse=_record_list)
+        try:
+            records = gh.call(argv, parse=_record_list)
+        except _NoLogin:
+            if not gh.allow_public:
+                raise
+            records = _public_search(gh, action, input_)
     except _Failed as failure:
-        return env.envelope(CHANNEL, action, input_, BACKEND, [], meta={"attempts": gh.attempts},
+        return env.envelope(CHANNEL, action, input_, gh.backend, [], meta={"attempts": gh.attempts},
                             error=env.error(failure.code, failure.message))
-    return env.envelope(CHANNEL, action, input_, BACKEND, [to_item(r) for r in records],
+    return env.envelope(CHANNEL, action, input_, gh.backend, [to_item(r) for r in records],
                         meta={"attempts": gh.attempts})
 
 

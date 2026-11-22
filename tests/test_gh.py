@@ -1,5 +1,10 @@
 """`rsrc gh` through rsrc.cli.main with a fake gh runner, plus rsrc.proc.run."""
 
+from email.message import Message
+from io import BytesIO
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlsplit
+
 import json
 import os
 import sys
@@ -251,10 +256,8 @@ def test_search_rate_limit(rsrc):
     assert code == 1 and out["error"]["code"] == "rate_limited" and len(fake.calls) == 1
 
 
-@pytest.mark.parametrize("result", [NOT_LOGGED_IN, proc.Result(1, "", "gh: Bad credentials (HTTP 401)\n"),
-                                    proc.Result(4, "", "You are not logged into any GitHub hosts.\n")])
-def test_not_logged_in_is_config(rsrc, result):
-    code, out = rsrc(["issues", "memory"], FakeGh(result))
+def test_rejected_credentials_do_not_fall_back(rsrc):
+    code, out = rsrc(["issues", "memory"], FakeGh(proc.Result(1, "", "gh: Bad credentials (HTTP 401)")))
     assert code == 2 and out["error"]["code"] == "config"
     assert "gh auth login" in out["error"]["message"]
 
@@ -272,10 +275,90 @@ def test_timeout(rsrc):
     assert out["meta"]["attempts"][0]["outcome"] == "timeout"
 
 
-def test_gh_missing_is_config(rsrc):
-    code, out = rsrc(["repo", "example-org/example-cli"], FakeGh(proc.Missing("gh not found")))
-    assert code == 2 and out["error"]["code"] == "config"
-    assert "gh not installed" in out["error"]["message"]
+@pytest.fixture
+def public(monkeypatch):
+    calls = []
+
+    def respond(*responses):
+        queue = iter(responses)
+
+        def open_url(request, timeout):
+            calls.append(request)
+            value = next(queue)
+            if isinstance(value, Exception):
+                raise value
+            response = BytesIO(value.encode())
+            response.headers = Message()
+            return response
+
+        monkeypatch.setattr(gh.urllib.request, "urlopen", open_url)
+        return calls
+    return respond
+
+
+@pytest.mark.parametrize("local", [proc.Missing("gh"), NOT_LOGGED_IN])
+def test_public_repo_has_same_content(rsrc, public, local):
+    calls = public(REPO, README, RELEASE)
+    args = ["repo", "example-org/example-cli"]
+    code, out = rsrc(args, FakeGh(local))
+    assert code == 0 and out["backend"] == "github-rest"
+    assert out["items"] == rsrc(args, FakeGh(ok(REPO), ok(README), ok(RELEASE)))[1]["items"]
+    assert len(calls) == 3
+    assert all(call.get_header("Authorization") is None for call in calls)
+
+
+def test_public_repository_search(rsrc, public):
+    repo = json.loads(REPO)
+    repo["owner"]["node_id"] = "O_kgDOExample1"
+    public(json.dumps({"total_count": 1, "incomplete_results": False, "items": [repo]}))
+    code, out = rsrc(["search", "research cli"], FakeGh(NOT_LOGGED_IN))
+    assert code == 0
+    assert out["items"][0]["raw"] == json.loads(SEARCH_REPOS)[0]
+
+
+def test_public_issue_search(rsrc, public):
+    calls = public((FIXTURES / "gh_public_issues.json").read_text())
+    code, out = rsrc(["issues", "documentation", "--repo", "python/cpython", "--limit", "1"], FakeGh(NOT_LOGGED_IN))
+    assert code == 0
+    assert out["items"][0]["id"] == "python/cpython#157847"
+    assert set(out["items"][0]["raw"]) == set(gh.ISSUE_FIELDS.split(","))
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["documentation is:issue repo:python/cpython state:open"]
+
+
+@pytest.mark.parametrize("update", [{"incomplete_results": True}, {"items": [{}]}, {"items": []}])
+def test_broken_search_never_looks_empty(rsrc, public, update):
+    doc = json.loads((FIXTURES / "gh_public_issues.json").read_text())
+    public(json.dumps(doc | update))
+    code, out = rsrc(["issues", "documentation"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and out["error"]["code"] == "upstream_error"
+
+
+def test_public_search_pages_use_fixed_size_and_honor_limit(rsrc, public):
+    sample = json.loads((FIXTURES / "gh_public_issues.json").read_text())["items"][0]
+    issues = [dict(sample, number=n, html_url=f"https://github.com/python/cpython/issues/{n}") for n in range(1, 201)]
+    def page(rows):
+        return json.dumps({"total_count": 200, "incomplete_results": False, "items": rows})
+    calls = public(page(issues[:100]), page(issues[100:]))
+    code, out = rsrc(["issues", "documentation", "--limit", "101"], FakeGh(NOT_LOGGED_IN))
+    assert code == 0 and len(out["items"]) == 101
+    assert [parse_qs(urlsplit(call.full_url).query)["page"] for call in calls] == [["1"], ["2"]]
+    assert all("per_page=100" in call.full_url for call in calls)
+
+
+def test_public_confirmed_empty_exits_66(rsrc, public):
+    public('{"total_count":0,"incomplete_results":false,"items":[]}')
+    code, out = rsrc(["issues", "missing"], FakeGh(NOT_LOGGED_IN))
+    assert code == 66 and out["items"] == []
+    assert out["meta"]["attempts"][-1]["outcome"] == "no_results"
+
+
+def test_public_rate_limit_stops_and_preserves_reset(rsrc, public):
+    headers = {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1795305600"}
+    calls = public(REPO, HTTPError("https://api.github.com", 403, "Forbidden", headers, BytesIO()))
+    code, out = rsrc(["repo", "example-org/example-cli"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and out["error"]["code"] == "rate_limited" and len(calls) == 2
+    assert "2026-11-22T00:00:00+00:00" in out["error"]["message"]
+    assert "gh auth login" in out["error"]["message"]
 
 
 @pytest.mark.parametrize("argv, stdout", [
