@@ -152,3 +152,13 @@ def test_response_id_mismatch(capsys):
 def test_leaderboard_help_shows_budget(capsys):
     assert cli.main(["producthunt", "leaderboard", "--help"]) == 0
     assert "total MCP requests (default 2)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("args,fixture", [(["search", "linear"], "search"),
+                                         (["leaderboard", "--date", "2026-11-21"], "board")])
+def test_limit_caps_returned_items(capsys, args, fixture):
+    reply = recording(fixture)
+    rows = reply["result"]["structuredContent"]["data"]["results"]
+    rows.append(recording(fixture)["result"]["structuredContent"]["data"]["results"][0])
+    code, out, _ = command(capsys, [*args, "--limit", "1"], reply)
+    assert code == 0 and len(out["items"]) == 1

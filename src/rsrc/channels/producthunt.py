@@ -172,7 +172,7 @@ def rows(data):
 
 
 def search_rows(client, query, limit):
-    return rows(tool(client, "search_products", query=query, limit=limit))
+    return rows(tool(client, "search_products", query=query, limit=limit))[:limit]
 
 
 def product_item(product, raw, latest, engagement):
@@ -229,7 +229,7 @@ def leaderboard(client, period, limit):
     if window["date"] != period:
         raise Failure("url_mismatch", "Product Hunt returned a different leaderboard period")
     items = []
-    for rank, row in enumerate(rows(data), 1):
+    for rank, row in enumerate(rows(data)[:limit], 1):
         post, = row["launches"]
         local = datetime.fromisoformat(post["launched_at"]).astimezone(ZoneInfo(ZONE)).date().isoformat()
         if type(post["rank"]) is not int or post["rank"] != rank or not window["launched_after"] <= local <= window["launched_before"]:
