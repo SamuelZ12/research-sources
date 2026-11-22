@@ -38,7 +38,7 @@ def register(subparsers):
         p.set_defaults(run=run)
         if action == "read":
             p.add_argument("--sort", choices=SORT, default="recent", help="review order (default recent)")
-            p.add_argument("--max-requests", type=int, default=8, help="total requests including app lookup (1-20)")
+            p.add_argument("--max-requests", type=int, default=8, help="total requests including app lookup, 1-20 (default %(default)s)")
 
 
 def get(client, url, headers=None):

@@ -38,14 +38,15 @@ def register(subparsers) -> None:
 
     search = actions.add_parser("search", help="search repositories")
     search.add_argument("query", metavar="QUERY")
-    search.add_argument("--limit", type=int, default=20)
+    search.add_argument("--limit", type=int, default=20, help=f"repositories, 1-{MAX_LIMIT} (default %(default)s)")
     search.set_defaults(run=run_search, action="search")
 
     issues = actions.add_parser("issues", help="search issues")
     issues.add_argument("query", metavar="QUERY")
-    issues.add_argument("--repo", metavar="OWNER/REPO")
-    issues.add_argument("--limit", type=int, default=30)
-    issues.add_argument("--state", choices=("open", "closed", "all"), default="open")
+    issues.add_argument("--repo", metavar="OWNER/REPO", help="only issues in this repository")
+    issues.add_argument("--limit", type=int, default=30, help=f"issues, 1-{MAX_LIMIT} (default %(default)s)")
+    issues.add_argument("--state", choices=("open", "closed", "all"), default="open",
+                        help="issue state (default %(default)s)")
     issues.set_defaults(run=run_issues, action="issues")
 
     for command in (repo, issues):

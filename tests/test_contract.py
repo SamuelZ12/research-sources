@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -77,13 +78,18 @@ CAPPED_COMMANDS = {
 }
 
 
+def commands(parser, path=()):
+    """(channel, action) and parser of every runnable command."""
+    subparsers = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
+    if not subparsers:
+        yield path, parser
+    for name, command in ((n, c) for s in subparsers for n, c in s.choices.items()):
+        yield from commands(command, (*path, name))
+
+
 def commands_with(option):
-    def actions(parser):
-        return next((a.choices for a in parser._actions if isinstance(a, argparse._SubParsersAction)), {})
-    for channel, parser in actions(cli.build_parser()).items():
-        for action, command in (actions(parser) or {None: parser}).items():
-            if any(option in a.option_strings for a in command._actions):
-                yield channel, action
+    return [path for path, parser in commands(cli.build_parser())
+            if any(option in a.option_strings for a in parser._actions)]
 
 
 def test_every_capped_command_is_in_the_contract():
@@ -196,3 +202,18 @@ def test_limit_holds_when_the_source_sends_more(capsys, command):
     assert out["ok"], out["error"]
     assert len(out["items"]) == 1, (f"{len(out['items'])} items for --limit 1: the source sent more rows than "
                                     "asked for, so slice the rows to the limit before building items")
+
+
+def test_every_option_says_what_it_does_and_its_default():
+    missing = []
+    for _, command in commands(cli.build_parser()):
+        for option in command._actions:
+            if not option.option_strings or isinstance(option, argparse._HelpAction):
+                continue
+            text = command._get_formatter()._expand_help(option) if option.help else ""
+            value = re.escape(str(option.default))
+            if not text or option.default not in (None, False) and not re.search(
+                    rf"default:? {value}\b|\b{value} \(default\)", text):
+                missing.append(f"{command.prog} {option.option_strings[0]}")
+    assert not missing, (f"{missing}: give each option help that ends with (default %(default)s) "
+                         "when it has a default")
