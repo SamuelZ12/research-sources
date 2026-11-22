@@ -34,14 +34,15 @@ def test_recorded_browser_page(monkeypatch):
 
 @pytest.mark.parametrize(("code", "dispatched"), [
     ("auth_failed", False), ("auth_failed", True), ("rate_limited", True),
-    ("blocked", True), ("upstream_error", True)])
+    ("blocked", True), ("timeout", True), ("upstream_error", True)])
 def test_browser_errors_stop_the_search(monkeypatch, code, dispatched):
     scripts = session_result(monkeypatch, {"error": code, "dispatched": dispatched})
     with pytest.raises(browser.BrowserError) as exc:
         with browser.Searcher(Client(max_requests=2), {}) as session:
             session.page("q", "Latest", None, 20)
     assert exc.value.code == code
-    assert len(scripts) == 1 and session.client.requests_made == 1 + dispatched
+    assert len(scripts) == 2 and "task.finish" in scripts[-1]
+    assert session.client.requests_made == 1 + dispatched
 
 
 def test_one_request_cannot_open_browser():
@@ -120,3 +121,27 @@ def test_rejected_id(monkeypatch, tmp_path, cap, success, reason):
             assert search._read_cache(session.cache_path) == ids[-1]
     assert ids == list(search.QUERY_IDS[:len(ids)])
     assert session.client.requests_made == 1 + len(ids)
+
+
+def test_verification_handoff(monkeypatch):
+    scripts = session_result(monkeypatch, {"error": "blocked", "handedOff": True, "dispatched": False})
+    with pytest.raises(browser.BrowserError, match="verification"):
+        with browser.Searcher(Client(max_requests=2), {}) as session:
+            session.page("q", "Latest", None, 20)
+    assert len(scripts) == 1
+
+
+@pytest.mark.parametrize("during_execute", [False, True])
+def test_exception_finishes_owned_space(monkeypatch, during_execute):
+    calls = []
+    def execute(script):
+        calls.append(script)
+        if len(calls) == 1 and during_execute:
+            raise browser.BrowserError("timeout", "timeout")
+        return ['RSRC_X {"tweets":[],"cursor":"next"}']
+    monkeypatch.setattr(browser, "execute", execute)
+    with pytest.raises((RuntimeError, browser.BrowserError)):
+        with browser.Searcher(Client(max_requests=3), {}) as session:
+            session.page("q", "Latest", None, 20)
+            raise RuntimeError("between pages")
+    assert len(calls) == 2 and "task.finish" in calls[-1]

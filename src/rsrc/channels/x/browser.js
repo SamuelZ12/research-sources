@@ -14,6 +14,9 @@ if (INPUT.first) await page.goto(origin);
 const result = await page.evaluate(async ({path, variables, application, features, id}) => {
   const nav = performance.getEntriesByType("navigation")[0];
   if (nav?.responseStatus === 429) return {error: "rate_limited", dispatched: false};
+  if (location.origin === "https://x.com" && document.contentType === "text/html" &&
+      document.querySelector('iframe[src*="challenges.cloudflare.com"], input[name="cf-turnstile-response"]'))
+    return {error: "blocked", challenge: true, dispatched: false};
   if (location.href !== "https://x.com/robots.txt" || document.contentType !== "text/plain"
       || nav?.responseStatus !== 200) return {error: "blocked", dispatched: false};
   const csrf = await cookieStore.get("ct0");
@@ -93,5 +96,8 @@ const result = await page.evaluate(async ({path, variables, application, feature
   }
   return tweets.length || (recognized && !unreadable) ? {tweets, cursor} : {error: "upstream_error"};
 }, {...INPUT, path});
-if (["auth_failed", "blocked"].includes(result.error)) await task.handOff();
+if (result.challenge) {
+  await task.handOff();
+  result.handedOff = true;
+}
 console.log("RSRC_X " + JSON.stringify(result));

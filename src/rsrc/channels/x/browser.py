@@ -43,6 +43,7 @@ class Searcher(search.Searcher):
     def __init__(self, client, environ):
         super().__init__(client, None, search.query_id_cache(environ))
         self.space = "rsrc X search " + uuid.uuid4().hex
+        self.cleanup_needed = False
         self.first = True
         self.lock = None
 
@@ -63,8 +64,10 @@ class Searcher(search.Searcher):
 
     def __exit__(self, typ, value, tb):
         try:
-            if not self.first and typ in (None, CapReached):
-                execute(f"const task = await taskSpace({json.dumps(self.space)}); await task.finish({{keep: []}});")
+            if self.cleanup_needed:
+                execute(f"const space = (await listTaskSpaces()).find(s => s.name === {json.dumps(self.space)});"
+                        "if (space?.ownership === 'agent') {"
+                        " const task = await taskSpace(space.id); await task.finish({keep: []}); }")
         finally:
             self.lock.close()
 
@@ -80,9 +83,11 @@ class Searcher(search.Searcher):
         config = dict(space=self.space, first=self.first, variables=variables, features=search.FEATURES,
                       application=search.BEARER, id=query_id)
         self.client.requests_made += cost
+        self.cleanup_needed = True
         try:
             lines = execute("const INPUT = " + json.dumps(config) + ";\n" + SCRIPT.read_text())
         except CookieError:
+            self.cleanup_needed = False
             self.client.requests_made -= cost
             raise
         self.first = False
@@ -92,6 +97,9 @@ class Searcher(search.Searcher):
         data = json.loads(marked[0])
         if data.get("dispatched") is False:
             self.client.requests_made -= 1
+        if data.get("handedOff"):
+            self.cleanup_needed = False
+            raise BrowserError("blocked", "Complete the X verification in the Ego Lite page handed to you.")
         if code := data.get("error"):
             if code == "query_id_rejected":
                 raise search.SearchError(f"SearchTimeline ID {query_id} rejected", query_id_rejected=True)
