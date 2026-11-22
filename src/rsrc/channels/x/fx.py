@@ -65,30 +65,40 @@ class Failure(NamedTuple):
         return HttpError(message)
 
 
-def read(client, arg) -> dict:
-    """One record for a post URL or ID, or {"id", "error", "code"} if it can't be resolved.
-
-    `code` is the envelope error code. Syndication is the deciding fallback: if it answered 404
-    or 200 without a post, the post doesn't exist or isn't public (`not_found`); if no response
-    arrived, `network_error`; anything else (5xx, non-JSON, unexpected shape) is `upstream_error`.
-    """
+def read(client, arg, *, syndication_client=None) -> dict:
+    """Try the independent syndication endpoint immediately when FxTwitter reports absence."""
     post_id = parse_id(arg)
     if not post_id:
         return {"id": arg, "error": "not a post URL or ID", "code": "usage"}
-    data, fx_failure = fx_json(client, f"{FX_API}/status/{post_id}", "status")
+    # Snowflake IDs place the millisecond timestamp above 22 worker/sequence bits.
+    # Allow a day of clock skew before making a local absence diagnosis.
+    timestamp_ms = (int(post_id) >> 22) + 1288834974657
+    if timestamp_ms > datetime.now(timezone.utc).timestamp() * 1000 + 86_400_000:
+        return {"id": post_id, "code": "not_found",
+                "error": "The post ID encodes a creation date in the future according to the system UTC clock"}
+    url = f"{FX_API}/status/{post_id}"
+    data, fx_failure = fx_json(client, url, "status", stop_on_missing=True)
+    tombstone = None
     if data:
-        return status_record(data["status"])
-    data, failure = get_json(client, SYNDICATION.format(id=post_id))
+        status = data["status"]
+        if not isinstance(status, dict):
+            fx_failure = Failure("unrecognized status")
+        elif status.get("type") != "tombstone":
+            return status_record(status)
+        else:
+            if status.get("id") in (None, post_id) and status.get("provider") == "twitter":
+                tombstone = status.get("reason")
+            fx_failure = Failure("post unavailable", status=404 if tombstone else None)
+    data, failure = get_json(syndication_client or client, SYNDICATION.format(id=post_id))
     if data and data.get("id_str"):
         return syndication_record(data)
-    reason = failure.reason if failure else "no post"  # no failure: a 200 without a post
-    if failure is None or failure.status == 404:
-        code = "not_found"
-    elif failure.network:
-        code = "network_error"
-    else:
-        code = "upstream_error"
-    return {"id": post_id, "error": f"fxtwitter: {fx_failure.reason}; syndication: {reason}", "code": code}
+    reason = failure.reason if failure else "no post"
+    message = f"fxtwitter: {fx_failure.reason}; syndication: {reason}"
+    if fx_failure.status == 404 and (data == {} or (failure and failure.status == 404)):
+        detail = {"deleted": "post deleted", "suspended": "author suspended", "private": "protected account"}
+        return {"id": post_id, "code": "not_found", "error": detail.get(tombstone, message)}
+    code = "network_error" if fx_failure.network or (failure and failure.network) else "upstream_error"
+    return {"id": post_id, "error": message, "code": code}
 
 
 def replies(client, post_id, rank="likes", limit=100):
@@ -200,18 +210,20 @@ class Searcher:
         raise failure.error("fxtwitter search")
 
 
-def fx_json(client, url, key) -> tuple[dict | None, Failure | None]:
+def fx_json(client, url, key, *, stop_on_missing=False) -> tuple[dict | None, Failure | None]:
     """FxTwitter GET with up to FX_TRIES attempts until the response has `key`."""
     failure = None
     for _ in range(FX_TRIES):
-        data, failure = get_json(client, url)
+        data, failure = get_json(client, url, read_tombstone=stop_on_missing)
         if data and data.get(key) is not None:
             return data, None
         failure = failure or Failure(f"response has no {key}")
+        if stop_on_missing and failure.status == 404:
+            break
     return None, failure
 
 
-def get_json(client, url) -> tuple[dict | None, Failure | None]:
+def get_json(client, url, *, read_tombstone=False) -> tuple[dict | None, Failure | None]:
     """(data, None) on HTTP 200 with a JSON object, else (None, Failure). Raises RateLimited on 429."""
     try:
         status, body = client.request("GET", url, HEADERS)
@@ -220,6 +232,14 @@ def get_json(client, url) -> tuple[dict | None, Failure | None]:
     if status == 429:
         check_status(status, body)
     if status != 200:
+        if read_tombstone and status in (403, 404):
+            try:
+                data = json.loads(body)
+            except ValueError:
+                data = None
+            item = data.get("status") if isinstance(data, dict) else None
+            if isinstance(item, dict) and item.get("type") == "tombstone":
+                return data, None
         return None, Failure(f"HTTP {status}", status=status)
     try:
         data = json.loads(body)

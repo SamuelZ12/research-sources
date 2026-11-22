@@ -199,7 +199,7 @@ def test_read_returns_one_item_per_argument_in_order(run_x):
 
 
 def test_read_reports_unresolvable_post_and_continues(run_x):
-    fake = FakeWeb(fx=[(404, b"")] * 3 + [(200, load("x_fx_status_reply.json"))], syndication=[(404, b"")])
+    fake = FakeWeb(fx=[(404, b""), (200, load("x_fx_status_reply.json"))], syndication=[(404, b"")])
     code, env, _ = run_x(["read", "111111111", "2114300044249890906"], fake)
     assert code == 0 and env["error"] is None
     [failure] = env["meta"]["failed"]
@@ -241,7 +241,7 @@ DOWN = OSError("connection reset")
 @pytest.mark.parametrize("fx, syndication, code", [
     ([(404, b"")] * 3, [(404, b"")], "not_found"),
     ([(404, b"")] * 3, [(200, {})], "not_found"),  # 200 without a post
-    ([DOWN] * 3, [(404, b"")], "not_found"),  # syndication is the deciding fallback
+    ([DOWN] * 3, [(404, b"")], "network_error"),  # only one source reported absence
     ([(404, b"")] * 3, [DOWN], "network_error"),
     ([(500, b"")] * 3, [(503, b"")], "upstream_error"),
     ([(500, b"")] * 3, [(200, b"<html>")], "upstream_error"),
@@ -258,3 +258,31 @@ def test_read_of_a_non_post_argument_is_a_usage_failure_without_requests():
     record = read(Client(transport=web, sleep=lambda s: None), "hello")
     assert record == {"id": "hello", "error": "not a post URL or ID", "code": "usage"}
     assert web.urls == []
+
+
+@pytest.mark.parametrize("reason, label", [
+    ("deleted", "post deleted"), ("suspended", "author suspended"), ("private", "protected account")])
+def test_corroborated_tombstone(reason, label):
+    fx = {"status": {"type": "tombstone", "provider": "twitter", "reason": reason}}
+    record = read(Client(transport=FakeWeb([(404, fx)], [(404, b"")]), sleep=lambda s: None), "12345")
+    assert record == {"id": "12345", "code": "not_found", "error": label}
+
+
+def test_syndication_post_wins_over_false_missing():
+    doc = load("x_syndication.json")
+    web = FakeWeb([(404, {})], [(200, doc)])
+    assert read(Client(transport=web, sleep=lambda s: None), doc["id_str"]) == syndication_record(doc)
+    assert len(web.urls) == 2
+
+
+def test_unrecognized_syndication_object_is_not_missing():
+    web = FakeWeb([(404, {})], [(200, {"errors": ["temporary failure"]})])
+    assert read(Client(transport=web, sleep=lambda s: None), "12345")["code"] == "upstream_error"
+
+
+def test_future_post_ids_are_impossible_without_network():
+    import time
+    future = int(time.time() * 1000) + 7 * 86_400_000
+    for sequence in (0, 4194303):
+        post = str(((future - 1288834974657) << 22) + sequence)
+        assert read(Client(transport=FakeWeb()), post)["code"] == "not_found"

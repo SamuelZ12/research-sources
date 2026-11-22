@@ -215,22 +215,23 @@ def search_posts(args, backend, client, environ, sink) -> tuple[dict, bool]:
 def run_read(args, ctx) -> dict:
     input = {"posts": list(args.posts)}
     client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    syndication = Client(transport=ctx.transport, sleep=ctx.sleep)
     items, attempts, rejected, failed = [], [], [], []
     failures = []  # (code, message) in input order, for the all-failed error
     meta = {"attempts": attempts, "rejected": rejected, "failed": failed}
     for arg in args.posts:
-        started, before = time.monotonic(), client.requests_made
+        started, before = time.monotonic(), client.requests_made + syndication.requests_made
         try:
-            record = fx.read(client, arg)
+            record = fx.read(client, arg, syndication_client=syndication)
         except (HttpError, CapReached) as e:  # RateLimited (429) or the request cap: stop now
             code = error_code(e)
-            attempts.append(env.attempt(FX_BACKEND, code, client.requests_made - before, env.elapsed_ms(started)))
+            attempts.append(env.attempt(FX_BACKEND, code, client.requests_made + syndication.requests_made - before, env.elapsed_ms(started)))
             if code == "truncated":
                 meta["truncated"] = "request_cap"
                 break
             return env.envelope(CHANNEL, "read", input, FX_BACKEND, items, meta=meta,
                                 error=env.error(code, str(e)))
-        requests = client.requests_made - before
+        requests = client.requests_made + syndication.requests_made - before
         if "error" in record:
             code = record["code"]
             attempts.append(env.attempt(FX_BACKEND, code, requests, env.elapsed_ms(started)))

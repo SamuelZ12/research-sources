@@ -330,7 +330,7 @@ def test_read_keeps_good_post_and_records_unresolvable_one(run):
     assert env["meta"]["failed"] == [{"input": missing, "code": "not_found",
                                       "message": "fxtwitter: HTTP 404; syndication: HTTP 404"}]
     assert [(a["backend"], a["outcome"], a["requests"]) for a in env["meta"]["attempts"]] == [
-        ("fxtwitter", "ok", 1), ("fxtwitter", "not_found", 4)]
+        ("fxtwitter", "ok", 1), ("fxtwitter", "not_found", 2)]
 
 
 def test_read_rejects_a_post_whose_id_differs_from_the_request(run):

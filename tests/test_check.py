@@ -260,10 +260,10 @@ def test_live_x_rate_limit_fails_the_x_probe(rsrc, environ):
 
 
 def test_live_x_unresolvable_post_fails_with_the_read_failure_code(rsrc, environ):
-    transport = FakeTransport(*[(404, b"")] * 4)  # FxTwitter's three tries, then syndication
+    transport = FakeTransport((404, b""), (404, b""))  # FxTwitter and syndication
     code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
     assert code == 1 and out["error"]["code"] == "not_found"
-    assert out["meta"]["sources"] == {"x": "not_found"} and len(transport.urls) == 4
+    assert out["meta"]["sources"] == {"x": "not_found"} and len(transport.urls) == 2
 
 
 def test_missing_cookies_leave_x_ok_and_name_the_unavailable_backend(rsrc, tmp_path):
