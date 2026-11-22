@@ -101,7 +101,9 @@ def test_cap_before_and_after_first_review(capsys):
     for cap in (1, 2):
         responses = [recording("app"), recording("rss")][:cap]
         code, out = run(capsys, ["read", "874139669", "--max-requests", str(cap)], *responses)
-        assert out["meta"]["truncated"] == "request_cap" and code == (2 if cap == 1 else 0)
+        assert out["meta"]["truncated"] == "request_cap" and code == (1 if cap == 1 else 0)
+        if cap == 1:
+            assert out["error"]["code"] == "upstream_error"
 
 
 def test_unavailable_vs_missing(capsys):

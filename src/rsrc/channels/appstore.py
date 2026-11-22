@@ -269,7 +269,7 @@ def run(args, ctx):
         meta["notes"].append(f"Request cap reached after {cap} calls; returned {max(0, len(items) - 1)} of "
                              f"{args.limit} requested reviews.")
         if len(items) <= 1:
-            error = env.error("usage", "Request cap reached before the answer could be verified; increase --max-requests")
+            error = env.error("upstream_error", "Request cap reached before the answer could be verified; increase --max-requests")
     except HttpError as e:
         error = env.error(e.code, str(e))
     except (ValueError, KeyError, TypeError, AttributeError, OverflowError):
