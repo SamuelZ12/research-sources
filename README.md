@@ -203,6 +203,8 @@ uv sync
 uv run pytest -q
 ```
 
+The tests also run the browser page scripts under Node.js, so install Node first.
+
 A change is welcome when it keeps these true:
 
 - **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
