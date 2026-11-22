@@ -1,11 +1,11 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a command-line tool that lets an AI agent read the places web search reaches poorly: X, Reddit, Hacker News, YouTube transcripts, Polymarket odds, GitHub, Bluesky, Product Hunt launches and Apple App Store reviews. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit or a block page. It is read-only and needs no API keys.
+`rsrc` is a command-line tool that lets an AI agent read the places web search reaches poorly: X, Reddit, Hacker News, YouTube transcripts, Polymarket odds, GitHub, Bluesky, Product Hunt launches, Apple App Store reviews and Ashby job boards. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit or a block page. It is read-only and needs no API keys.
 
 **Status:** early, with one maintainer. Developed and tested on macOS only. FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification now lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional). `rsrc x read`, `rsrc x replies` and `rsrc x timeline` still work without a login.
 
-- **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in.
-- **One output shape.** Nine sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
+- **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store, Ashby and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in.
+- **One output shape.** Ten sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
 - **Stops on rate limits.** A rate-limited backend stops. A repository-scoped GitHub read can restart with your login after exhausting the shared public allowance.
 - **No Python dependencies.** Standard library only. The tests run offline.
@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes all nine: HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes all ten: Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 Requirements by channel:
 
@@ -52,6 +52,7 @@ Requirements by channel:
 | `gh` | Nothing for public repositories. A logged-in [GitHub CLI](https://cli.github.com/) gives access to private repositories and higher limits |
 | `bluesky` | Nothing. Bluesky may disable anonymous search |
 | `producthunt` | Nothing. The official MCP server exposes launches and selected review excerpts. Launch discussions are unavailable |
+| `ashby` | Nothing. Reads one public employer board per request |
 | `appstore` | Nothing. Apple’s public storefront review feed can lag by a day or two |
 | `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH` |
 
@@ -84,6 +85,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 | Bluesky | `rsrc bluesky search QUERY` or `rsrc bluesky search --url URL`, `rsrc bluesky read POST`, `rsrc bluesky replies POST`, `rsrc bluesky timeline HANDLE_OR_URL` |
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
+| Ashby | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` |
 | All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
 
 `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
@@ -93,6 +95,8 @@ Bluesky search returns one page, newest first (`--top` for ranked results). Filt
 Product Hunt search and leaderboards return up to 25 results. The leaderboard defaults to today in Pacific time and accepts a day, ISO week, month or year. A product profile includes makers, links and selected review excerpts without authors or dates. A launch URL selects its own tagline, date and points. Points include votes and other engagement. The server does not expose launch discussions.
 
 See [Product Hunt’s terms of use](https://www.producthunt.com/legal).
+
+For example, `rsrc ashby search linear --team Engineering` lists matching roles. Pass an item’s URL to `rsrc ashby read` for its full description. Each command reads the board once. The [Ashby posting API](https://developers.ashbyhq.com/docs/public-job-posting-api) exposes current postings and their last publication dates. It supplies no closed-role history or applicant counts. For bulk ingestion, Ashby documents [partner feeds with employer opt-in](https://developers.ashbyhq.com/docs/dedicated-partner-job-feeds).
 
 App Store reads return the listing followed by written reviews, newest first by default (30). A URL selects its storefront unless you override it. An ambiguous name returns candidate apps and `usage`; rerun with an ID. Ratings are in `engagement.rating`. Apple's fallback feed omits the reviewed version. Neither feed promises stability or complete coverage. Use the reviews as dated examples; their frequency and timing cannot establish prevalence or support real-time monitoring.
 
