@@ -17,6 +17,10 @@ from rsrc.envelope import ITEM_KEYS
 FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH = json.loads((FIXTURES / "reddit_search.json").read_text())
 THREAD = json.loads((FIXTURES / "reddit_thread.json").read_text())
+# Reduced archived pages (Wayback timestamps): CenturyClub 20260103115225,
+# The_Donald 20250518184233, /login/ 20241104000710, and ib3lzb 20230617202108.
+# The missing-page heading was recorded in the signed-in browser.
+READ_STATES = json.loads((FIXTURES / "reddit_read_states.json").read_text())
 BLOCK_TEXT = ("You've been blocked by network security. If you think you've been blocked by mistake, "
               "file a ticket below and we'll look into it. File a ticket")
 
@@ -359,6 +363,31 @@ def test_read_rejects_a_different_post(rsrc):
 def test_read_page_without_post_is_classified(rsrc, fields, code_):
     code, out = rsrc(["read", "1xootop"], FakeEgo(printed(page(**fields))))
     assert code == 1 and out["error"]["code"] == code_ and out["items"] == []
+
+
+@pytest.mark.parametrize("state,code_,message", [
+    ("private", "blocked", "r/CenturyClub is private"),
+    ("banned", "blocked", "r/The_Donald is banned"),
+    ("login", "blocked", "requires login"),
+    ("missing", "not_found", "no such post"),
+])
+def test_recorded_thread_walls(rsrc, state, code_, message):
+    code, out = rsrc(["read", "ib3lzb"], FakeEgo(printed(page(**READ_STATES[state]))))
+    assert code == 1 and not out["ok"] and out["items"] == []
+    assert out["error"]["code"] == code_ and message in out["error"]["message"]
+
+
+def test_recorded_network_block_keeps_its_diagnosis(rsrc):
+    html = (FIXTURES / "block_reddit.html").read_text()
+    code, out = rsrc(["read", "ib3lzb"], FakeEgo(printed(page(page_text=html))))
+    assert code == 1 and not out["ok"] and out["error"]["code"] == "blocked"
+
+
+def test_removed_post_keeps_the_visible_record_and_removal_notice(rsrc):
+    code, out = rsrc(["read", "ib3lzb"], FakeEgo(printed(page(**READ_STATES["removed"]))))
+    assert code == 0 and out["items"][0]["id"] == "t3_ib3lzb"
+    assert out["items"][0]["text"] is None
+    assert out["meta"]["notes"] == ["Sorry, this post has been removed by the moderators of r/science."]
 
 
 # ego-browser failures

@@ -1,0 +1,34 @@
+{
+  "private": {
+    "title": "Reddit - The heart of the internet",
+    "community_gate": "r/CenturyClub is private"
+  },
+  "banned": {
+    "title": "Reddit - The heart of the internet",
+    "community_gate": "r/The_Donald is banned"
+  },
+  "login": {
+    "title": "Reddit - Dive into anything",
+    "login_wall": true,
+    "url": "https://www.reddit.com/login/"
+  },
+  "removed": {
+    "title": "Reddit - Dive into anything",
+    "post": {
+      "attrs": {
+        "permalink": "/r/science/comments/ib3lzb/every_single_seafood_sample_tested_in_this/",
+        "created-timestamp": "2020-08-17T00:12:32.345000+0000",
+        "id": "t3_ib3lzb",
+        "score": "35430",
+        "post-title": "Every Single Seafood Sample Tested in This Microplastics Study Was Polluted",
+        "post-type": "link"
+      },
+      "text": null,
+      "removal_notice": "Sorry, this post has been removed by the moderators of r/science."
+    }
+  },
+  "missing": {
+    "title": "Reddit - The heart of the internet",
+    "page_text": "Page not found"
+  }
+}

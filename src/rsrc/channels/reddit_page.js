@@ -26,7 +26,20 @@ function readSearch() {
   });
 }
 
+function threadReady() {
+  const post = document.querySelector("shreddit-post");
+  if (post && post.getClientRects().length) return true;
+  const navigation = performance.getEntriesByType("navigation")[0];
+  return navigation?.responseStatus === 404 &&
+    document.querySelector("h1")?.innerText.trim().toLowerCase() === "page not found";
+}
+
 function readThread(attrs) {
+  const communityGate = document.querySelector('guard-community-modal [slot="title"]');
+  if (communityGate) return { community_gate: communityGate.textContent.trim() };
+  if (/^\/login\/?$/.test(location.pathname) && document.querySelector('form[action$="/account/login"]')) {
+    return { login_wall: true };
+  }
   const pick = (node, names) => Object.fromEntries(
     names.filter((n) => node.hasAttribute(n)).map((n) => [n, node.getAttribute(n)]));
   const own = (node, slot, owner) => [...node.querySelectorAll(`[slot="${slot}"]`)]
@@ -38,7 +51,11 @@ function readThread(attrs) {
   });
   if (!post) return { post: null, comments };
   const body = own(post, "text-body", "shreddit-post");
-  return { post: { attrs: pick(post, attrs.post), text: body ? body.innerText.trim() : null }, comments };
+  const record = { attrs: pick(post, attrs.post), text: body ? body.innerText.trim() : null };
+  const removal = [...post.querySelectorAll('[slot="post-message-banner"]')].find((banner) =>
+    banner.closest("shreddit-post") === post && /\bremoved\b/i.test(banner.innerText));
+  if (removal) record.removal_notice = removal.innerText.trim();
+  return { post: record, comments };
 }
 
 const UNIT = '[data-testid="sdui-post-unit"]';
@@ -63,7 +80,7 @@ try {
       out.loads += 1;
     }
   } else {
-    await page.waitForSelector("shreddit-post", { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(threadReady, undefined, { timeout: 15000 }).catch(() => {});
     Object.assign(out, await page.evaluate(readThread, INPUT.attrs));
   }
   Object.assign(out, await page.evaluate(() => ({

@@ -157,6 +157,8 @@ def run_read(args, ctx) -> dict:
         meta["rejected"] = [{"url": post["url"], "reason": "url_mismatch"}]
         return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta,
                             error=env.error("url_mismatch", f"asked for t3_{post_id}, page shows {post['id']}"))
+    if page["post"].get("removal_notice"):
+        meta["notes"] = [page["post"]["removal_notice"]]
     comments = [comment_item(c) for c in page.get("comments") or []][:args.comments]
     return env.envelope(CHANNEL, "read", input_, BACKEND, [post, *comments], meta=meta)
 
@@ -263,8 +265,15 @@ def page_failure(page: dict, action: str) -> tuple[str, str]:
     title, text = page.get("title") or "", page.get("page_text") or ""
     haystack = f"{title}\n{text[:checks.TEXT_WINDOW]}".lower()
     where = page.get("url") or "the page"
+    # Reddit also puts its rate-limit greeting on the network-security block page.
+    if "blocked by network security" in haystack:
+        return "blocked", f"Reddit blocked access at {where}"
     if any(marker in haystack for marker in RATE_MARKERS):
         return "rate_limited", f"Reddit rate-limited the session at {where}; stop and retry later"
+    if action == "read" and page.get("community_gate"):
+        return "blocked", f"Reddit restricted access at {where}: {page['community_gate']}"
+    if action == "read" and page.get("login_wall"):
+        return "blocked", f"Reddit requires login at {where}"
     if checks.is_block_page(title, text):
         return "blocked", f"Reddit showed a block or login page at {where}"
     if action == "read" and any(marker in haystack for marker in NOT_FOUND_MARKERS):
