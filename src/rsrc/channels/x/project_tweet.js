@@ -1,4 +1,3 @@
-  // Copy only fields consumed by search.to_record, including quote and media details.
   function project(tweet) {
     if (tweet?.__typename === "TweetWithVisibilityResults") tweet = tweet.tweet;
     const legacy = tweet?.legacy;

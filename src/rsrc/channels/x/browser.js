@@ -1,4 +1,3 @@
-// Executed by ego-browser nodejs. INPUT is a JSON literal written by browser.py.
 const task = await taskSpace(INPUT.space);
 const page = task.page("p1");
 const origin = "https://x.com/robots.txt";

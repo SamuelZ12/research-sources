@@ -17,7 +17,7 @@ from rsrc import proc
 from rsrc.channels import appstore, ashby, bluesky, check, gh, hn, polymarket, producthunt, reddit, x, youtube
 from rsrc.http import redirect_transport, urllib_transport
 
-CHANNELS: list = [x, bluesky, gh, reddit, hn, polymarket, producthunt, youtube, appstore, ashby, check]  # channel modules, in help order
+CHANNELS: list = [x, bluesky, gh, reddit, hn, polymarket, producthunt, youtube, appstore, ashby, check]
 FIXED_ACTIONS = {"check": "check"}  # channels without an action word
 
 

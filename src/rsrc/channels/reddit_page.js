@@ -157,7 +157,6 @@ async function loadPage(task) {
 
 async function loadBatch(task) {
   const pages = [task.page("p1")];
-  // Allocate blank tabs first. All navigations start in one turn, with no queue or retry.
   while (pages.length < INPUT.urls.length) pages.push(await task.newPage());
   const rows = pages.map(() => ({ cancelled: true }));
   let signalStop;

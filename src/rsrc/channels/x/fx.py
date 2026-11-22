@@ -71,7 +71,6 @@ def read(client, arg, *, syndication_client=None) -> dict:
     if not post_id:
         return {"id": arg, "error": "not a post URL or ID", "code": "usage"}
     # Snowflake IDs place the millisecond timestamp above 22 worker/sequence bits.
-    # Allow a day of clock skew before making a local absence diagnosis.
     timestamp_ms = (int(post_id) >> 22) + 1288834974657
     if timestamp_ms > datetime.now(timezone.utc).timestamp() * 1000 + 86_400_000:
         return {"id": post_id, "code": "not_found",

@@ -1,4 +1,3 @@
-"""Read a user's own posts and reposts using the configured X web session."""
 import json
 from pathlib import Path
 from urllib.parse import urlencode

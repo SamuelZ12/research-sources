@@ -1,4 +1,3 @@
-"""Search an explicitly selected Ego Lite session, in a command-owned task space."""
 import json
 import subprocess
 import uuid
@@ -116,14 +115,13 @@ class Searcher(search.Searcher):
 
 
 def timeline(client, environ, handle, limit):
-    """One navigation, one account lookup and at most three timeline pages."""
     if client.max_requests < 3:
         raise CapReached("Browser timeline needs navigation, lookup and a timeline page")
     with Searcher(client, environ) as session:
         config = dict(handle=handle, limit=limit, maxRequests=client.max_requests, space=session.space, application=search.BEARER,
                       ops=json.loads(SCRIPT.with_name("timeline_ops.json").read_text()))
         session.cleanup_needed = True
-        client.requests_made = client.max_requests  # conservative reservation if control is lost
+        client.requests_made = client.max_requests
         try:
             lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(SCRIPT.with_name("timeline.js")))
         except CookieError:

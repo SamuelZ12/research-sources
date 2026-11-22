@@ -1,5 +1,3 @@
-"""App Store software listings and storefront-specific customer reviews."""
-
 import json
 import re
 import time
@@ -143,7 +141,7 @@ def rss(client, app, page, sort):
 
 def native_count(client, app, params):
     data = get(client, NATIVE + "customerReviews?" + urlencode({**params, "dataOnly": "true"}), HEADERS)
-    # This returned URL identifies both the app and the resolved storefront. Never request it.
+    # This returned URL identifies both the app and the resolved storefront.
     scope = parse_qs(urlsplit(data["writeUserReviewUrl"]).query)
     if (str(data["adamId"]) != app["id"] or scope.get("cc") != [params["cc"]]
             or scope.get("id") != [app["id"]]):
@@ -231,7 +229,6 @@ def run(args, ctx):
     if read:
         inputs.update(sort=args.sort, max_requests=cap)
     meta, items, error = {"notes": []}, [], None
-    # A read is two to four calls to Apple (the app, then its reviews); a short pause keeps paging polite.
     client = Client(max_requests=cap, min_interval=0.2, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:

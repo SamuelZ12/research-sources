@@ -209,7 +209,6 @@ def run(args, ctx):
     host = SEARCH if action == "search" else PUBLIC
     fields = {k: str(v) if isinstance(v, date) else v for k, v in vars(args).items()
               if k not in ("action", "channel", "run")}
-    # A timeline is two requests to Bluesky's own AppView (profile, feed): no pause between them.
     client = Client(max_requests=args.max_requests, min_interval=0, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     items, meta, error = [], {}, None
@@ -245,8 +244,6 @@ def run(args, ctx):
 
 
 def probe(ctx, attempts, failure_type):
-    """Check anonymous search, the operation most likely to be refused."""
-
     args = argparse.Namespace(action="search", query="python", url=None, top=False, author=None, domain=None,
                               since=None, until=None, max_requests=1, limit=1)
     result = run(args, ctx)

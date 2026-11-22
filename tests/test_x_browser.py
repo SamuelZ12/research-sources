@@ -1,4 +1,3 @@
-"""Exercise the shipped page program against recorded public GraphQL responses offline."""
 import json
 import subprocess
 from pathlib import Path

@@ -1,4 +1,3 @@
-// Offline replay of the browser wait. Run with node --test tests/reddit_page.test.mjs.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -26,7 +25,6 @@ test("wait for the post or the rendered 404 document", async () => {
         document.querySelector = (selector) => selector === "h1" ? { innerText: heading } :
           visiblePost && selector === "shreddit-post" ? { getClientRects: () => [{}] } : null;
         performance.getEntriesByType = () => [{ responseStatus: status }];
-        // The production script tolerates wait timeouts, so assert outside that catch.
         observations.push([Boolean(ready()), expected]);
       }
     },
@@ -92,7 +90,6 @@ test("a slow navigation can time out without discarding another thread", async (
   assert.equal(result.rows[1].page.post.attrs.id, fixture.post.attrs.id);
 });
 
-// Run the actual browser probe against successive views of the recorded Best thread.
 function snapshot(expression, count, rows) {
   const node = (attrs, text) => {
     const el = {

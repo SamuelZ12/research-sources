@@ -241,7 +241,7 @@ DOWN = OSError("connection reset")
 @pytest.mark.parametrize("fx, syndication, code", [
     ([(404, b"")] * 3, [(404, b"")], "not_found"),
     ([(404, b"")] * 3, [(200, {})], "not_found"),  # 200 without a post
-    ([DOWN] * 3, [(404, b"")], "network_error"),  # only one source reported absence
+    ([DOWN] * 3, [(404, b"")], "network_error"),
     ([(404, b"")] * 3, [DOWN], "network_error"),
     ([(500, b"")] * 3, [(503, b"")], "upstream_error"),
     ([(500, b"")] * 3, [(200, b"<html>")], "upstream_error"),

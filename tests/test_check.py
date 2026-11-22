@@ -270,7 +270,7 @@ def test_live_x_rate_limit_fails_the_x_probe(rsrc, environ):
 
 
 def test_live_x_unresolvable_post_fails_with_the_read_failure_code(rsrc, environ):
-    transport = FakeTransport((404, b""), (404, b""))  # FxTwitter and syndication
+    transport = FakeTransport((404, b""), (404, b""))
     code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
     assert code == 1 and out["error"]["code"] == "not_found"
     assert out["meta"]["sources"] == {"x": "not_found"} and len(transport.urls) == 2

@@ -375,7 +375,7 @@ def _load(ctx, input_: dict) -> tuple[dict | None, tuple[str, str] | None, dict]
 
 
 def _finish_abandoned(ctx, name):
-    # The runner can kill Node before its finally executes. Never create or claim a space here.
+    # The runner can kill Node before its finally executes.
     cleanup = ("const s = (await listTaskSpaces()).find(x => x.name === " + json.dumps(name)
                + " && x.ownership === 'agent'); if (s) await (await taskSpace(s.id)).finish({keep: []});")
     (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", cleanup], 15)

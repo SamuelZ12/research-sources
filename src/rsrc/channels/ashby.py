@@ -1,5 +1,3 @@
-"""Read listed roles or one published posting from Ashby's public board API."""
-
 import json
 import re
 import time
@@ -125,7 +123,6 @@ def posting(job, board):
             raise ValueError()
     except (TypeError, ValueError):
         raise HttpError("Ashby returned a malformed posting") from None
-    # The hiring company is the author of a posting: the board name as Ashby spells it in the job URL.
     return env.item(id=role, title=job["title"], url=url, author=actual, published_at=stamp, source="ashby", raw=job)
 
 

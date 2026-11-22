@@ -1,4 +1,3 @@
-"""Replay projected public posts from a UserTweets page with reposts and conversation modules."""
 import json
 from pathlib import Path
 

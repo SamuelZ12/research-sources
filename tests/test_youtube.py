@@ -481,7 +481,6 @@ def test_read_keeps_its_caption_file_in_a_directory_that_is_gone_afterwards(rsrc
 
 @pytest.fixture
 def caption_http(monkeypatch):
-    """Stand in for YouTube after restoring the public URL prefix stripped from the recording."""
     calls = []
 
     def serve(payload, status=200):

@@ -44,7 +44,6 @@ const result = await page.evaluate(async ({handle,limit,maxRequests,application,
     const u = await read("UserByScreenName",{screen_name:handle,withSafetyModeUserFields:true});
     const screen_name = u.core?.screen_name || u.legacy?.screen_name;
     if (!u.rest_id || screen_name?.toLowerCase() !== handle.toLowerCase()) throw Error("upstream_error");
-    // Project public profile fields only. Relationship and viewer data stay in the page.
     const legacy = u.legacy || {};
     const account = {rest_id: u.rest_id, core: {screen_name, name: u.core?.name, created_at: u.core?.created_at},
       privacy: {protected: u.privacy?.protected}, location: {location: u.location?.location},

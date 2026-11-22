@@ -1,5 +1,3 @@
-"""Channel health probes for rsrc check."""
-
 import argparse
 import json
 import stat
@@ -366,7 +364,6 @@ def probe_producthunt(ctx, attempts):
 
 
 def probe_appstore(ctx, attempts):
-    """Check a catalog search and the identity of its first listing."""
     args = SimpleNamespace(action="search", query="Wikipedia", country="us", limit=1)
     answer = appstore.run(args, ctx)
     attempts.extend(answer["meta"]["attempts"])

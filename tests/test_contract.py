@@ -1,5 +1,3 @@
-"""Behaviour every channel shares, run against every registered channel."""
-
 import argparse
 import json
 import re
@@ -13,7 +11,6 @@ from rsrc.channels import appstore, ashby, bluesky, check, gh, hn, polymarket, p
 FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
 
-# One command per channel that reads a JSON API through rsrc.http.Client.
 HTTP_COMMANDS = {
     hn: ["hn", "search", "q"],
     polymarket: ["polymarket", "search", "q"],
@@ -61,7 +58,6 @@ def test_a_refusal_has_one_error_code_on_every_channel(capsys, channel, answer, 
         "rsrc.http.raise_refusal before reading it")
 
 
-# Every command with --max-requests. Each answer below fails, so no cap may turn the run into a result.
 CAPPED_COMMANDS = {
     ("x", "search"): ["x", "search", "q", "--backend", "fxtwitter"],
     ("x", "search", "x-graphql"): ["x", "search", "q", "--backend", "x-graphql"],
@@ -79,7 +75,6 @@ CAPPED_COMMANDS = {
 
 
 def commands(parser, path=()):
-    """(channel, action) and parser of every runnable command."""
     subparsers = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
     if not subparsers:
         yield path, parser
@@ -127,7 +122,6 @@ def answer(data):
 
 
 def twice(data, *path):
-    """`data` with the list at `path` holding each of its rows twice: more rows than --limit 1 asks for."""
     rows = data
     for key in path:
         rows = rows[key]
@@ -158,7 +152,6 @@ def issues():
     return data
 
 
-# Commands where --limit counts every item, with an answer holding more rows than --limit 1.
 LIMITED_COMMANDS = {
     ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
     ("polymarket", "search"): (["polymarket", "search", "q"], lambda: [recorded("polymarket_search_p1.json")]),

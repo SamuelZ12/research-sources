@@ -1,5 +1,3 @@
-"""GitHub repositories and issues via gh or the anonymous REST API."""
-
 import gzip
 import http.client
 import json
@@ -355,7 +353,7 @@ def _repo_record(stdout: str) -> dict:
         raise ValueError("incomplete repository record")
     if not _OWNER_REPO.fullmatch(data["full_name"]) or data["full_name"].split("/")[1] in (".", ".."):
         raise ValueError("not a repository record")
-    # GitHub adds a short-lived clone credential to a private repository's record. Never pass it on.
+    # GitHub adds a short-lived clone credential to a private repository's record.
     data.pop("temp_clone_token", None)
     return data
 

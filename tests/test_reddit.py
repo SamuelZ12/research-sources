@@ -17,9 +17,6 @@ from rsrc.envelope import ITEM_KEYS
 FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH = json.loads((FIXTURES / "reddit_search.json").read_text())
 THREAD = json.loads((FIXTURES / "reddit_thread.json").read_text())
-# Reduced archived pages (Wayback timestamps): CenturyClub 20260103115225,
-# The_Donald 20250518184233, /login/ 20241104000710, and ib3lzb 20230617202108.
-# The missing-page heading was recorded in the signed-in browser.
 READ_STATES = json.loads((FIXTURES / "reddit_read_states.json").read_text())
 BLOCK_TEXT = ("You've been blocked by network security. If you think you've been blocked by mistake, "
               "file a ticket below and we'll look into it. File a ticket")
@@ -429,7 +426,6 @@ def test_each_run_gets_its_own_task_space(rsrc):
 
 
 def best_thread(post_id=THREAD["post"]["attrs"]["id"]):
-    # The thread fixture supplies recorded comment bodies and parent/depth relationships.
     return {**THREAD, "post": {**THREAD["post"], "attrs": {**THREAD["post"]["attrs"], "id": post_id}},
             "comments": [{**c, "attrs": {**c["attrs"], "postid": post_id,
                                       "permalink": c["attrs"]["permalink"].replace("1xootop", post_id[3:])}} for c in THREAD["comments"]],
@@ -514,7 +510,6 @@ def test_read_best_uses_reddits_confidence_sort(rsrc):
 
 
 def test_recorded_best_order_keeps_scores_authors_and_links():
-    # Signed-in Best page for the first "mechanical keyboards" search hit.
     thread = json.loads((FIXTURES / "reddit_best_comments.json").read_text())
     post_id = thread["post"]["attrs"]["id"]
     items, error = reddit.best_comments(thread, post_id)

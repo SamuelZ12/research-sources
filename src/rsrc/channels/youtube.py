@@ -102,15 +102,11 @@ class _Failed(Exception):
 
 
 class _DirectFailed(_Failed):
-    """The direct caption GET failed in a way yt-dlp's own downloader may not: the read falls back to it.
-
-    Never raised for a rate limit, a login or bot check, a timeout or an oversized file."""
+    """The direct caption GET failed in a way yt-dlp's own downloader may not: the read falls back to it."""
 
 
 class _YtDlp:
-    """Counts a command's yt-dlp runs and direct caption request in its one `meta.attempts` entry.
-
-    `ceiling`: seconds the whole command may take; each run gets what is left of it at most."""
+    """`ceiling`: seconds the whole command may take; each run gets what is left of it at most."""
 
     def __init__(self, ctx, ceiling: float | None = None):
         self.runner = ctx.runner or proc.run
@@ -393,14 +389,7 @@ def _transcript(ytdlp: _YtDlp, video_id: str, info: dict, words: int, notes: lis
 
 
 def _caption_text(ytdlp: _YtDlp, video_id: str, info: dict, track: str, source: str, notes: list[str]) -> str:
-    """Read the selected VTT from the same extraction that established its language.
-
-    Keep yt-dlp's downloader for other URL shapes and for OS proxy configurations. A rate limit,
-    a login or bot check, a timeout or an oversized file on the direct GET ends the read. Any
-    other failure of it (a refused or expired address, a server error, a body that is not WebVTT,
-    a dropped connection) falls back to one yt-dlp caption run, as before this shortcut existed,
-    and a note says so.
-    """
+    """Keep yt-dlp's downloader for other URL shapes and for OS proxy configurations."""
     rows = info["subtitles" if source == "uploaded" else "automatic_captions"][track]
     row = next((r for r in reversed(rows) if r.get("ext") == "vtt"), {})
     url = row.get("url")
