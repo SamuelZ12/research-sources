@@ -178,6 +178,14 @@ def test_lasting_404_cannot_tell_a_missing_account_from_a_failing_fxtwitter(run)
     assert env["meta"]["attempts"][0]["outcome"] == "upstream_error"
 
 
+def test_a_404_the_cap_stops_retrying_keeps_its_diagnosis(run):
+    fake = FakeFx([(404, {"code": 404, "message": "User not found"})] * 3)
+    code, env = run(["nosuchaccount", "--backend", "fxtwitter", "--max-requests", "1"], fake)
+    assert code == 1 and env["error"]["code"] == "upstream_error" and len(fake.urls) == 1
+    assert "rsrc x search 'from:" in env["error"]["message"]
+    assert env["meta"]["truncated"] is None
+
+
 def test_a_404_followed_by_the_timeline_still_answers(run):
     fake = FakeFx([(404, {}), (200, only_page())])
     code, env = run(["mitchellh"], fake)

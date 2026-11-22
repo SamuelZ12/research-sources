@@ -12,7 +12,7 @@ from urllib.parse import quote, urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
 from rsrc.channels.x.search import check_status
-from rsrc.http import CapReached, HttpError, NetworkError, NotFound
+from rsrc.http import HttpError, NetworkError, NotFound
 
 FX_API = "https://api.fxtwitter.com/2"
 SYNDICATION = "https://cdn.syndication.twimg.com/tweet-result?id={id}&token=a"
@@ -187,19 +187,12 @@ class Searcher:
 
         429 raises RateLimited. 404 is retried like a 5xx: no results is a 200 with `results: []`
         (probed 2026-11-11), so a lasting 404 is an outage, not an empty search. Any other 4xx
-        (rejected query, 401/403) fails at once. A retry the request cap cuts off raises the
-        failure it was retrying, so the outage never reads as an empty, capped search.
+        (rejected query, 401/403) fails at once.
         """
         params = {"q": query, "feed": FEEDS[product], "count": count} | ({"cursor": cursor} if cursor else {})
         url = f"{FX_API}/search?{urlencode(params)}"
-        failure = None
-        for _ in range(FX_TRIES):
-            try:
-                data, failure = get_json(self.client, url)
-            except CapReached:
-                if failure is None:
-                    raise
-                break
+        for _ in self.client.tries(range(FX_TRIES)):
+            data, failure = get_json(self.client, url)
             if data and isinstance(data.get("results"), list):
                 records = [status_record(s) for s in data["results"] if isinstance(s, dict)]
                 return records, (data.get("cursor") or {}).get("bottom")
@@ -212,8 +205,7 @@ class Searcher:
 
 def fx_json(client, url, key, *, stop_on_missing=False) -> tuple[dict | None, Failure | None]:
     """FxTwitter GET with up to FX_TRIES attempts until the response has `key`."""
-    failure = None
-    for _ in range(FX_TRIES):
+    for _ in client.tries(range(FX_TRIES)):
         data, failure = get_json(client, url, read_tombstone=stop_on_missing)
         if data and data.get(key) is not None:
             return data, None

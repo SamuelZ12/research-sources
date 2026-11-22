@@ -117,6 +117,19 @@ class Client:
         self._sleep = sleep
         self._last = None
 
+    @property
+    def spent(self) -> bool:
+        return self.max_requests is not None and self.requests_made >= self.max_requests
+
+    def tries(self, attempts):
+        """Yield each of `attempts` while the request cap allows another request. The first always runs,
+        so a cap spent beforehand still raises CapReached. A retry loop iterates this and, when it runs
+        out, raises the failure it was retrying: the cap never hides that failure."""
+        for number, attempt in enumerate(attempts):
+            if number and self.spent:
+                return
+            yield attempt
+
     def request(self, method, url, headers=None, body=None) -> tuple[int, bytes]:
         """Return (status, body) for any HTTP status; raise NetworkError if no response arrives."""
         status, _, data = self.request_with_headers(method, url, headers, body)

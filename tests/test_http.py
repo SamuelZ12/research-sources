@@ -42,6 +42,20 @@ def test_request_cap_stops_before_calling_network():
     assert len(calls) == 2
 
 
+def test_tries_stop_before_a_retry_the_cap_refuses():
+    client, calls, _ = make_client([(500, b"")] * 3, max_requests=2)
+    statuses = [client.request("GET", f"https://x.com/{n}")[0] for n in client.tries(range(3))]
+    assert statuses == [500, 500] and len(calls) == 2
+
+
+def test_the_first_try_still_meets_a_spent_cap():
+    client, _, _ = make_client([(200, b"")], max_requests=1)
+    client.request("GET", "https://x.com/a")
+    with pytest.raises(CapReached):
+        for _ in client.tries(range(3)):
+            client.request("GET", "https://x.com/b")
+
+
 def test_requests_are_spaced_by_min_interval():
     client, _, clock = make_client([(200, b"{}")] * 2, min_interval=1.0)
     client.request("GET", "https://x.com/a")

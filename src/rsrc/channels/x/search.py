@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, to_int
-from rsrc.http import AuthError, CapReached, HttpError, RateLimited
+from rsrc.http import AuthError, HttpError, RateLimited
 
 API = "https://x.com/i/api/graphql"
 QUERY_IDS = ("6AAys3t42mosm_yTI_QENg", "M1jEez78PEfVfbQLvlWMvQ", "5h0kNbk3ii97rmfY6CdgAA", "Tp1sewRU1AsZpBWhqCZicQ")
@@ -93,16 +93,9 @@ class Searcher:
     def page(self, query, product="Latest", cursor=None, count=PAGE_SIZE):
         cached = _read_cache(self.cache_path)
         candidates = [self.query_id] if self.query_id else list(dict.fromkeys(filter(None, (cached, *QUERY_IDS))))
-        rejected = None
-        for query_id in candidates:
+        for query_id in self.client.tries(candidates):
             try:
                 result = self._fetch(query, product, cursor, query_id, count)
-            except CapReached:
-                if rejected is None:
-                    raise
-                raise SearchError(
-                    f"{rejected}. --max-requests stopped rotation before all SearchTimeline query IDs were tried."
-                ) from rejected
             except SearchError as e:
                 if not e.query_id_rejected:
                     raise
@@ -110,6 +103,10 @@ class Searcher:
                 continue
             self._remember(query_id, cached)
             return result
+        if query_id != candidates[-1]:
+            raise SearchError(
+                f"{rejected}. --max-requests stopped rotation before all SearchTimeline query IDs were tried."
+            ) from rejected
         raise SearchError(
             f"{rejected}; every SearchTimeline query ID was rejected (X rotated it). Fix: in a browser "
             "logged in to x.com, open DevTools > Network, run a search, copy <id> from the request "
