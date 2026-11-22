@@ -22,6 +22,7 @@ from types import SimpleNamespace
 
 from rsrc import checks, proc
 from rsrc import envelope as env
+from rsrc.channels import appstore
 from rsrc.channels import gh as ghc
 from rsrc.channels import bluesky
 from rsrc.channels import hn as hnc
@@ -34,7 +35,7 @@ from rsrc.channels.x import auth, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
-NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt")
+NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
@@ -78,6 +79,7 @@ def run(args, ctx) -> dict:
     input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
     probes = {"bluesky": lambda attempts: bluesky.probe(ctx, attempts, _Failed),
               "x": lambda attempts: probe_x(ctx, args.live_x, attempts),
+              "appstore": lambda attempts: probe_appstore(ctx, attempts),
               "gh": lambda attempts: probe_gh(ctx, attempts),
               "reddit": lambda attempts: probe_reddit(ctx, args.live_reddit, attempts),
               "hn": lambda attempts: probe_hn(ctx, attempts),
@@ -343,3 +345,16 @@ def probe_producthunt(ctx, attempts):
         attempts[-1]["outcome"] = "upstream_error"
         raise _Failed("upstream_error", "Product Hunt returned no products for its probe")
     return "Product Hunt MCP answered an anonymous product search", {"product": result["items"][0]["id"]}
+
+
+def probe_appstore(ctx, attempts):
+    """Check a catalog search and the identity of its first listing."""
+    args = SimpleNamespace(action="search", query="Wikipedia", country="us", limit=1)
+    answer = appstore.run(args, ctx)
+    attempts.extend(answer["meta"]["attempts"])
+    if answer["error"]:
+        raise _Failed(answer["error"]["code"], answer["error"]["message"])
+    if not answer["items"]:
+        attempts[-1]["outcome"] = "upstream_error"
+        raise _Failed("upstream_error", "Apple returned no apps for Wikipedia")
+    return "App Store catalog answered (1 request, no key)", {"app_id": answer["items"][0]["id"]}

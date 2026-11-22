@@ -1,0 +1,17 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "kind": "software",
+      "trackId": 874139669,
+      "trackViewUrl": "https://apps.apple.com/us/app/signal-private-messenger/id874139669?uo=4",
+      "trackName": "Signal - Private Messenger",
+      "artistName": "Signal Messenger, LLC",
+      "primaryGenreName": "Social Networking",
+      "averageUserRating": 4.72825,
+      "userRatingCount": 1117753,
+      "version": "8.38",
+      "currentVersionReleaseDate": "2026-11-19T17:00:23Z"
+    }
+  ]
+}

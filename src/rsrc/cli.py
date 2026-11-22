@@ -14,10 +14,10 @@ from typing import Callable, Mapping
 
 from rsrc import envelope as env
 from rsrc import proc
-from rsrc.channels import bluesky, check, gh, hn, polymarket, producthunt, reddit, x, youtube
+from rsrc.channels import appstore, bluesky, check, gh, hn, polymarket, producthunt, reddit, x, youtube
 from rsrc.http import redirect_transport, urllib_transport
 
-CHANNELS: list = [x, bluesky, gh, reddit, hn, polymarket, producthunt, youtube, check]  # channel modules, in help order
+CHANNELS: list = [x, bluesky, gh, reddit, hn, polymarket, producthunt, youtube, appstore, check]  # channel modules, in help order
 FIXED_ACTIONS = {"check": "check"}  # channels without an action word
 
 

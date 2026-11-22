@@ -1,0 +1,17 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "kind": "software",
+      "trackId": 324715238,
+      "trackViewUrl": "https://apps.apple.com/us/app/wikipedia/id324715238?uo=4",
+      "trackName": "Wikipedia",
+      "artistName": "Wikimedia Foundation",
+      "primaryGenreName": "Reference",
+      "averageUserRating": 4.3356,
+      "userRatingCount": 6460,
+      "version": "2026.11.17",
+      "currentVersionReleaseDate": "2026-11-18T21:48:08Z"
+    }
+  ]
+}
