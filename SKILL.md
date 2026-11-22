@@ -133,7 +133,7 @@ No command sweeps several sites at once. For "what are people saying about TOPIC
 | `error.code` | Action |
 |---|---|
 | `usage` | Fix the arguments from `error.message` and rerun once |
-| `config` | Follow the specific setup message. If another browser X command is running, wait for it to finish. |
+| `config` | Stop that channel; ask the user to apply the exact fix the message prints (e.g. a `chmod`, `gh auth login`, a missing program or cookie). Do not apply it yourself. If the message says another browser X command is running, wait for it to finish and rerun. |
 | `auth_failed` | Stop that channel (scope below); for x-graphql, ask the user to refresh the cookie pair; for x-browser, ask them to check the signed-in X session in Ego Lite |
 | `rate_limited` | Stop that channel (scope below) for the rest of the session; never retry or route around it |
 | `blocked` | Access was refused or the source returned a block page. Treat it as unreadable. On X (`x read`, `check --live-x`) it covers that one post only; on Reddit it stops all Reddit access, and on YouTube all `rsrc youtube` (scope below) |
