@@ -425,6 +425,14 @@ def test_each_run_gets_its_own_task_space(rsrc):
     assert first.startswith("rsrc reddit ") and first != second
 
 
+def test_a_killed_batch_finishes_its_own_space(rsrc):
+    fake = FakeEgo(printed(SEARCH), proc.Timeout("slow"), proc.Result(0, "", ""))
+    code, out = rsrc(["search", "q", "--with-comments", "1"], fake)
+    assert out["error"]["code"] == "timeout"
+    assert fake.input(2) == {"space": fake.input(1)["space"]}
+    assert fake.calls[2][0][3].endswith(reddit.CLEANUP.read_text())
+
+
 def best_thread(post_id=THREAD["post"]["attrs"]["id"]):
     return {**THREAD, "post": {**THREAD["post"], "attrs": {**THREAD["post"]["attrs"], "id": post_id}},
             "comments": [{**c, "attrs": {**c["attrs"], "postid": post_id,

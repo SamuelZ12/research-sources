@@ -164,3 +164,27 @@ test("a rendered root with an unpopulated body is not evidence of a complete tre
   assert.equal(calls, 2);
   assert.equal(page.comments.length, 3);
 });
+
+const cleanup = readFileSync(new URL("../src/rsrc/channels/reddit_cleanup.js", import.meta.url), "utf8");
+
+async function abandon(spaces) {
+  const opened = [], finished = [];
+  await runInNewContext(`(async () => { ${cleanup} })()`, {
+    INPUT: { space: "rsrc reddit 1-2" },
+    listTaskSpaces: async () => spaces,
+    taskSpace: async (key) => {
+      opened.push(key);
+      return { async finish(options) { finished.push([key, options]); } };
+    },
+  });
+  return JSON.parse(JSON.stringify({ opened, finished }));
+}
+
+test("cleanup finishes only the command's own space and never opens one", async () => {
+  const mine = { id: "s-agent", name: "rsrc reddit 1-2", ownership: "agent" };
+  const users = { id: "s-user", name: "rsrc reddit 1-2", ownership: "user" };
+  const other = { id: "s-other", name: "rsrc reddit 3-4", ownership: "agent" };
+  assert.deepEqual(await abandon([users, other, mine]),
+    { opened: ["s-agent"], finished: [["s-agent", { keep: [] }]] });
+  assert.deepEqual(await abandon([users, other]), { opened: [], finished: [] });
+});
