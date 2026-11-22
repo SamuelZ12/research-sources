@@ -93,10 +93,10 @@ class _Gh:
             raise _Failed(code, message)
         try:
             value = parse(result.stdout)
-        except ValueError:
+        except (ValueError, TypeError, KeyError, AttributeError):
             self._record("upstream_error", ms)
             raise _Failed("upstream_error", "gh returned malformed or unexpected JSON") from None
-        self._record("no_results" if value == [] else "ok", ms)
+        self._record("no_results" if value in ([], (0, [])) else "ok", ms)
         return value
 
     def public(self, path, parse, *, raw=False, missing_ok=False):
@@ -298,17 +298,18 @@ def _public_issue(r):
                 state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=False)
 
 
-def _public_search(gh, action, args):
+def _rest_search(gh, action, args, *, authenticated=False):
     query = args["query"]
     limit = args["limit"]
     endpoint, convert = "repositories", _public_repo
     if action == "issues":
         endpoint, convert = "issues", _public_issue
-        query += " is:issue"
+        query = f"( {query} )"
         if args["repo"]:
             query += " repo:" + args["repo"]
         if args["state"] != "all":
             query += " state:" + args["state"]
+        query += " type:issue"
 
     def page(stdout):
         data = json.loads(stdout)
@@ -324,7 +325,13 @@ def _public_search(gh, action, args):
     size = min(100, limit)
     for number in range(1, (limit + size - 1) // size + 1):
         params = urlencode({"q": query, "per_page": size, "page": number})
-        total, rows = gh.public(f"search/{endpoint}?{params}", page)
+        path = f"search/{endpoint}?{params}"
+        if action == "issues":
+            path += "&advanced_search=true"
+        if authenticated:
+            total, rows = gh.call(["gh", "api", path], parse=page)
+        else:
+            total, rows = gh.public(path, page)
         records.extend(rows)
         seen.update(r["url"] for r in rows)
         if len(seen) != len(records) or len(records) > total or len(records) < min(number * size, total, limit):
@@ -345,11 +352,14 @@ def _search(ctx, action, input_, argv, to_item) -> dict:
     gh = _Gh(ctx)
     try:
         try:
-            records = gh.call(argv, parse=_record_list)
+            if action == "issues" and gh.allow_public:
+                records = _rest_search(gh, action, input_, authenticated=True)
+            else:
+                records = gh.call(argv, parse=_record_list)
         except _NoLogin:
-            if not gh.allow_public:
+            if not gh.allow_public or len(gh.attempts) != 1:
                 raise
-            records = _public_search(gh, action, input_)
+            records = _rest_search(gh, action, input_)
     except _Failed as failure:
         return env.envelope(CHANNEL, action, input_, gh.backend, [], meta={"attempts": gh.attempts},
                             error=env.error(failure.code, failure.message))

@@ -56,8 +56,8 @@ class FakeGh:
 def rsrc(monkeypatch, capsys):
     monkeypatch.setattr(cli, "CHANNELS", [gh])
 
-    def run(argv, fake):
-        code = cli.main(["gh", *argv], cli.Context(environ={}, runner=fake))
+    def run(argv, fake, environ=None):
+        code = cli.main(["gh", *argv], cli.Context(environ=environ or {}, runner=fake))
         out = capsys.readouterr().out
         assert len(out.splitlines()) == 1
         return code, json.loads(out)
@@ -167,10 +167,10 @@ def test_search_maps_repositories(rsrc):
     assert out["meta"]["attempts"][0]["outcome"] == "ok"
 
 
-def test_issues_maps_issues_and_passes_filters(rsrc):
+def test_enterprise_issues_map_fields_and_pass_filters(rsrc):
     fake = FakeGh(ok(SEARCH_ISSUES))
     code, out = rsrc(["issues", "memory", "--repo", "example-org/example-cli", "--limit", "10",
-                      "--state", "closed"], fake)
+                      "--state", "closed"], fake, {"GH_HOST": "git.example.com"})
 
     assert code == 0 and out["action"] == "issues"
     assert out["input"] == {"query": "memory", "repo": "example-org/example-cli", "limit": 10, "state": "closed"}
@@ -193,23 +193,29 @@ def test_issues_maps_issues_and_passes_filters(rsrc):
     assert second["text"] is None and second["engagement"] == {"comments": 0}
 
 
-def test_issues_state_defaults_to_open_and_all_omits_the_flag(rsrc):
-    default = FakeGh(ok(SEARCH_ISSUES))
-    rsrc(["issues", "memory"], default)
-    argv = default.argvs[0]
-    assert argv[argv.index("--state") + 1] == "open"
-    assert argv[argv.index("--limit") + 1] == "30"
-    assert "--repo" not in argv
-
-    every = FakeGh(ok(SEARCH_ISSUES))
-    code, out = rsrc(["issues", "memory", "--state", "all"], every)
-    assert code == 0 and out["input"]["state"] == "all"
-    assert "--state" not in every.argvs[0]
+@pytest.mark.parametrize("flags, qualifiers", [
+    ([], " state:open"),
+    (["--state", "all"], ""),
+    (["--repo", "python/cpython", "--state", "closed"], " repo:python/cpython state:closed"),
+])
+def test_issue_search_uses_authenticated_rest(rsrc, flags, qualifiers):
+    sample = (FIXTURES / "gh_public_issues.json").read_text()
+    fake = FakeGh(ok(sample))
+    code, out = rsrc(["issues", "docs OR help", "--limit", "1", *flags], fake)
+    assert code == 0 and out["backend"] == "gh"
+    [argv] = fake.argvs
+    assert argv[:2] == ["gh", "api"]
+    path = urlsplit(argv[2])
+    assert path.path == "search/issues"
+    assert parse_qs(path.query) == {"q": ["( docs OR help )" + qualifiers + " type:issue"],
+                                    "per_page": ["1"], "page": ["1"], "advanced_search": ["true"]}
+    assert out["items"][0]["id"] == "python/cpython#157847"
 
 
 @pytest.mark.parametrize("action", ["search", "issues"])
 def test_empty_results_exit_66(rsrc, action):
-    code, out = rsrc([action, "nothing matches this"], FakeGh(ok("[]\n")))
+    empty = '{"items":[],"total_count":0,"incomplete_results":false}' if action == "issues" else "[]"
+    code, out = rsrc([action, "nothing matches this"], FakeGh(ok(empty)))
     assert code == 66 and out["ok"] and out["items"] == [] and out["error"] is None
     assert out["meta"]["attempts"][0]["outcome"] == "no_results"
 
@@ -322,7 +328,7 @@ def test_public_issue_search(rsrc, public):
     assert code == 0
     assert out["items"][0]["id"] == "python/cpython#157847"
     assert set(out["items"][0]["raw"]) == set(gh.ISSUE_FIELDS.split(","))
-    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["documentation is:issue repo:python/cpython state:open"]
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["( documentation ) repo:python/cpython state:open type:issue"]
 
 
 @pytest.mark.parametrize("update", [{"incomplete_results": True}, {"items": [{}]}, {"items": []}])
