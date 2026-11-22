@@ -25,7 +25,7 @@ def test_recorded_browser_page(monkeypatch):
               for instruction in timeline["instructions"] for entry in instruction.get("entries", [])
               if "tweet_results" in entry["content"].get("itemContent", {})]
     scripts = session_result(monkeypatch, {"tweets": tweets, "cursor": None})
-    with browser.Searcher(Client(max_requests=2), {}) as session:
+    with browser.Searcher(Client(min_interval=1, max_requests=2), {}) as session:
         rows, cursor = session.page("q", "Latest", None, 20)
     assert rows == [r | {"source": "x-browser"} for r in search.parse_page(doc)[0]]
     assert cursor is None and session.client.requests_made == 2
@@ -38,7 +38,7 @@ def test_recorded_browser_page(monkeypatch):
 def test_browser_errors_stop_the_search(monkeypatch, code, dispatched):
     scripts = session_result(monkeypatch, {"error": code, "dispatched": dispatched})
     with pytest.raises(browser.BrowserError) as exc:
-        with browser.Searcher(Client(max_requests=2), {}) as session:
+        with browser.Searcher(Client(min_interval=1, max_requests=2), {}) as session:
             session.page("q", "Latest", None, 20)
     assert exc.value.code == code
     assert len(scripts) == 2 and "task.finish" in scripts[-1]
@@ -46,16 +46,16 @@ def test_browser_errors_stop_the_search(monkeypatch, code, dispatched):
 
 
 def test_one_request_cannot_open_browser():
-    with browser.Searcher(Client(max_requests=1), {}) as session:
+    with browser.Searcher(Client(min_interval=1, max_requests=1), {}) as session:
         with pytest.raises(browser.CookieError, match="--max-requests 2"):
             session.page("q", "Top", None, 20)
         assert session.client.requests_made == 0
 
 
 def test_concurrent_browser_searches_stop_before_navigation():
-    with browser.Searcher(Client(max_requests=2), {}):
+    with browser.Searcher(Client(min_interval=1, max_requests=2), {}):
         with pytest.raises(browser.CookieError, match="another X browser command"):
-            with browser.Searcher(Client(max_requests=2), {}):
+            with browser.Searcher(Client(min_interval=1, max_requests=2), {}):
                 pytest.fail("acquired a busy browser")
 
 
@@ -112,7 +112,7 @@ def test_rejected_id(monkeypatch, tmp_path, cap, success, reason):
         data = {"tweets": [], "cursor": None} if success and len(ids) == 2 else {"error": "query_id_rejected"}
         return ["RSRC_X " + json.dumps(data)]
     monkeypatch.setattr(browser, "execute", execute)
-    with browser.Searcher(Client(max_requests=cap), {"XDG_CACHE_HOME": str(tmp_path)}) as session:
+    with browser.Searcher(Client(min_interval=1, max_requests=cap), {"XDG_CACHE_HOME": str(tmp_path)}) as session:
         if reason:
             with pytest.raises(search.SearchError, match=reason):
                 session.page("test", "Top", None, 1)
@@ -126,7 +126,7 @@ def test_rejected_id(monkeypatch, tmp_path, cap, success, reason):
 def test_verification_handoff(monkeypatch):
     scripts = session_result(monkeypatch, {"error": "blocked", "handedOff": True, "dispatched": False})
     with pytest.raises(browser.BrowserError, match="verification"):
-        with browser.Searcher(Client(max_requests=2), {}) as session:
+        with browser.Searcher(Client(min_interval=1, max_requests=2), {}) as session:
             session.page("q", "Latest", None, 20)
     assert len(scripts) == 1
 
@@ -141,7 +141,7 @@ def test_exception_finishes_owned_space(monkeypatch, during_execute):
         return ['RSRC_X {"tweets":[],"cursor":"next"}']
     monkeypatch.setattr(browser, "execute", execute)
     with pytest.raises((RuntimeError, browser.BrowserError)):
-        with browser.Searcher(Client(max_requests=3), {}) as session:
+        with browser.Searcher(Client(min_interval=1, max_requests=3), {}) as session:
             session.page("q", "Latest", None, 20)
             raise RuntimeError("between pages")
     assert len(calls) == 2 and "task.finish" in calls[-1]

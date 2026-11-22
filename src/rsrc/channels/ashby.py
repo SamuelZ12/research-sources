@@ -81,7 +81,7 @@ class Description(HTMLParser):
 
 def fetch(board, ctx):
     transport = single_hop_transport if ctx.transport is urllib_transport else ctx.transport
-    client = Client(max_requests=1, transport=transport)
+    client = Client(min_interval=1, max_requests=1, transport=transport)
     status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
     if status == 404:
         raise Failure("not_found", f"Ashby board {board!r} was not found. {GUIDANCE}")

@@ -137,7 +137,7 @@ def fetch(ctx, path: str, parse, attempts: list, *, missing: str | None = None):
     `parse` raises ValueError for JSON of the wrong shape. `missing` is what a 404 means when the
     path names one item. Raises HttpError, whose `code` is the envelope code for the kind of
     failure; nothing is retried."""
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
         status, body = client.request("GET", f"{API}/{path}")

@@ -150,7 +150,7 @@ def _query_id_cache(environ) -> dict:
 
 
 def _live_read(ctx, attempts: list, raw: dict) -> dict:
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
         record = fx.read(client, LIVE_X_POST)
@@ -178,7 +178,7 @@ def _live_search(ctx, attempts: list, raw: dict, x_graphql: str) -> str:
     A failing search fails x, except when searches have somewhere else to go: x-graphql in the
     order with loadable cookies. A rate limit always fails x.
     """
-    client = Client(transport=ctx.transport, sleep=ctx.sleep, max_requests=1)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep, max_requests=1)
     started = time.monotonic()
     code, message = "ok", None
     try:
@@ -331,7 +331,7 @@ def probe_hn(ctx, attempts: list) -> tuple[str, dict]:
 
 def probe_polymarket(ctx, attempts: list) -> tuple[str, dict]:
     """One request to the gamma API: the first page of a fixed search. Any list of events will do."""
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
         events, _ = pmc.fetch_page(client, POLYMARKET_QUERY, 1)

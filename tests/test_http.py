@@ -18,7 +18,7 @@ class FakeClock:
         self.now += seconds
 
 
-def make_client(responses, **kwargs):
+def make_client(responses, min_interval=1, **kwargs):
     calls = []
     clock = FakeClock()
 
@@ -29,7 +29,7 @@ def make_client(responses, **kwargs):
             raise response
         return response
 
-    client = Client(transport=transport, clock=clock.time, sleep=clock.sleep, **kwargs)
+    client = Client(min_interval=min_interval, transport=transport, clock=clock.time, sleep=clock.sleep, **kwargs)
     return client, calls, clock
 
 
@@ -160,7 +160,7 @@ def test_single_hop_transport_exposes_redirect_headers_without_following():
 
     server, seen = serve_redirect()
     try:
-        client = Client(transport=single_hop_transport)
+        client = Client(min_interval=1, transport=single_hop_transport)
         url = f"http://127.0.0.1:{server.server_port}/start"
         status, headers, data = client.request_with_headers("GET", url, {"Authorization": "Bearer test-value"})
         assert (status, headers["Location"], data) == (302, "/landing", b"")

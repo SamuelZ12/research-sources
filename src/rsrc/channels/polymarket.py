@@ -48,7 +48,7 @@ def run_search(args, ctx) -> dict:
         return env.usage(CHANNEL, "search", "QUERY is empty")
     if not 1 <= args.limit <= MAX_LIMIT:
         return env.usage(CHANNEL, "search", f"--limit must be between 1 and {MAX_LIMIT}, got {args.limit}")
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     found: dict[str, dict] = {}  # event ID -> event, in the API's order
     meta = {}

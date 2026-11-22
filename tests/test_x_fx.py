@@ -247,7 +247,7 @@ DOWN = OSError("connection reset")
     ([(500, b"")] * 3, [(200, b"<html>")], "upstream_error"),
 ])
 def test_failed_read_carries_the_code_its_fallback_decided(fx, syndication, code):
-    client = Client(transport=FakeWeb(fx, syndication), sleep=lambda s: None)
+    client = Client(min_interval=1, transport=FakeWeb(fx, syndication), sleep=lambda s: None)
     record = read(client, "2117770299454177696")
     assert record["id"] == "2117770299454177696" and record["code"] == code
     assert record["error"].startswith("fxtwitter: ") and "; syndication: " in record["error"]
@@ -255,7 +255,7 @@ def test_failed_read_carries_the_code_its_fallback_decided(fx, syndication, code
 
 def test_read_of_a_non_post_argument_is_a_usage_failure_without_requests():
     web = FakeWeb()
-    record = read(Client(transport=web, sleep=lambda s: None), "hello")
+    record = read(Client(min_interval=1, transport=web, sleep=lambda s: None), "hello")
     assert record == {"id": "hello", "error": "not a post URL or ID", "code": "usage"}
     assert web.urls == []
 
@@ -264,20 +264,20 @@ def test_read_of_a_non_post_argument_is_a_usage_failure_without_requests():
     ("deleted", "post deleted"), ("suspended", "author suspended"), ("private", "protected account")])
 def test_corroborated_tombstone(reason, label):
     fx = {"status": {"type": "tombstone", "provider": "twitter", "reason": reason}}
-    record = read(Client(transport=FakeWeb([(404, fx)], [(404, b"")]), sleep=lambda s: None), "12345")
+    record = read(Client(min_interval=1, transport=FakeWeb([(404, fx)], [(404, b"")]), sleep=lambda s: None), "12345")
     assert record == {"id": "12345", "code": "not_found", "error": label}
 
 
 def test_syndication_post_wins_over_false_missing():
     doc = load("x_syndication.json")
     web = FakeWeb([(404, {})], [(200, doc)])
-    assert read(Client(transport=web, sleep=lambda s: None), doc["id_str"]) == syndication_record(doc)
+    assert read(Client(min_interval=1, transport=web, sleep=lambda s: None), doc["id_str"]) == syndication_record(doc)
     assert len(web.urls) == 2
 
 
 def test_unrecognized_syndication_object_is_not_missing():
     web = FakeWeb([(404, {})], [(200, {"errors": ["temporary failure"]})])
-    assert read(Client(transport=web, sleep=lambda s: None), "12345")["code"] == "upstream_error"
+    assert read(Client(min_interval=1, transport=web, sleep=lambda s: None), "12345")["code"] == "upstream_error"
 
 
 def test_future_post_ids_are_impossible_without_network():
@@ -285,4 +285,4 @@ def test_future_post_ids_are_impossible_without_network():
     future = int(time.time() * 1000) + 7 * 86_400_000
     for sequence in (0, 4194303):
         post = str(((future - 1288834974657) << 22) + sequence)
-        assert read(Client(transport=FakeWeb()), post)["code"] == "not_found"
+        assert read(Client(min_interval=1, transport=FakeWeb()), post)["code"] == "not_found"

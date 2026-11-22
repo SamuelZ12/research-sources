@@ -308,7 +308,7 @@ def parse_post(value: str) -> tuple[str | None, str | None]:
 
 def share_post(ctx, url: str) -> tuple[str | None, tuple[str, str] | None, dict]:
     """(post id, None, attempt) or (None, (code, message), attempt): the post a share link leads to."""
-    client = Client(transport=ctx.redirect, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.redirect, sleep=ctx.sleep)
     started = time.monotonic()
     try:
         status, location = client.request("GET", url, SHARE_HEADERS)

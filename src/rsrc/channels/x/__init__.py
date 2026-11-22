@@ -156,7 +156,7 @@ def browser_remedy(args):
 
 def _search(args, backend, ctx, max_requests) -> dict:
     """One backend's search: {"backend", "outcome", "items", "attempts", "meta", "error"}."""
-    client = Client(transport=ctx.transport, max_requests=max_requests, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, max_requests=max_requests, sleep=ctx.sleep)
     items = []
     started = time.monotonic()
     run = {"backend": backend, "items": items, "meta": {}, "error": None}
@@ -218,8 +218,8 @@ def search_posts(args, backend, client, environ, sink) -> tuple[dict, bool]:
 
 def run_read(args, ctx) -> dict:
     input = {"posts": list(args.posts)}
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
-    syndication = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
+    syndication = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     items, attempts, rejected, failed = [], [], [], []
     failures = []  # (code, message) in input order, for the all-failed error
     meta = {"attempts": attempts, "rejected": rejected, "failed": failed}
@@ -264,7 +264,7 @@ def run_replies(args, ctx) -> dict:
     if not post_id:
         return env.envelope(CHANNEL, "replies", input, FX_BACKEND,
                             error=env.error("usage", f"not a post URL or ID: {args.post}"))
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     items, meta = [], {}
     started = time.monotonic()
     try:

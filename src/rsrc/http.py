@@ -86,7 +86,10 @@ def redirect_transport(method, url, headers, body):
 
 
 class Client:
-    def __init__(self, max_requests=None, min_interval=1.0, transport=urllib_transport,
+    """`min_interval` has no default: seconds between this client's requests, chosen per source.
+    A scraped site needs a pause; one official API answering a two-call read does not."""
+
+    def __init__(self, *, min_interval, max_requests=None, transport=urllib_transport,
                  clock=time.monotonic, sleep=time.sleep):
         self.max_requests = max_requests
         self.min_interval = min_interval
