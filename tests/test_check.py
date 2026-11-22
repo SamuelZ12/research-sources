@@ -336,12 +336,15 @@ def test_x_reports_its_default_paths_under_rsrc_names(rsrc, monkeypatch, tmp_pat
 
 # gh
 
-def test_gh_not_logged_in_is_config_and_skips_rate_limit(rsrc, environ):
-    runner = FakeGh(NOT_LOGGED_IN)
-    code, out = rsrc(["gh"], environ=environ, runner=runner)
-    assert code == 2 and out["error"]["code"] == "config"
-    assert out["meta"]["sources"] == {"gh": "config"}
-    assert runner.argvs == [["gh", "auth", "status"]]
+@pytest.mark.parametrize("result", [NOT_LOGGED_IN, proc.Missing("gh")])
+def test_gh_public_only_is_usable(rsrc, environ, result):
+    repo = json.loads((Path(__file__).parent / "fixtures/gh_repo.json").read_text())
+    repo["full_name"] = "cli/cli"
+    transport = FakeTransport((200, json.dumps(repo).encode()))
+    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(result), transport=transport)
+    assert code == 0 and out["meta"]["sources"] == {"gh": "ok"}
+    assert out["items"][0]["raw"] == {"auth": "not logged in", "public_reads": "ok"}
+    assert transport.urls == ["https://api.github.com/repos/cli/cli"]
 
 
 def test_gh_auth_status_failure_output_is_not_echoed(rsrc, environ):
@@ -351,13 +354,9 @@ def test_gh_auth_status_failure_output_is_not_echoed(rsrc, environ):
     assert "GH_TOKEN" not in json.dumps(out)
 
 
-@pytest.mark.parametrize("failure, code_", [
-    (proc.Missing("gh not found"), "config"),
-    (proc.Timeout("gh timed out"), "timeout"),
-])
-def test_gh_missing_or_slow(rsrc, environ, failure, code_):
-    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(failure))
-    assert out["error"]["code"] == code_ and out["meta"]["sources"] == {"gh": code_}
+def test_gh_timeout(rsrc, environ):
+    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(proc.Timeout("gh timed out")))
+    assert out["error"]["code"] == "timeout" and out["meta"]["sources"] == {"gh": "timeout"}
 
 
 def test_gh_rate_limited(rsrc, environ):
@@ -665,5 +664,14 @@ def test_help_explains_default_live_probes(capsys):
     assert cli.main(["check", "--help"]) == 0
     help_text = " ".join(capsys.readouterr().out.split())
     for probe in ("Bluesky search", "Product Hunt search", "App Store catalog", "YouTube metadata",
-                  "gh login and rate limits"):
+                  "GitHub access"):
         assert probe in help_text
+
+
+def test_public_github_probe_must_reach_the_api(rsrc, environ):
+    class Unreachable:
+        def __call__(self, *args):
+            raise OSError("offline")
+    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(NOT_LOGGED_IN), transport=Unreachable())
+    assert code == 1 and out["meta"]["sources"] == {"gh": "network_error"}
+    assert out["items"][0]["text"] == "Could not read GitHub API response"

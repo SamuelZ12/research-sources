@@ -34,7 +34,7 @@ def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
                                    description="By default check all nine channels. Probe HN, Polymarket, Bluesky search, "
                                                "Product Hunt search and the App Store catalog, read YouTube metadata "
-                                               "with yt-dlp, and check gh login and rate limits. X setup and Ego Lite "
+                                               "with yt-dlp, and check GitHub access. X setup and Ego Lite "
                                                "are checked locally unless their live flag is set.")
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
@@ -206,14 +206,40 @@ def _live_search(ctx, attempts: list, raw: dict, x_graphql: str) -> str:
 
 # --- gh ----------------------------------------------------------------------------
 
+class _NoGhLogin(_Failed):
+    pass
+
+
 def probe_gh(ctx, attempts: list) -> tuple[str, dict]:
     runner = ctx.runner or proc.run
-    _gh(runner, ["gh", "auth", "status"], attempts, auth_status=True)
-    stdout = _gh(runner, ["gh", "api", "rate_limit"], attempts)
+    session = ghc._Gh(ctx)
+    session.attempts = attempts
     try:
-        resources = json.loads(stdout)["resources"]
+        try:
+            _gh(runner, ["gh", "auth", "status"], attempts, auth_status=True)
+        except _NoGhLogin:
+            if not session.allow_public:
+                raise
+            repo = session.public("repos/cli/cli", ghc._repo_record)
+            if repo["full_name"].lower() != "cli/cli":
+                raise _Failed("url_mismatch", "GitHub public probe returned a different repository")
+            return ("Public reads work without a login. Run `gh auth login` for private repositories "
+                    "and higher rate limits.", {"auth": "not logged in", "public_reads": "ok"})
+        stdout = _gh(runner, ["gh", "api", "rate_limit"], attempts)
+        try:
+            rate = json.loads(stdout)
+        except ValueError:
+            rate = None
+    except ghc._Failed as exc:
+        raise _Failed(exc.code, exc.message) from None
+    finally:
+        session.close()
+    try:
+        resources = rate["resources"]
         core, search_limit = resources["core"], resources["search"]
         counts = (core["remaining"], core["limit"], search_limit["remaining"])
+        if any(type(n) is not int or n < 0 for n in counts):
+            raise ValueError("invalid allowance")
     except (ValueError, KeyError, TypeError):
         attempts[-1]["outcome"] = "upstream_error"
         raise _Failed("upstream_error", "gh api rate_limit returned unexpected JSON") from None
@@ -227,12 +253,15 @@ def _gh(runner, argv: list[str], attempts: list, auth_status: bool = False) -> s
         result = runner(argv, ghc.TIMEOUT)
     except proc.Missing:
         attempts.append(env.attempt(ghc.BACKEND, "config"))
-        raise _Failed("config", "gh not installed (brew install gh)") from None
+        raise _NoGhLogin("config", "gh not installed (brew install gh)") from None
     except proc.Timeout:
         attempts.append(env.attempt(ghc.BACKEND, "timeout", ms=env.elapsed_ms(started)))
         raise _Failed("timeout", f"{' '.join(argv)} did not answer within {ghc.TIMEOUT} s") from None
     if result.code != 0:
         code, message = ghc.classify(result)
+        if auth_status and code == "config" and "not logged into any github hosts" in (result.stderr + result.stdout).lower():
+            attempts.append(env.attempt(ghc.BACKEND, "config", ms=env.elapsed_ms(started)))
+            raise _NoGhLogin("config", "gh has no configured login")
         if auth_status and code == "upstream_error":
             # `gh auth status` fails only when no host has a working login; its output names
             # accounts and token scopes, so it is not echoed.

@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes all nine: HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and the logged-in GitHub CLI's rate limits. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes all nine: HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 Requirements by channel:
 
@@ -96,7 +96,7 @@ See [Product Hunt’s terms of use](https://www.producthunt.com/legal).
 
 App Store reads return the listing followed by written reviews, newest first by default (30). A URL selects its storefront unless you override it. An ambiguous name returns candidate apps and `usage`; rerun with an ID. Ratings are in `engagement.rating`. Apple's fallback feed omits the reviewed version. Neither feed promises stability or complete coverage. Use the reviews as dated examples; their frequency and timing cannot establish prevalence or support real-time monitoring.
 
-GitHub uses public REST when the CLI is missing or logged out. The unauthenticated core allowance is 60 requests per hour per IP, with a separate search limit. A repo read normally needs three calls; searches can page. A public 404 can also mean a private repo. `rsrc check gh` tests the logged-in CLI only.
+GitHub uses public REST when the CLI is missing or logged out. The unauthenticated core allowance is 60 requests per hour per IP, with a separate search limit. A repo read normally needs three calls; searches can page. A public 404 can also mean a private repo. `rsrc check gh` reports remaining allowance when logged in and verifies public access otherwise.
 
 YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read. Reddit returns `not_found` for a missing thread and `blocked` for a private or banned community or a login wall. A removed post may still return its record and a removal notice in `meta.notes`.
 
