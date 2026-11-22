@@ -5,6 +5,7 @@ from io import BytesIO
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
+import gzip
 import json
 import os
 import sys
@@ -69,7 +70,7 @@ def rsrc(monkeypatch, capsys):
 
 def test_repo_returns_one_item_with_stats_release_and_readme_head(rsrc):
     fake = FakeGh(ok(REPO), ok(README), ok(RELEASE))
-    code, out = rsrc(["repo", "example-org/example-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"], out["backend"]) == ("gh", "repo", "gh")
@@ -100,7 +101,7 @@ def test_repo_returns_one_item_with_stats_release_and_readme_head(rsrc):
 
 def test_repo_without_readme_or_release_is_still_ok(rsrc):
     fake = FakeGh(ok(REPO), NOT_FOUND, NOT_FOUND)
-    code, out = rsrc(["repo", "example-org/example-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
 
     assert code == 0 and out["ok"]
     [item] = out["items"]
@@ -111,7 +112,7 @@ def test_repo_without_readme_or_release_is_still_ok(rsrc):
 
 def test_repo_rename_is_accepted_with_a_note(rsrc):
     fake = FakeGh(ok(REPO), ok(README), ok(RELEASE))
-    code, out = rsrc(["repo", "old-org/old-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "old-org/old-cli"], fake)
 
     assert code == 0
     assert out["items"][0]["id"] == "example-org/example-cli"
@@ -120,14 +121,14 @@ def test_repo_rename_is_accepted_with_a_note(rsrc):
 
 
 def test_repo_case_difference_is_not_a_rename(rsrc):
-    code, out = rsrc(["repo", "Example-Org/Example-CLI"], FakeGh(ok(REPO), ok(README), ok(RELEASE)))
+    code, out = rsrc(["repo", "--backend", "gh", "Example-Org/Example-CLI"], FakeGh(ok(REPO), ok(README), ok(RELEASE)))
     assert code == 0 and out["meta"]["notes"] == []
 
 
 @pytest.mark.parametrize("name", ["example-cli", "a/b/c", "owner/", "/repo", "own er/repo", "owner/..", "o/r?x=1"])
 def test_malformed_owner_repo_is_usage_with_no_gh_call(rsrc, name):
     fake = FakeGh()
-    code, out = rsrc(["repo", name], fake)
+    code, out = rsrc(["repo", "--backend", "gh", name], fake)
     assert code == 2 and out["error"]["code"] == "usage"
     assert fake.calls == []
 
@@ -135,7 +136,7 @@ def test_malformed_owner_repo_is_usage_with_no_gh_call(rsrc, name):
 def test_repo_readme_mentioning_login_is_kept(rsrc):
     readme = "# example-cli\n\nPlease log in to continue: run `example-cli login` first. Access denied errors mean...\n"
     fake = FakeGh(ok(REPO), ok(readme), NOT_FOUND)
-    code, out = rsrc(["repo", "example-org/example-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
 
     assert code == 0 and out["error"] is None
     assert readme in out["items"][0]["text"]
@@ -201,7 +202,7 @@ def test_enterprise_issues_map_fields_and_pass_filters(rsrc):
 def test_issue_search_uses_authenticated_rest(rsrc, flags, qualifiers):
     sample = (FIXTURES / "gh_public_issues.json").read_text()
     fake = FakeGh(ok(sample))
-    code, out = rsrc(["issues", "docs OR help", "--limit", "1", *flags], fake)
+    code, out = rsrc(["issues", "--backend", "gh", "docs OR help", "--limit", "1", *flags], fake)
     assert code == 0 and out["backend"] == "gh"
     [argv] = fake.argvs
     assert argv[:2] == ["gh", "api"]
@@ -239,7 +240,7 @@ def test_bad_search_arguments_are_usage_with_no_gh_call(rsrc, argv):
 
 def test_rate_limit_on_first_call_stops_the_command(rsrc):
     fake = FakeGh(RATE_LIMIT, ok(README), ok(RELEASE))
-    code, out = rsrc(["repo", "example-org/example-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
 
     assert code == 1 and out["error"]["code"] == "rate_limited"
     assert len(fake.calls) == 1
@@ -248,7 +249,7 @@ def test_rate_limit_on_first_call_stops_the_command(rsrc):
 
 def test_rate_limit_midway_stops_and_keeps_the_partial_item(rsrc):
     fake = FakeGh(ok(REPO), proc.Result(1, "", "gh: HTTP 429: Too Many Requests\n"), ok(RELEASE))
-    code, out = rsrc(["repo", "example-org/example-cli"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
 
     assert code == 1 and out["error"]["code"] == "rate_limited"
     assert len(fake.calls) == 2
@@ -270,7 +271,7 @@ def test_rejected_credentials_do_not_fall_back(rsrc):
 
 def test_repo_404_is_not_found(rsrc):
     fake = FakeGh(NOT_FOUND)
-    code, out = rsrc(["repo", "example-org/missing"], fake)
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/missing"], fake)
     assert code == 1 and out["error"]["code"] == "not_found"
     assert out["items"] == [] and len(fake.calls) == 1
 
@@ -311,7 +312,7 @@ def test_public_repo_has_same_content(rsrc, public, local):
     args = ["repo", "example-org/example-cli"]
     code, out = rsrc(args, FakeGh(local))
     assert code == 0 and out["backend"] == "github-rest"
-    assert out["items"] == rsrc(args, FakeGh(ok(REPO), ok(README), ok(RELEASE)))[1]["items"]
+    assert out["items"] == rsrc([*args, "--backend", "gh"], FakeGh(ok(REPO), ok(README), ok(RELEASE)))[1]["items"]
     assert len(calls) == 3
     assert all(call.get_header("Authorization") is None for call in calls)
 
@@ -420,7 +421,7 @@ def test_public_rate_limit_stops_and_preserves_reset(rsrc, public):
 
 
 @pytest.mark.parametrize("argv, stdout", [
-    (["repo", "example-org/example-cli"], "<html>not json"),
+    (["repo", "--backend", "gh", "example-org/example-cli"], "<html>not json"),
     (["search", "cli"], "[{\"fullName\": "),
     (["issues", "memory"], "{\"message\": \"not a list\"}"),
 ])
@@ -431,7 +432,7 @@ def test_malformed_json_is_upstream_error(rsrc, argv, stdout):
 
 
 def test_malformed_release_json_is_upstream_error_with_partial_item(rsrc):
-    code, out = rsrc(["repo", "example-org/example-cli"], FakeGh(ok(REPO), ok(README), ok("{oops")))
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], FakeGh(ok(REPO), ok(README), ok("{oops")))
     assert code == 1 and out["error"]["code"] == "upstream_error"
     assert len(out["items"]) == 1
 
@@ -606,3 +607,117 @@ def test_redirect_cap_stops_before_another_get(rsrc, public):
     code, out = rsrc(["repo", "a/b"], FakeGh(NOT_LOGGED_IN))
     assert code == 1 and "request cap" in out["error"]["message"]
     assert len(calls) == next(a["requests"] for a in out["meta"]["attempts"] if a["backend"] == "github-rest") == 20
+
+
+def test_public_read_skips_cli(rsrc, public):
+    public(REPO, README, RELEASE)
+    runner = FakeGh()
+    code, out = rsrc(["repo", "example-org/example-cli"], runner)
+    assert code == 0 and out["backend"] == "github-rest" and runner.calls == []
+    assert [(a["backend"], a["outcome"]) for a in out["meta"]["attempts"]] == [("github-rest", "ok")] * 3
+
+
+@pytest.mark.parametrize("response, outcome", [
+    ((404, {}, b"{}"), "not_found"),
+    ((500, {}, b"{}"), "upstream_error"),
+    (OSError("offline"), "network_error"),
+    ((200, {}, b"{}"), "upstream_error"),
+])
+def test_public_failure_restarts_repo_with_gh(rsrc, public, response, outcome):
+    calls = public(response)
+    runner = FakeGh(ok(REPO), ok(README), ok(RELEASE))
+    code, out = rsrc(["repo", "example-org/example-cli"], runner)
+    assert code == 0 and out["backend"] == "gh" and len(calls) == 1
+    assert [(a["backend"], a["outcome"]) for a in out["meta"]["attempts"]] == [
+        ("github-rest", outcome), ("gh", "ok"), ("gh", "ok"), ("gh", "ok")]
+    assert out["meta"]["notes"] == [f"Public GitHub returned {outcome}. Restarted with the gh login."]
+
+
+def test_rate_limited_readme_restarts_from_metadata_and_discards_public_data(rsrc, public):
+    metadata = dict(json.loads(REPO), description="anonymous description")
+    calls = public(json.dumps(metadata), (403, {"X-RateLimit-Remaining": "0"}, b"rate limit"))
+    runner = FakeGh(ok(REPO), ok(README), ok(RELEASE))
+    code, out = rsrc(["repo", "example-org/example-cli"], runner)
+    assert code == 0 and out["backend"] == "gh" and len(calls) == 2
+    assert out["items"][0]["raw"]["repo"] == json.loads(REPO)
+    assert runner.argvs[0] == ["gh", "api", "repos/example-org/example-cli"]
+    assert [a["outcome"] for a in out["meta"]["attempts"]] == ["ok", "rate_limited", "ok", "ok", "ok"]
+    assert out["meta"]["notes"] == ["Public GitHub allowance exhausted. Restarted with the gh login."]
+
+
+def test_fallback_stops_on_signed_rate_limit(rsrc, public):
+    calls = public((429, {}, b"{}"))
+    runner = FakeGh(RATE_LIMIT)
+    code, out = rsrc(["repo", "example-org/example-cli"], runner)
+    assert code == 1 and out["backend"] == "gh" and out["error"]["code"] == "rate_limited"
+    assert len(calls) == len(runner.calls) == 1
+    assert [a["backend"] for a in out["meta"]["attempts"]] == ["github-rest", "gh"]
+
+
+@pytest.mark.parametrize("public_result", [(422, {}, b'{"message":"Validation Failed"}'),
+                                           '{"items":[],"total_count":0,"incomplete_results":false}'])
+def test_scoped_invisible_search_restarts_with_gh(rsrc, public, public_result):
+    calls = public(public_result)
+    runner = FakeGh(ok((FIXTURES / "gh_public_issues.json").read_text()))
+    code, out = rsrc(["issues", "docs", "--repo", "python/cpython", "--limit", "1"], runner)
+    assert code == 0 and out["backend"] == "gh" and len(calls) == len(runner.calls) == 1
+    assert out["items"][0]["id"] == "python/cpython#157847"
+
+
+@pytest.mark.parametrize("args", [["repo", "a/b"], ["issues", "docs", "--repo", "a/b"]])
+def test_forced_gh_without_login_returns_config(rsrc, public, args):
+    calls = public()
+    code, out = rsrc([*args, "--backend", "gh"], FakeGh(NOT_LOGGED_IN))
+    assert code == 2 and out["backend"] == "gh" and out["error"]["code"] == "config" and not calls
+
+
+@pytest.mark.parametrize("query", ["assignee:@me", "docs repo:another/private", "bug OR team:acme/docs",
+                                   "bug OR project:acme/3", "no:project"])
+def test_viewer_or_additional_repo_qualifier_keeps_login(rsrc, public, query):
+    calls = public()
+    code, out = rsrc(["issues", query, "--repo", "python/cpython", "--limit", "1"],
+                     FakeGh(ok((FIXTURES / "gh_public_issues.json").read_text())))
+    assert code == 0 and out["backend"] == "gh" and not calls
+
+
+def test_compressed_public_search(rsrc, public):
+    body = (FIXTURES / "gh_public_issues.json").read_bytes()
+    calls = public((200, {"Content-Encoding": "gzip"}, gzip.compress(body)))
+    code, out = rsrc(["issues", "docs", "--repo", "python/cpython", "--limit", "1"], FakeGh())
+    assert code == 0 and out["items"][0]["id"] == "python/cpython#157847"
+    assert calls[0].get_header("Accept-encoding") == "gzip"
+
+
+def test_invalid_compressed_search_response(rsrc, public):
+    public((200, {"Content-Encoding": "gzip"}, b"invalid"))
+    code, out = rsrc(["issues", "docs", "--repo", "python/cpython"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and out["error"]["code"] == "upstream_error"
+
+
+def test_compressed_secondary_limit(rsrc, public):
+    public((403, {"Content-Encoding": "gzip"}, gzip.compress(b'{"message":"secondary rate limit"}')))
+    code, out = rsrc(["issues", "docs", "--repo", "python/cpython"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and out["error"]["code"] == "rate_limited"
+
+def test_custom_gh_socket_keeps_its_configured_route(rsrc, public):
+    calls = public()
+    code, out = rsrc(["repo", "example-org/example-cli"], FakeGh(ok(REPO), ok(README), ok(RELEASE)),
+                     {"GH_HTTP_UNIX_SOCKET": "/example/github.sock"})
+    assert code == 0 and out["backend"] == "gh" and not calls
+
+def test_public_search_page_two_failure_restarts_at_page_one(rsrc, public):
+    sample = json.loads((FIXTURES / "gh_public_issues.json").read_text())["items"][0]
+    issues = [dict(sample, number=n, html_url=f"https://github.com/python/cpython/issues/{n}") for n in range(1, 102)]
+
+    def page(rows):
+        return json.dumps({"total_count": 101, "incomplete_results": False, "items": rows})
+
+    public_rows = [dict(issue, title="discard this public title") for issue in issues[:100]]
+    calls = public(page(public_rows), (429, {}, b"limited"))
+    runner = FakeGh(ok(page(issues[:100])), ok(page(issues[100:])))
+    code, out = rsrc(["issues", "docs", "--repo", "python/cpython", "--limit", "101"], runner)
+    assert code == 0 and out["backend"] == "gh"
+    assert [parse_qs(urlsplit(r.full_url).query)["page"] for r in calls] == [["1"], ["2"]]
+    assert [parse_qs(urlsplit(argv[-1]).query)["page"] for argv in runner.argvs] == [["1"], ["2"]]
+    assert [i["title"] for i in out["items"]] == [issue["title"] for issue in issues]
+    assert [a["outcome"] for a in out["meta"]["attempts"]] == ["ok", "rate_limited", "ok", "ok"]

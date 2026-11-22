@@ -1,10 +1,12 @@
 """GitHub repositories and issues via gh or the anonymous REST API."""
 
+import gzip
 import http.client
 import json
 import re
 import time
 import urllib.request
+import zlib
 from datetime import UTC, datetime
 from urllib.parse import urlencode, urljoin, urlsplit
 
@@ -45,6 +47,9 @@ def register(subparsers) -> None:
     issues.add_argument("--limit", type=int, default=30)
     issues.add_argument("--state", choices=("open", "closed", "all"), default="open")
     issues.set_defaults(run=run_issues, action="issues")
+
+    for command in (repo, issues):
+        command.add_argument("--backend", choices=("gh",), help="use the logged-in GitHub CLI directly")
 
 
 class _Failed(Exception):
@@ -107,6 +112,12 @@ class _Gh:
         self._record("no_results" if value in ([], (0, [])) else "ok", ms)
         return value
 
+    def signed(self, path, parse, *, raw=False, missing_ok=False):
+        argv = ["gh", "api"]
+        if raw:
+            argv.extend(["-H", "Accept: application/vnd.github.raw"])
+        return self.call([*argv, path], parse=parse, missing_ok=missing_ok)
+
     def transport(self, method, url, headers, body):
         target = urlsplit(url)
         if target.netloc != "api.github.com":
@@ -127,6 +138,8 @@ class _Gh:
         url = "https://api.github.com/" + path
         headers = {"Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
                    "User-Agent": "research-sources"}
+        if path.startswith("search/"):
+            headers["Accept-Encoding"] = "gzip"
         try:
             while True:
                 status, response_headers, body = self.client.request_with_headers("GET", url, headers)
@@ -147,6 +160,13 @@ class _Gh:
             if status == 404 and missing_ok:
                 outcome = "no_results"
                 return None
+            if fields.get("content-encoding", "").lower() == "gzip":
+                try:
+                    body = gzip.decompress(body)
+                except (OSError, EOFError, zlib.error):
+                    if status == 200:
+                        raise _Failed("upstream_error", "GitHub returned a malformed gzip response") from None
+                    body = b""
             if status != 200:
                 raise _rest_error(status, fields, body, path)
             if fields.get("content-type", "").split(";")[0].strip().lower() == "text/html":
@@ -209,39 +229,67 @@ def run_repo(args, ctx) -> dict:
     if not _OWNER_REPO.fullmatch(requested) or requested.split("/")[1] in (".", ".."):
         return env.usage(CHANNEL, "repo", f"expected OWNER/REPO, got {requested!r}")
 
+    return _route(ctx, "repo", input_, _read_repo, scoped=True, force=args.backend == BACKEND)
+
+
+def _route(ctx, action, input_, read, *, scoped=False, force=False):
     gh = _Gh(ctx)
-    notes: list[str] = []
-    data = readme = release = None
+    public = None
     try:
-        path = f"repos/{requested}"
+        if scoped and gh.allow_public and not force and not ctx.environ.get("GH_HTTP_UNIX_SOCKET"):
+            public = read(gh, input_, True)
+            if public["ok"] and public["items"]:
+                return public
+            # An empty search can also be a repository the public search cannot see.
+        gh.backend = BACKEND
+        signed_start = len(gh.attempts)
         try:
-            data = gh.call(["gh", "api", path], parse=_repo_record)
+            signed = read(gh, input_, False)
         except _NoLogin:
-            if not gh.allow_public:
+            if len(gh.attempts) != signed_start + 1:
                 raise
-            data = gh.public(path, _repo_record)
-        name = data["full_name"]
-        if name.lower() != requested.lower():
-            notes.append(f"renamed: {requested} -> {name}")
-        readme_path = f"repos/{name}/readme"
-        release_path = f"repos/{name}/releases/latest"
-        if gh.backend == BACKEND:
-            readme = gh.call(["gh", "api", "-H", "Accept: application/vnd.github.raw", readme_path],
-                             parse=str, missing_ok=True)
-            release = gh.call(["gh", "api", release_path], parse=_release_record, missing_ok=True)
-        else:
-            readme = gh.public(readme_path, str, raw=True, missing_ok=True)
-            release = gh.public(release_path, _release_record, missing_ok=True)
+            if public is not None:
+                return public
+            if force or not gh.allow_public:
+                raise
+            return read(gh, input_, True)
+        if public is not None:
+            error = public["error"]
+            if error and error["code"] == "rate_limited":
+                note = "Public GitHub allowance exhausted. Restarted with the gh login."
+            else:
+                reason = error["code"] if error else "no_results"
+                note = f"Public GitHub returned {reason}. Restarted with the gh login."
+            signed["meta"]["notes"].insert(0, note)
+        return signed
     except _Failed as failure:
-        items = [] if data is None else [_repo_item(data, readme, release)]
-        return env.envelope(CHANNEL, "repo", input_, gh.backend, items,
-                            meta={"attempts": gh.attempts, "notes": notes},
+        return env.envelope(CHANNEL, action, input_, gh.backend, meta={"attempts": gh.attempts},
                             error=env.error(failure.code, failure.message))
     finally:
         gh.close()
 
-    return env.envelope(CHANNEL, "repo", input_, gh.backend, [_repo_item(data, readme, release)],
-                        meta={"attempts": gh.attempts, "notes": notes})
+
+def _read_repo(gh, input_, public):
+    requested = input_["repo"]
+    get = gh.public if public else gh.signed
+    notes = []
+    data = readme = release = error = None
+    try:
+        data = get(f"repos/{requested}", _repo_record)
+        name = data["full_name"]
+        if name.lower() != requested.lower():
+            notes.append(f"renamed: {requested} -> {name}")
+        readme = get(f"repos/{name}/readme", str, raw=True, missing_ok=True)
+        release = get(f"repos/{name}/releases/latest", _release_record, missing_ok=True)
+    except _NoLogin as failure:
+        if data is None:
+            raise
+        error = env.error(failure.code, failure.message)
+    except _Failed as failure:
+        error = env.error(failure.code, failure.message)
+    items = [] if data is None else [_repo_item(data, readme, release)]
+    return env.envelope(CHANNEL, "repo", input_, gh.backend, items,
+                        meta={"attempts": gh.attempts, "notes": notes}, error=error)
 
 
 def _repo_item(data: dict, readme, release) -> dict:
@@ -283,7 +331,9 @@ def run_issues(args, ctx) -> dict:
     if args.state != "all":
         argv += ["--state", args.state]
     argv += ["--", args.query]
-    return _search(ctx, "issues", input_, argv, _issue_item)
+    # A public issue can belong to a private project or mention a team visible to the viewer.
+    scoped = bool(args.repo) and not re.search(r"@me\b|\b(?:repo|project|team):|\bno:project\b", args.query, re.I)
+    return _search(ctx, "issues", input_, argv, _issue_item, scoped=scoped, force=args.backend == BACKEND)
 
 
 def _check_query(query: str, limit: int) -> str | None:
@@ -375,6 +425,7 @@ def _rest_search(gh, action, args, *, authenticated=False):
         records.extend(rows)
         seen.update(r["url"] for r in rows)
         if len(seen) != len(records) or len(records) > total or len(records) < min(number * size, total, limit):
+            gh.attempts[-1]["outcome"] = "upstream_error"
             raise _Failed("upstream_error", "GitHub returned an incomplete search page")
         if len(records) >= min(total, limit):
             break
@@ -388,25 +439,22 @@ def _record_list(stdout: str) -> list[dict]:
     return records
 
 
-def _search(ctx, action, input_, argv, to_item) -> dict:
-    gh = _Gh(ctx)
-    try:
+def _search(ctx, action, input_, argv, to_item, *, scoped=False, force=False):
+    def read(gh, input_, public):
         try:
-            if action == "issues" and gh.allow_public:
-                records = _rest_search(gh, action, input_, authenticated=True)
+            if public or (action == "issues" and gh.allow_public):
+                records = _rest_search(gh, action, input_, authenticated=not public)
             else:
                 records = gh.call(argv, parse=_record_list)
         except _NoLogin:
-            if not gh.allow_public or len(gh.attempts) != 1:
-                raise
-            records = _rest_search(gh, action, input_)
-    except _Failed as failure:
-        return env.envelope(CHANNEL, action, input_, gh.backend, [], meta={"attempts": gh.attempts},
-                            error=env.error(failure.code, failure.message))
-    finally:
-        gh.close()
-    return env.envelope(CHANNEL, action, input_, gh.backend, [to_item(r) for r in records],
-                        meta={"attempts": gh.attempts})
+            raise
+        except _Failed as failure:
+            return env.envelope(CHANNEL, action, input_, gh.backend, meta={"attempts": gh.attempts},
+                                error=env.error(failure.code, failure.message))
+        return env.envelope(CHANNEL, action, input_, gh.backend, [to_item(r) for r in records],
+                            meta={"attempts": gh.attempts})
+
+    return _route(ctx, action, input_, read, scoped=scoped, force=force)
 
 
 def _search_repo_item(r: dict) -> dict:

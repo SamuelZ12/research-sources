@@ -7,7 +7,7 @@
 - **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in.
 - **One output shape.** Nine sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
-- **Stops on rate limits.** A 429 ends the command. It is never retried, and no other backend is tried to get around it.
+- **Stops on rate limits.** A rate-limited backend stops. A repository-scoped GitHub read can restart with your login after exhausting the shared public allowance.
 - **No Python dependencies.** Standard library only. The tests run offline.
 - **Ships with an agent skill.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
 - **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. [Method and limits](docs/comparisons.md).
@@ -96,7 +96,9 @@ See [Product Hunt’s terms of use](https://www.producthunt.com/legal).
 
 App Store reads return the listing followed by written reviews, newest first by default (30). A URL selects its storefront unless you override it. An ambiguous name returns candidate apps and `usage`; rerun with an ID. Ratings are in `engagement.rating`. Apple's fallback feed omits the reviewed version. Neither feed promises stability or complete coverage. Use the reviews as dated examples; their frequency and timing cannot establish prevalence or support real-time monitoring.
 
-GitHub uses public REST when the CLI is missing or logged out. The unauthenticated core allowance is 60 requests per hour per IP, with a separate search limit. A repo read normally needs three calls; searches can page. A public 404 can also mean a private repo. `rsrc check gh` reports remaining allowance when logged in and verifies public access otherwise.
+On github.com, `gh repo` and `gh issues --repo` try public REST first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Pass `--backend gh` to use your login directly for private reads, permissions or signed search rankings.
+
+A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
 
 YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read. Reddit returns `not_found` for a missing thread and `blocked` for a private or banned community or a login wall. A removed post may still return its record and a removal notice in `meta.notes`.
 
@@ -201,7 +203,7 @@ A change is welcome when it keeps these true:
 
 - **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
 - **Runtime dependencies stay empty.** Programs such as `gh` and `yt-dlp` are run as subprocesses, never imported.
-- **A rate limit stops the command.** A 429 is never retried and never falls back to another backend.
+- **Stop requests on a rate-limited backend.** A GitHub repo read or repo-scoped issue search may restart once with the CLI login after a public limit. A signed limit ends the command.
 - **No secrets anywhere.** No cookie, token or account ID in source, fixtures, test output or commit messages. Run `gitleaks dir . --redact --no-banner` before you commit.
 - **A failure never becomes an `ok` result.** No `except` that swallows an error, and a page `rsrc` does not recognize fails instead of reading as empty.
 - **Fixtures hold public data only.** Before saving a recording, remove anything that identifies you: `yt-dlp`'s stream and caption addresses carry your IP address.
