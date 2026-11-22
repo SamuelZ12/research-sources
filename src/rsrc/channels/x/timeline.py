@@ -11,6 +11,27 @@ class TimelineBlocked(HttpError):
     code = "blocked"
 
 
+def profile_record(user):
+    core, legacy = user.get("core") or {}, user.get("legacy") or {}
+    name = core.get("screen_name") or legacy.get("screen_name")
+    entities = legacy.get("entities") or {}
+    websites = (entities.get("url") or {}).get("urls") or []
+    website = next((u for u in websites if u.get("url") == legacy.get("url")), {})
+    return dict(id=user["rest_id"], screen_name=name, url=f"https://x.com/{name}", type="profile",
+                name=core.get("name") or legacy.get("name"),
+                description=search.expand_links(legacy.get("description"),
+                    (entities.get("description") or {}).get("urls") or []),
+                location=(user.get("location") or {}).get("location") or legacy.get("location"),
+                followers=legacy.get("followers_count"), following=legacy.get("friends_count"),
+                statuses=legacy.get("statuses_count"), likes=legacy.get("favourites_count"),
+                media_count=legacy.get("media_count"), joined=core.get("created_at") or legacy.get("created_at"),
+                protected=(user.get("privacy") or {}).get("protected", legacy.get("protected")),
+                avatar_url=(user.get("avatar") or {}).get("image_url") or legacy.get("profile_image_url_https"),
+                banner_url=legacy.get("profile_banner_url"),
+                website={"url": website["expanded_url"], "display_url": website.get("display_url")}
+                        if website.get("expanded_url") else None)
+
+
 def timeline(client, cookies, handle, limit):
     ops = json.loads(Path(__file__).with_name("timeline_ops.json").read_text())
     headers = search.headers(cookies)
@@ -38,16 +59,12 @@ def timeline(client, cookies, handle, limit):
             raise HttpError(f"X returned an unrecognized {name} response") from None
 
     user = read("UserByScreenName", {"screen_name": handle, "withSafetyModeUserFields": True})
-    core, legacy = user.get("core") or {}, user.get("legacy") or {}
-    name = core.get("screen_name") or legacy.get("screen_name")
-    if not user.get("rest_id") or (name or "").lower() != handle.lower():
+    if not user.get("rest_id"):
+        raise HttpError("X returned an unavailable account")
+    account = profile_record(user)
+    name = account["screen_name"]
+    if (name or "").lower() != handle.lower():
         raise HttpError("X returned a different or unavailable account")
-    account = dict(screen_name=name, name=core.get("name") or legacy.get("name"),
-                   description=search.expand_links(legacy.get("description"),
-                       (legacy.get("entities") or {}).get("description", {}).get("urls") or []),
-                   followers=legacy.get("followers_count"),
-                   following=legacy.get("friends_count"), statuses=legacy.get("statuses_count"),
-                   joined=core.get("created_at") or legacy.get("created_at"))
     posts = {}
     cursor = None
     while len(posts) < limit:

@@ -34,7 +34,7 @@ def test_login_selection_and_recorded_reposts(run_x, monkeypatch, backend):
         return 200, json.dumps({"data": {"user": {"result": replies.pop(0)}}}).encode()
     def execute(script):
         if script.startswith("const INPUT"):
-            data = {"account": {"screen_name": HANDLE}, "tweets": expected, "requests": 3}
+            data = {"account": profile, "tweets": expected, "requests": 3}
             return ["RSRC_X " + json.dumps(data)]
         assert "task.finish" in script
         return []
@@ -44,6 +44,7 @@ def test_login_selection_and_recorded_reposts(run_x, monkeypatch, backend):
     assert code == 0 and doc["backend"] == backend
     assert doc["meta"]["attempts"][0]["requests"] == (3 if backend == "x-browser" else 2)
     account, *posts = doc["items"]
+    assert account["id"] == profile["rest_id"]
     assert account["author"] == HANDLE
     assert [p["id"] for p in posts] == [e["tweet"]["rest_id"] for e in expected]
     assert posts[0]["raw"]["reposted_by"] == HANDLE and posts[0]["author"] != HANDLE

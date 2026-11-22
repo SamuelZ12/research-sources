@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 
 from rsrc.channels.x import search
+from rsrc.channels.x.timeline import profile_record
 from rsrc.channels.x.auth import CookieError
 from rsrc.http import CapReached, HttpError
 
@@ -147,6 +148,5 @@ def timeline(client, environ, handle, limit):
             if entry.get("reposted_by"):
                 record["reposted_by"] = entry["reposted_by"]
             rows.append(record)
-        account = data["account"]
-        account["description"] = search.expand_links(account.get("description"), account.pop("descriptionUrls", []))
+        account = profile_record(data["account"])
         return account, rows, data.get("capped", False)

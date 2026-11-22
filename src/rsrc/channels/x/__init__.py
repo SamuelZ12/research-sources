@@ -337,7 +337,7 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
             else:
                 author, records, capped = timeline.timeline(client, load_cookies(ctx.environ), handle, limit)
             account = account_item(author)
-            account.update(id=author["screen_name"], source=backend)
+            account["source"] = backend
             posts = [to_item(record) for record in records]
     except CapReached:
         capped = True

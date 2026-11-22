@@ -44,10 +44,20 @@ const result = await page.evaluate(async ({handle,limit,maxRequests,application,
     const u = await read("UserByScreenName",{screen_name:handle,withSafetyModeUserFields:true});
     const screen_name = u.core?.screen_name || u.legacy?.screen_name;
     if (!u.rest_id || screen_name?.toLowerCase() !== handle.toLowerCase()) throw Error("upstream_error");
-    const account = {screen_name,name:u.core?.name || u.legacy?.name,description:u.legacy?.description,
-      descriptionUrls:(u.legacy?.entities?.description?.urls || []).map(({url, expanded_url}) => ({url, expanded_url})),
-      followers:u.legacy?.followers_count,following:u.legacy?.friends_count,statuses:u.legacy?.statuses_count,
-      joined:u.core?.created_at || u.legacy?.created_at,location:u.location?.location};
+    // Project public profile fields only. Relationship and viewer data stay in the page.
+    const legacy = u.legacy || {};
+    const account = {rest_id: u.rest_id, core: {screen_name, name: u.core?.name, created_at: u.core?.created_at},
+      privacy: {protected: u.privacy?.protected}, location: {location: u.location?.location},
+      avatar: {image_url: u.avatar?.image_url}, legacy: {}};
+    for (const key of ["name", "description", "url", "location", "created_at", "followers_count",
+      "friends_count", "statuses_count", "favourites_count", "media_count", "protected",
+      "profile_image_url_https", "profile_banner_url"]) account.legacy[key] = legacy[key];
+    account.legacy.entities = {};
+    for (const key of ["description", "url"]) {
+      const links = legacy.entities?.[key]?.urls || [];
+      account.legacy.entities[key] = {urls: links.map(({url, expanded_url, display_url}) =>
+        ({url, expanded_url, display_url}))};
+    }
     const tweets = new Map();
     let cursor;
     while (requests < maxRequests) {
@@ -83,7 +93,7 @@ const result = await page.evaluate(async ({handle,limit,maxRequests,application,
           }
         }
       }
-      if (!recognized || (!tweets.size && !next && account.statuses !== 0)) throw Error("upstream_error");
+      if (!recognized || (!tweets.size && !next && legacy.statuses_count !== 0)) throw Error("upstream_error");
       if (tweets.size >= limit || !next) return {account,tweets:[...tweets.values()],requests};
       if (next === cursor) throw Error("upstream_error");
       cursor = next;
