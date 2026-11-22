@@ -99,6 +99,16 @@ def test_repo_returns_one_item_with_stats_release_and_readme_head(rsrc):
     assert out["meta"]["notes"] == []
 
 
+def test_repo_drops_the_temporary_clone_credential(rsrc):
+    record = {**json.loads(REPO), "private": True, "temp_clone_token": "SENTINEL-CLONE-CREDENTIAL"}
+    fake = FakeGh(ok(json.dumps(record)), ok(README), ok(RELEASE))
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
+
+    assert code == 0 and out["ok"]
+    assert "temp_clone_token" not in out["items"][0]["raw"]["repo"]
+    assert "SENTINEL-CLONE-CREDENTIAL" not in json.dumps(out)
+
+
 def test_repo_without_readme_or_release_is_still_ok(rsrc):
     fake = FakeGh(ok(REPO), NOT_FOUND, NOT_FOUND)
     code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"], fake)
