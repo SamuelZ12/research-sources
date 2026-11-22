@@ -278,3 +278,26 @@ def test_search_top_flag_requests_top_product(run_x, tmp_path):
     code, env, _ = run_x(["search", "q", "--top", "--backend", "x-graphql"], transport, environ)
     assert code == 0 and env["input"]["top"] is True and len(calls) == 1
     assert json.loads(parse_qs(urlsplit(calls[0]).query)["variables"][0])["product"] == "Top"
+
+
+def test_entity_targets_and_attached_media():
+    short = "https://t.co/ABC"
+    unknown = short + "D"
+    target = "https://example.org/article"
+    media = {"url": "https://t.co/media", "expanded_url": "https://x.com/alice/status/1/photo/1"}
+    legacy = {"full_text": f"See {short}, {unknown} {media['url']}",
+              "entities": {"urls": [{"url": short, "expanded_url": target}]},
+              "extended_entities": {"media": [media]}}
+    record, = parse_page(page(tweet(legacy=legacy)))[0]
+    assert record["text"] == f"See {target}, {unknown}"
+
+
+def test_full_note_has_its_own_entity_set_inside_quote():
+    recorded = load("x_graphql_latest.json")
+    outer = next(entry["content"]["itemContent"]["tweet_results"]["result"]
+                 for op in recorded["data"]["search_by_raw_query"]["search_timeline"]["timeline"]["instructions"]
+                 for entry in op.get("entries", []) if "tweet_results" in entry["content"].get("itemContent", {}))
+    outer["quoted_status_result"] = {"result": tweet(note_tweet={"note_tweet_results": {"result": {
+        "text": "🙂 https://t.co/n", "entity_set": {"urls": [
+            {"url": "https://t.co/n", "expanded_url": "https://example.org/note"}]}}}})}
+    assert parse_page(page(outer))[0][0]["quoted"]["text"] == "🙂 https://example.org/note"

@@ -45,6 +45,7 @@ const result = await page.evaluate(async ({handle,limit,maxRequests,application,
     const screen_name = u.core?.screen_name || u.legacy?.screen_name;
     if (!u.rest_id || screen_name?.toLowerCase() !== handle.toLowerCase()) throw Error("upstream_error");
     const account = {screen_name,name:u.core?.name || u.legacy?.name,description:u.legacy?.description,
+      descriptionUrls:(u.legacy?.entities?.description?.urls || []).map(({url, expanded_url}) => ({url, expanded_url})),
       followers:u.legacy?.followers_count,following:u.legacy?.friends_count,statuses:u.legacy?.statuses_count,
       joined:u.core?.created_at || u.legacy?.created_at,location:u.location?.location};
     const tweets = new Map();

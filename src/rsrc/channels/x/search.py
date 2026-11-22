@@ -294,6 +294,31 @@ def parse_page(data) -> tuple[list[dict], str | None]:
     return records, cursor
 
 
+SHORT_LINK = re.compile(r"https?://t\.co/[A-Za-z0-9_-]+")
+MEDIA_PERMALINK = re.compile(r"https?://(?:www\.)?(?:x|twitter)\.com/(?:[^/]+|i/web)/status/"
+                            r"(\d+)/(?:photo|video)/\d+")
+
+
+def expand_links(text, urls, media=(), post_id=None):
+    """Use only mappings X supplied. A media permalink can belong to a different post."""
+    if not text or "t.co/" not in text:
+        return text
+    replacements = {}
+    for entity in urls:
+        target = entity.get("expanded_url")
+        if isinstance(target, str) and target.startswith(("https://", "http://")):
+            replacements[entity.get("url")] = target
+    for entity in media:
+        target = entity.get("expanded_url")
+        if isinstance(target, str) and target.startswith(("https://", "http://")):
+            attachment = MEDIA_PERMALINK.fullmatch(target)
+            replacements[entity.get("url")] = "" if attachment and attachment[1] == post_id else target
+    expanded = SHORT_LINK.sub(lambda m: replacements.get(m[0], m[0]), text)
+    if any(link and not target and text.rstrip().endswith(link) for link, target in replacements.items()):
+        return expanded.rstrip()
+    return expanded
+
+
 def to_record(result):
     result = _unwrap(result)
     if not result or not result.get("rest_id"):
@@ -305,13 +330,19 @@ def to_record(result):
     text = note.get("text") or legacy.get("full_text")
     if not author or not text:
         return None
+    text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    original = _unwrap((legacy.get("retweeted_status_result") or {}).get("result")) or {}
+    original_legacy = original.get("legacy") or {}
+    original_links = (original_legacy.get("entities") or {}).get("urls") or []
+    links = (legacy.get("entities") or {}).get("urls") or []
+    note_links = (note.get("entity_set") or {}).get("urls") or []
     quoted = to_record((result.get("quoted_status_result") or {}).get("result"))
     entities = legacy.get("extended_entities") if isinstance(legacy.get("extended_entities"), dict) else {}
     return make_record(
         id=result["rest_id"],
         author=author,
         created_at=_iso(legacy.get("created_at")),
-        text=text,
+        text=expand_links(text, [*original_links, *links, *note_links], entities.get("media") or [], result["rest_id"]),
         likes=to_int(legacy.get("favorite_count")),
         reposts=to_int(legacy.get("retweet_count")),
         replies=to_int(legacy.get("reply_count")),

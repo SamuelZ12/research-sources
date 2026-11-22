@@ -43,7 +43,9 @@ def timeline(client, cookies, handle, limit):
     if not user.get("rest_id") or (name or "").lower() != handle.lower():
         raise HttpError("X returned a different or unavailable account")
     account = dict(screen_name=name, name=core.get("name") or legacy.get("name"),
-                   description=legacy.get("description"), followers=legacy.get("followers_count"),
+                   description=search.expand_links(legacy.get("description"),
+                       (legacy.get("entities") or {}).get("description", {}).get("urls") or []),
+                   followers=legacy.get("followers_count"),
                    following=legacy.get("friends_count"), statuses=legacy.get("statuses_count"),
                    joined=core.get("created_at") or legacy.get("created_at"))
     posts = {}

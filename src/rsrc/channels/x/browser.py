@@ -147,4 +147,6 @@ def timeline(client, environ, handle, limit):
             if entry.get("reposted_by"):
                 record["reposted_by"] = entry["reposted_by"]
             rows.append(record)
-        return data["account"], rows, data.get("capped", False)
+        account = data["account"]
+        account["description"] = search.expand_links(account.get("description"), account.pop("descriptionUrls", []))
+        return account, rows, data.get("capped", False)
