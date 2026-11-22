@@ -74,6 +74,8 @@ def test_profile_cards_quotes_and_cap(run):
     assert code == 0 and len(urls) == 2
     account, card, quote = out["items"]
     assert account["raw"]["kind"] == "profile" and account["title"] == profile["displayName"]
+    assert account["engagement"] == {"followers": profile["followersCount"], "following": profile["followsCount"],
+                                     "posts": profile["postsCount"]}
     assert card["raw"]["embed"]["external"]["uri"] in card["text"]
     assert quote["raw"]["embed"]["record"]["value"]["text"]
     assert quote["raw"]["quote"]["text"] == quote["raw"]["embed"]["record"]["value"]["text"]

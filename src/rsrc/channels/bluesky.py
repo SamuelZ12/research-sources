@@ -192,8 +192,9 @@ def timeline(client, args, items):
     handle = profile["handle"]
     items.append(env.item(id=profile["did"], url=f"https://bsky.app/profile/{handle}", author=handle,
                           title=profile.get("displayName"), text=profile.get("description"), source="bluesky",
-                          raw={"kind": "profile", "followers": profile.get("followersCount"),
-                               "following": profile.get("followsCount"), "posts": profile.get("postsCount")}))
+                          engagement={"followers": profile.get("followersCount"),
+                               "following": profile.get("followsCount"), "posts": profile.get("postsCount")},
+                          raw={"kind": "profile"}))
     feed = fetch(client, PUBLIC, "feed.getAuthorFeed", actor=profile["did"], limit=args.limit, filter="posts_no_replies")
     for entry in entries(feed, "feed")[:args.limit]:
         post = entry["post"]
