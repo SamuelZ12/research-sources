@@ -24,6 +24,10 @@ class BrowserError(HttpError):
         self.code = code
 
 
+def program(path):
+    return path.read_text().replace("/* PROJECT_TWEET */", SCRIPT.with_name("project_tweet.js").read_text())
+
+
 def execute(script):
     try:
         proc = subprocess.run(["ego-browser", "nodejs"], input=script, text=True, capture_output=True, timeout=25)
@@ -85,7 +89,7 @@ class Searcher(search.Searcher):
         self.client.requests_made += cost
         self.cleanup_needed = True
         try:
-            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + SCRIPT.read_text())
+            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(SCRIPT))
         except CookieError:
             self.cleanup_needed = False
             self.client.requests_made -= cost
@@ -108,3 +112,39 @@ class Searcher(search.Searcher):
         for record in records:
             record["source"] = "x-browser"
         return records, data["cursor"]
+
+
+def timeline(client, environ, handle, limit):
+    """One navigation, one account lookup and at most three timeline pages."""
+    if client.max_requests < 3:
+        raise CapReached("Browser timeline needs navigation, lookup and a timeline page")
+    with Searcher(client, environ) as session:
+        config = dict(handle=handle, limit=limit, maxRequests=client.max_requests, space=session.space, application=search.BEARER,
+                      ops=json.loads(SCRIPT.with_name("timeline_ops.json").read_text()))
+        session.cleanup_needed = True
+        client.requests_made = client.max_requests  # conservative reservation if control is lost
+        try:
+            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(SCRIPT.with_name("timeline.js")))
+        except CookieError:
+            client.requests_made = 0
+            session.cleanup_needed = False
+            raise
+        marked = [line[7:] for line in lines if line.startswith("RSRC_X ")]
+        if len(marked) != 1:
+            raise BrowserError("blocked", "Ego Lite did not return a timeline response.")
+        data = json.loads(marked[0])
+        client.requests_made = data["requests"]
+        if data.get("handedOff"):
+            session.cleanup_needed = False
+            raise BrowserError("blocked", "Complete the X verification in the Ego Lite page handed to you.")
+        if code := data.get("error"):
+            raise BrowserError(code, "X returned an unrecognized account timeline" if code == "upstream_error"
+                               else MESSAGES[code])
+        rows = []
+        for entry in data["tweets"]:
+            record = search.to_record(entry["tweet"])
+            record["source"] = "x-browser"
+            if entry.get("reposted_by"):
+                record["reposted_by"] = entry["reposted_by"]
+            rows.append(record)
+        return data["account"], rows, data.get("capped", False)

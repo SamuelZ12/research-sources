@@ -1,0 +1,154 @@
+{
+  "timeline": {
+    "timeline": {
+      "instructions": [
+        {
+          "type": "TimelineAddEntries",
+          "entries": [
+            {
+              "entryId": "tweet",
+              "content": {
+                "entryType": "TimelineTimelineItem",
+                "itemContent": {
+                  "itemType": "TimelineTweet",
+                  "tweetDisplayType": "Tweet",
+                  "tweet_results": {
+                    "result": {
+                      "__typename": "Tweet",
+                      "core": {
+                        "user_results": {
+                          "result": {
+                            "core": {
+                              "screen_name": "sama"
+                            }
+                          }
+                        }
+                      },
+                      "legacy": {
+                        "full_text": "RT @kaicathyc: A lot has happened in the past couple months, to say the least.\n\nToday we are sharing a recap of what it takes to move a fro\u2026",
+                        "created_at": "Wed Nov 18 22:14:02 +0000 2026",
+                        "retweeted_status_result": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "core": {
+                                    "screen_name": "kaicathyc"
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "A lot has happened in the past couple months, to say the least.\n\nToday we are sharing a recap of what it takes to move a frontier model from training to internal use to public release. As model capabilities rise, so do the safety and alignment standards required to move forward",
+                              "created_at": "Wed Nov 18 20:07:29 +0000 2026"
+                            },
+                            "rest_id": "2123146093366333850"
+                          }
+                        }
+                      },
+                      "rest_id": "2123177941022474703"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "entryId": "profile",
+              "content": {
+                "entryType": "TimelineTimelineModule",
+                "displayType": "VerticalConversation",
+                "items": [
+                  {
+                    "item": {
+                      "itemContent": {
+                        "itemType": "TimelineTweet",
+                        "tweetDisplayType": "Tweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "core": {
+                                    "screen_name": "sama"
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "6.2 Sol and Astra are out.\n\nThese models can do amazing things and are very token-efficient; we hope people will get great value from them.\n\nIn particular, 6.2 Sol ultrafast is something I think people will really enjoy.",
+                              "created_at": "Tue Nov 17 21:04:27 +0000 2026"
+                            },
+                            "rest_id": "2122798039899263456"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "item": {
+                      "itemContent": {
+                        "itemType": "TimelineTweet",
+                        "tweetDisplayType": "Tweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "core": {
+                                    "screen_name": "sama"
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "Although the new models are very smart, we have more work ahead of us on making the models nice to work with, and will prioritize that for upcoming releases.\n\nBut even if it takes a little extra work, the intelligence and capability are extraordinary.",
+                              "created_at": "Tue Nov 17 21:04:27 +0000 2026"
+                            },
+                            "rest_id": "2122798042734633452"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "entryId": "who",
+              "content": {
+                "entryType": "TimelineTimelineModule",
+                "displayType": "Vertical",
+                "items": [
+                  {
+                    "item": {
+                      "itemContent": {
+                        "itemType": "TimelineUser"
+                      }
+                    }
+                  },
+                  {
+                    "item": {
+                      "itemContent": {
+                        "itemType": "TimelineUser"
+                      }
+                    }
+                  },
+                  {
+                    "item": {
+                      "itemContent": {
+                        "itemType": "TimelineUser"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -18,7 +18,7 @@ from datetime import date
 
 from rsrc import checks
 from rsrc import envelope as env
-from rsrc.channels.x import browser, fx, search
+from rsrc.channels.x import browser, fx, search, timeline
 from rsrc.channels.x.auth import BACKENDS, FX_BACKEND, CookieError, load_cookies, load_search_order
 from rsrc.channels.x.record import to_int
 from rsrc.http import CapReached, Client, HttpError
@@ -91,6 +91,10 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
 
     parsers["timeline"] = p = commands.add_parser(
         "timeline", help="one account: its profile, then its newest posts (no login)")
+    p.add_argument("--backend", choices=BACKENDS,
+                   help="override the same backend selection used by x search")
+    p.add_argument("--max-requests", type=int, choices=range(1, 6), default=5,
+                   help="HTTP request cap, including account lookup (default 5)")
     p.add_argument("account", metavar="HANDLE_OR_URL", help="handle, @handle or x.com/twitter.com account URL")
     p.add_argument("--limit", type=positive_int, default=20,
                    help=f"max posts, 1-{fx.TIMELINE_MAX} (default 20); about 20 per request")
@@ -289,22 +293,65 @@ def run_timeline(args, ctx) -> dict:
         problem = f"--limit must be between 1 and {fx.TIMELINE_MAX}, got {args.limit}"
     if problem:
         return env.envelope(CHANNEL, "timeline", input, FX_BACKEND, error=env.error("usage", problem))
-    client = Client(transport=ctx.transport, sleep=ctx.sleep)
-    posts, account, error = [], None, None
+    try:
+        order = (args.backend,) if args.backend else load_search_order(ctx.environ)
+    except CookieError as e:
+        return env.envelope(CHANNEL, "timeline", input, None, error=env.error(e.code, str(e)))
+    attempts, notes = [], []
+    remaining = args.max_requests
+    for backend in order:
+        result = _timeline_attempt(backend, handle, args.limit, remaining, ctx, input)
+        attempt = result["meta"]["attempts"][0]
+        attempts.append(attempt)
+        remaining -= attempt["requests"]
+        if result["ok"] or remaining == 0:
+            break
+        if not args.backend and result["error"]["code"] == "config" and len(order) == 1 and not attempt["requests"]:
+            notes.append(str(result["error"]["message"]))
+            result = _timeline_attempt(FX_BACKEND, handle, args.limit, remaining, ctx, input)
+            attempts.extend(result["meta"]["attempts"])
+            break
+        if result["error"]["code"] not in FALLBACK_ON or backend == order[-1]:
+            break
+        notes.append(f"{backend}: {result['error']['message']}")
+    result["meta"]["attempts"] = attempts
+    result["meta"]["notes"] = notes + result["meta"]["notes"]
+    return result
+
+
+def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
+    client = Client(transport=ctx.transport, sleep=ctx.sleep, max_requests=remaining,
+                    min_interval=1 if backend == FX_BACKEND else 0)
+    posts, account, error, capped = [], None, None, False
     started = time.monotonic()
     try:
-        for record, status in fx.timeline(client, handle, args.limit):
-            posts.append(to_item(record))
-            author = status.get("author")
-            if not account and isinstance(author, dict) and str(author.get("screen_name")).lower() == handle.lower():
-                account = account_item(author)
-    except HttpError as e:
-        error = env.error(error_code(e), str(e))
-    outcome = error["code"] if error else "ok" if posts else "no_results"
-    meta = {"attempts": [_attempt(FX_BACKEND, outcome, client, started)]}
+        if backend == FX_BACKEND:
+            for record, status in fx.timeline(client, handle, limit):
+                posts.append(to_item(record))
+                author = status.get("author")
+                if not account and isinstance(author, dict) and str(author.get("screen_name")).lower() == handle.lower():
+                    account = account_item(author)
+        else:
+            if backend == "x-browser":
+                author, records, capped = browser.timeline(client, ctx.environ, handle, limit)
+            else:
+                author, records, capped = timeline.timeline(client, load_cookies(ctx.environ), handle, limit)
+            account = account_item(author)
+            account.update(id=author["screen_name"], source=backend)
+            posts = [to_item(record) for record in records]
+    except CapReached:
+        capped = True
+        if not posts:
+            error = env.error("upstream_error", "Timeline reached the request cap before completion")
+    except (HttpError, CookieError) as e:
+        error = env.error(e.code, str(e))
+    outcome = error["code"] if error else "ok" if posts or account else "no_results"
+    meta = {"attempts": [_attempt(backend, outcome, client, started)]}
+    if capped:
+        meta["truncated"] = "request_cap"
     if posts and not account and not error:
         meta["notes"] = [f"none of the {len(posts)} posts is by @{handle} (reposts only), so there is no account item"]
-    return env.envelope(CHANNEL, "timeline", input, FX_BACKEND, [account, *posts] if account else posts,
+    return env.envelope(CHANNEL, "timeline", input, backend, [account, *posts] if account else posts,
                         meta=meta, error=error)
 
 
