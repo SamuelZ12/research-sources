@@ -659,3 +659,11 @@ def test_live_x_session_only_reads_the_public_post(rsrc, environ):
     assert out["items"][0]["raw"]["search_order"] == ["x-graphql"]
     assert "searches run on x-graphql with your X session, which this check did not try" in out["items"][0]["text"]
     assert transport.urls == ["https://api.fxtwitter.com/2/status/20"]
+
+
+def test_help_explains_default_live_probes(capsys):
+    assert cli.main(["check", "--help"]) == 0
+    help_text = " ".join(capsys.readouterr().out.split())
+    for probe in ("Bluesky search", "Product Hunt search", "App Store catalog", "YouTube metadata",
+                  "gh login and rate limits"):
+        assert probe in help_text

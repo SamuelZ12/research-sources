@@ -1,18 +1,4 @@
-"""`rsrc check`: one cheap probe per channel (x, gh, reddit, hn, polymarket, youtube), one item
-per channel.
-
-x checks the search order (RSRC_X_SEARCH) and the session cookies locally. Missing or malformed
-cookies fail x only when x-graphql comes first in the order; a cookie file readable by other users
-always does. `--live-x` adds one `fx.read` of a fixed public post (one request, up to four when it
-has to retry) and, when FxTwitter is in the order, one FxTwitter search request, both without
-login. A failing FxTwitter search fails x unless x-graphql is in the order and its cookies load;
-x-graphql is reported, never run, because it would search from the user's own X session. Cookie
-values are never read into the output: only which keys are set and where. gh runs `gh auth status` and `gh api rate_limit`; its token is never read.
-reddit runs a local ego-browser script (no Reddit request) unless `--live-reddit`, which also
-loads one Reddit search page in Ego and reads one result from it. hn makes one keyless request for the top front-page story. polymarket makes one
-keyless request for the first page of a fixed search. youtube looks for `yt-dlp` and `deno`, then
-makes one yt-dlp metadata run for a fixed public video.
-"""
+"""Channel health probes for rsrc check."""
 
 import argparse
 import json
@@ -46,8 +32,10 @@ YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to Yo
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
-                                   description="One cheap probe per channel. No FxTwitter request "
-                                               "unless --live-x, no Reddit request unless --live-reddit.")
+                                   description="By default check all nine channels. Probe HN, Polymarket, Bluesky search, "
+                                               "Product Hunt search and the App Store catalog, read YouTube metadata "
+                                               "with yt-dlp, and check gh login and rate limits. X setup and Ego Lite "
+                                               "are checked locally unless their live flag is set.")
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
     parser.add_argument("--live-x", action="store_true",
