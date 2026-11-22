@@ -6,11 +6,11 @@ const path = "/i/api/graphql/" + encodeURIComponent(INPUT.id) + "/SearchTimeline
 if (INPUT.first) {
   await page.cdp("Network.enable");
   await page.cdp("Network.setBypassServiceWorker", {bypass: true});
-  await page.cdp("Network.setBlockedURLs", {urls: ["*"], urlPatterns: [
+}
+await page.cdp("Network.setBlockedURLs", {urls: ["*"], urlPatterns: [
     {urlPattern: origin, block: false}, {urlPattern: "https://x.com" + path, block: false}
   ]});
-  await page.goto(origin);
-}
+if (INPUT.first) await page.goto(origin);
 const result = await page.evaluate(async ({path, variables, application, features, id}) => {
   const nav = performance.getEntriesByType("navigation")[0];
   if (nav?.responseStatus === 429) return {error: "rate_limited", dispatched: false};
@@ -33,15 +33,21 @@ const result = await page.evaluate(async ({path, variables, application, feature
   if (response.status === 429) return {error: "rate_limited"};
   if ([401, 403].includes(response.status)) return {error: "auth_failed"};
   if (response.headers.get("content-type")?.includes("html")) return {error: "blocked"};
-  if (!response.ok || !response.headers.get("content-type")?.includes("json"))
+  if (response.status === 404) return {error: "query_id_rejected"};
+  if (!response.headers.get("content-type")?.includes("json"))
     return {error: "upstream_error"};
   const doc = await response.json();
   if (doc.errors?.length) {
     const codes = doc.errors.map(e => Number(e.code));
     if (codes.includes(88)) return {error: "rate_limited"};
     if (codes.some(c => [32,89,215].includes(c))) return {error: "auth_failed"};
+    if ([200,400,422].includes(response.status) && doc.errors.every(e =>
+      e.extensions?.code === "GRAPHQL_VALIDATION_FAILED" ||
+      (e.path?.includes("rawQuery") && /must be defined/i.test(e.message))))
+      return {error: "query_id_rejected"};
     return {error: "blocked"};
   }
+  if (!response.ok) return {error: "upstream_error"};
   const instructions = doc.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
   if (!Array.isArray(instructions) || !instructions.length) return {error: "upstream_error"};
 

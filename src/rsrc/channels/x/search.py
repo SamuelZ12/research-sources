@@ -87,13 +87,16 @@ class Searcher:
         self.cache_path = cache_path
         self.query_id = None
 
+    def _fetch(self, query, product, cursor, query_id, count):
+        return fetch_page(self.client, self.cookies, query, product, cursor, query_id, count)
+
     def page(self, query, product="Latest", cursor=None, count=PAGE_SIZE):
         cached = _read_cache(self.cache_path)
         candidates = [self.query_id] if self.query_id else list(dict.fromkeys(filter(None, (cached, *QUERY_IDS))))
         rejected = None
         for query_id in candidates:
             try:
-                result = fetch_page(self.client, self.cookies, query, product, cursor, query_id, count)
+                result = self._fetch(query, product, cursor, query_id, count)
             except CapReached:
                 if rejected is None:
                     raise

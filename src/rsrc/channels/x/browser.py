@@ -37,12 +37,11 @@ def execute(script):
     return (proc.stdout + "\n" + proc.stderr).splitlines()
 
 
-class Searcher:
+class Searcher(search.Searcher):
     page_size = search.PAGE_SIZE
 
     def __init__(self, client, environ):
-        self.client = client
-        self.cache = search.query_id_cache(environ)
+        super().__init__(client, None, search.query_id_cache(environ))
         self.space = "rsrc X search " + uuid.uuid4().hex
         self.first = True
         self.lock = None
@@ -69,7 +68,7 @@ class Searcher:
         finally:
             self.lock.close()
 
-    def page(self, query, product, cursor, count):
+    def _fetch(self, query, product, cursor, query_id, count):
         cost = 2 if self.first else 1
         if self.client.requests_made + cost > self.client.max_requests:
             if self.first:
@@ -79,7 +78,7 @@ class Searcher:
         if cursor:
             variables["cursor"] = cursor
         config = dict(space=self.space, first=self.first, variables=variables, features=search.FEATURES,
-                      application=search.BEARER, id=search._read_cache(self.cache) or search.QUERY_IDS[0])
+                      application=search.BEARER, id=query_id)
         self.client.requests_made += cost
         try:
             lines = execute("const INPUT = " + json.dumps(config) + ";\n" + SCRIPT.read_text())
@@ -94,6 +93,8 @@ class Searcher:
         if data.get("dispatched") is False:
             self.client.requests_made -= 1
         if code := data.get("error"):
+            if code == "query_id_rejected":
+                raise search.SearchError(f"SearchTimeline ID {query_id} rejected", query_id_rejected=True)
             raise BrowserError(code, MESSAGES[code])
         records = [search.to_record(tweet) for tweet in data["tweets"]]
         for record in records:

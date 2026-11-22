@@ -97,3 +97,26 @@ def test_cli_browser_error_has_no_fallback(run_x, monkeypatch):
     code, result, _ = run_x(["search", "q", "--backend", "x-browser"], None)
     assert code == 1 and not result["ok"] and result["error"]["code"] == "rate_limited"
     assert [a["backend"] for a in result["meta"]["attempts"]] == ["x-browser"]
+
+
+@pytest.mark.parametrize(("cap", "success", "reason"), [
+    (2, False, "max-requests stopped"), (6, False, "every SearchTimeline"),
+    (3, True, None)])
+def test_rejected_id(monkeypatch, tmp_path, cap, success, reason):
+    ids = []
+    def execute(script):
+        if not script.startswith("const INPUT"):
+            return []
+        ids.append(json.loads(script.splitlines()[0][14:-1])["id"])
+        data = {"tweets": [], "cursor": None} if success and len(ids) == 2 else {"error": "query_id_rejected"}
+        return ["RSRC_X " + json.dumps(data)]
+    monkeypatch.setattr(browser, "execute", execute)
+    with browser.Searcher(Client(max_requests=cap), {"XDG_CACHE_HOME": str(tmp_path)}) as session:
+        if reason:
+            with pytest.raises(search.SearchError, match=reason):
+                session.page("test", "Top", None, 1)
+        else:
+            assert session.page("test", "Top", None, 1) == ([], None)
+            assert search._read_cache(session.cache_path) == ids[-1]
+    assert ids == list(search.QUERY_IDS[:len(ids)])
+    assert session.client.requests_made == 1 + len(ids)
