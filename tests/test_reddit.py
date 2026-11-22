@@ -436,6 +436,11 @@ def best_thread(post_id=THREAD["post"]["attrs"]["id"]):
             "comment_sort": "Sort by Best"}
 
 
+def batch_pages(*pages):
+    rows = [{"page": p, "ms": 1} if p is not None else {"cancelled": True} for p in pages]
+    return printed({"rows": rows, "loads": len(rows)})
+
+
 @pytest.mark.parametrize("n", [0, -1, 6])
 def test_comment_thread_limit_fails_before_search(rsrc, n):
     fake = FakeEgo()
@@ -445,10 +450,10 @@ def test_comment_thread_limit_fails_before_search(rsrc, n):
 
 def test_search_groups_best_comments_and_keeps_other_threads_on_failure(rsrc):
     first, second, third = [r["context"]["post"]["id"] for r in SEARCH["posts"][:3]]
-    fake = FakeEgo(*map(printed, [SEARCH, best_thread(), page(**READ_STATES["missing"]), best_thread(third)]))
+    fake = FakeEgo(printed(SEARCH), batch_pages(best_thread(), page(**READ_STATES["missing"]), best_thread(third)))
     code, out = rsrc(["search", "q", "--with-comments"], fake)
-    assert code == 0 and out["error"] is None and len(fake.calls) == 4
-    assert fake.input(1)["url"].endswith("?sort=confidence")
+    assert code == 0 and out["error"] is None and len(fake.calls) == 2
+    assert fake.input(1)["urls"][0].endswith("?sort=confidence")
     posts = [i for i in out["items"] if i["raw"]["kind"] == "post"]
     assert len(posts) == 7 and [i["id"] for i in posts[:3]] == [first, second, third]
     assert out["meta"]["failed"] == [{"input": posts[1]["url"], "code": "not_found",
@@ -462,10 +467,12 @@ def test_search_groups_best_comments_and_keeps_other_threads_on_failure(rsrc):
 
 @pytest.mark.parametrize("failure,code_", [(page(page_text=BLOCK_TEXT), "blocked"),
                                           (page(status=429), "rate_limited")])
-def test_block_stops_before_next_thread_and_preserves_all_posts(rsrc, failure, code_):
-    fake = FakeEgo(*map(printed, [SEARCH, best_thread(), failure]))
+def test_block_cancels_pending_threads_and_preserves_all_posts(rsrc, failure, code_):
+    fake = FakeEgo(printed(SEARCH), batch_pages(best_thread(), failure, None, None, None))
     code, out = rsrc(["search", "q", "--with-comments", "5"], fake)
-    assert code == 1 and out["error"]["code"] == code_ and len(fake.calls) == 3
+    assert code == 1 and out["error"]["code"] == code_ and len(fake.calls) == 2
+    assert "5 thread pages had already been requested" in out["meta"]["notes"][-1]
+    assert sum(a["requests"] for a in out["meta"]["attempts"]) == 6
     assert [i["id"] for i in out["items"] if i["raw"]["kind"] == "post"] == [
         r["context"]["post"]["id"] for r in SEARCH["posts"]]
     assert out["items"][1]["raw"]["kind"] == "comment"
@@ -477,7 +484,7 @@ def test_search_rejects_unconfirmed_sort_and_wrong_parent(rsrc):
     thread["comments"][0]["attrs"]["postid"] = "t3_other"
     for bad, reason in [(thread, "url_mismatch"), ({**thread, "comment_sort": "Sort by New"}, "upstream_error"),
                         (READ_STATES["removed"], "url_mismatch")]:
-        code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(bad)))
+        code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), batch_pages(bad)))
         assert code == 1 and out["error"]["code"] == reason and len(out["items"]) == 7
 
 
@@ -492,10 +499,10 @@ def test_no_comments_is_success_and_removed_thread_is_named(rsrc):
     thread = best_thread()
     thread["comments"] = []
     thread["post"]["attrs"]["comment-count"] = "0"
-    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(thread)))
+    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), batch_pages(thread)))
     assert code == 0 and out["meta"]["failed"] == []
     thread["post"]["removal_notice"] = READ_STATES["removed"]["post"]["removal_notice"]
-    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(thread)))
+    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), batch_pages(thread)))
     assert code == 1 and out["meta"]["failed"][0]["code"] == "not_found"
 
 
@@ -525,3 +532,28 @@ def test_search_replaced_by_login_keeps_posts_and_stops(rsrc):
     code, out = rsrc(["search", "q", "--with-comments"], fake)
     assert code == 1 and out["error"]["code"] == "blocked" and len(out["items"]) == 7
     assert len(fake.calls) == 1
+
+
+def test_crossed_batch_results_never_attach_a_comment_to_another_thread(rsrc):
+    second = SEARCH["posts"][1]["context"]["post"]["id"]
+    fake = FakeEgo(printed(SEARCH), batch_pages(best_thread(second), best_thread()))
+    code, out = rsrc(["search", "q", "--with-comments", "2"], fake)
+    assert code == 1 and [f["code"] for f in out["meta"]["failed"]] == ["url_mismatch"] * 2
+    assert all(i["raw"]["kind"] == "post" for i in out["items"])
+
+
+@pytest.mark.parametrize("shortfall,reason", [
+    ("complete", "all comments accounted for"),
+    ("deadline", "completeness unconfirmed at the 15 s deadline"),
+])
+def test_short_groups_keep_their_comments_and_name_the_reason(rsrc, shortfall, reason):
+    thread = json.loads((FIXTURES / "reddit_best_comments.json").read_text())
+    record = dict(SEARCH["posts"][0])
+    record["context"] = {"post": {"id": thread["post"]["attrs"]["id"]}}
+    record["href"] = "/comments/1y0zet7/"
+    thread["comments"] = thread["comments"][:2]
+    thread["shortfall"] = shortfall
+    fake = FakeEgo(printed({**SEARCH, "posts": [record]}), batch_pages(thread))
+    code, out = rsrc(["search", "q", "--limit", "1", "--with-comments"], fake)
+    assert code == 0 and len(out["items"]) == 3
+    assert out["meta"]["notes"] == [f"t3_1y0zet7: 2 of 3 readable top-level comments ({reason})"]

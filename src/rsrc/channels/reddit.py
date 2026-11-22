@@ -144,38 +144,64 @@ def run_search(args, ctx) -> dict:
 
 
 def with_comments(ctx, input_, posts, meta, count):
+    selected = posts[:count]
+    rows = {}
+    urls, indexes = [], []
+    for index, post in enumerate(selected):
+        url = post["url"] or ""
+        match = _POST_URL.match(url)
+        if not match or "t3_" + match[1].lower() != post["id"]:
+            rows[index] = {"error": "url_mismatch"}
+        else:
+            urls.append(BASE + urlsplit(url).path + "?sort=confidence")
+            indexes.append(index)
+
     items, failed = [], []
     meta["failed"] = failed
     stop = None
+    if urls:
+        batch, problem, attempt = _load(ctx, {
+            "action": "batch", "urls": urls, "block_markers": checks.BLOCK_MARKERS,
+            "rate_markers": RATE_MARKERS, "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS, "preview": True},
+        })
+        if problem:
+            meta["attempts"].append(attempt)
+            stop = env.error(*problem)
+            for index in indexes:
+                rows[index] = {"error": problem[0], "message": problem[1]}
+        else:
+            rows.update(zip(indexes, batch["rows"], strict=True))
+
     for index, post in enumerate(posts):
         post["raw"]["kind"] = "post"
         items.append(post)
-        if index >= count or stop:
+        if index not in rows:
             continue
-        # Only navigate to a validated Reddit post. Use the canonical path to avoid a redirect.
-        url = post["url"] or ""
-        match = _POST_URL.match(url)
-        browser_failed = False
-        if not match or "t3_" + match[1].lower() != post["id"]:
-            problem = ("url_mismatch", "search result permalink does not identify the returned post")
+        row = rows[index]
+        if row.get("cancelled"):
+            meta["attempts"].append(env.attempt(BACKEND, "cancelled", 1))
+            continue
+        if "error" in row:
+            reason = row["error"]
+            problem = reason, row.get("message") or f"{reason} reading comments for {post['id']}"
         else:
-            url = BASE + urlsplit(url).path + "?sort=confidence"
-            page, problem, attempt = _load(ctx, {"action": "comments", "url": url,
-                                                 "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS,
-                                                           "preview": True}})
-            meta["attempts"].append(attempt)
-            browser_failed = bool(problem and problem[0] != "timeout")
-            if not problem:
-                comments, problem = best_comments(page, post["id"])
-                items.extend(comments)
-            if problem:
-                attempt["outcome"] = problem[0]
+            comments, problem = best_comments(row["page"], post["id"])
+            items.extend(comments)
+            if not problem and len(comments) < 3:
+                reason = ("all comments accounted for" if row["page"].get("shortfall") == "complete"
+                          else "completeness unconfirmed at the 15 s deadline")
+                meta.setdefault("notes", []).append(
+                    f"{post['id']}: {len(comments)} of 3 readable top-level comments ({reason})")
+        if index in indexes and "ms" in row:
+            meta["attempts"].append(env.attempt(BACKEND, problem[0] if problem else "ok", 1, row["ms"]))
         if problem:
             code, message = problem
             failed.append({"input": post["url"] or post["id"], "code": code, "message": message})
-            if browser_failed or code in ("blocked", "rate_limited", "auth_failed", "config"):
+            if code in ("blocked", "rate_limited", "auth_failed"):
                 stop = env.error(code, message)
-    if failed and not stop and len(failed) == min(len(posts), count):
+                meta.setdefault("notes", []).append(
+                    f"{len(urls)} thread pages had already been requested when Reddit stopped the batch")
+    if failed and not stop and len(failed) == len(selected):
         stop = env.error(failed[0]["code"], failed[0]["message"])
     return env.envelope(CHANNEL, "search", input_, BACKEND, items, meta=meta, error=stop)
 
@@ -199,7 +225,7 @@ def best_comments(page, post_id):
         return [], ("url_mismatch", f"asked for {post_id}, page shows {attrs.get('id')}")
     if thread.get("removal_notice"):
         return [], ("not_found", thread["removal_notice"])
-    if not page.get("comments") and _int(attrs.get("comment-count")) == 0:
+    if not page.get("comments") and (page.get("shortfall") or _int(attrs.get("comment-count")) == 0):
         return [], None
     if page.get("comment_sort") not in ("Sort by Best", "Sort by Best (Default)"):
         return [], ("upstream_error", f"could not confirm Reddit's Best comment order on {post_id}")
@@ -312,18 +338,27 @@ def script(input_: dict) -> str:
 def _load(ctx, input_: dict) -> tuple[dict | None, tuple[str, str] | None, dict]:
     """(page JSON, None, attempt) or (None, (code, message), attempt)."""
     input_ = {**input_, "space": f"rsrc reddit {os.getpid()}-{time.time_ns()}"}
+    guarded = input_.get("comment_search") or input_["action"] == "batch"
+    if guarded:
+        input_["owner_pid"] = os.getpid()
     started = time.monotonic()
     try:
         result = (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", script(input_)], TIMEOUT)
+    except KeyboardInterrupt:
+        if guarded:
+            _finish_abandoned(ctx, input_["space"])
+        raise
     except proc.Missing:
         return None, ("config", "ego-browser not found; install Ego Lite and keep it running"), \
             env.attempt(BACKEND, "config")
     except proc.Timeout:
-        # The kill skips the script's `finally`, so its task space stays open in Ego. The script's
-        # own waits total about 80 s, so only a hung Ego gets here.
+        if guarded:
+            _finish_abandoned(ctx, input_["space"])
         return None, ("timeout", f"ego-browser did not finish within {TIMEOUT} s"), \
             env.attempt(BACKEND, "timeout", ms=env.elapsed_ms(started))
     ms = env.elapsed_ms(started)
+    if guarded and result.code != 0:
+        _finish_abandoned(ctx, input_["space"])
     line = result_line(result, MARKER)
     page = None
     if line is not None:
@@ -337,6 +372,13 @@ def _load(ctx, input_: dict) -> tuple[dict | None, tuple[str, str] | None, dict]
         return None, ("upstream_error", f"{message}: {tail}" if tail else message), \
             env.attempt(BACKEND, "upstream_error", ms=ms)
     return page, None, env.attempt(BACKEND, "ok", page.get("loads"), ms)
+
+
+def _finish_abandoned(ctx, name):
+    # The runner can kill Node before its finally executes. Never create or claim a space here.
+    cleanup = ("const s = (await listTaskSpaces()).find(x => x.name === " + json.dumps(name)
+               + " && x.ownership === 'agent'); if (s) await (await taskSpace(s.id)).finish({keep: []});")
+    (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", cleanup], 15)
 
 
 def _lines(result: proc.Result) -> list[str]:
