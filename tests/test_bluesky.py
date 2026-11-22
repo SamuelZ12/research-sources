@@ -129,3 +129,8 @@ def test_feed_failure_preserves_profile_and_stops(run):
     assert code == 1 and len(urls) == 2 and out["error"]["code"] == "blocked"
     assert [i["author"] for i in out["items"]] == ["atproto.com"]
     assert all(url.hostname == "public.api.bsky.app" for url in urls)
+
+
+def test_timeline_help_shows_budget(capsys):
+    assert cli.main(["bluesky", "timeline", "--help"]) == 0
+    assert "total requests (default 2)" in capsys.readouterr().out

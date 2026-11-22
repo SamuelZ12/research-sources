@@ -147,3 +147,8 @@ def test_response_id_mismatch(capsys):
     reply["id"] = 82
     code, out, _ = command(capsys, ["search", "linear"], (200, json.dumps(reply).encode()))
     assert code == 1 and not out["items"]
+
+
+def test_leaderboard_help_shows_budget(capsys):
+    assert cli.main(["producthunt", "leaderboard", "--help"]) == 0
+    assert "total MCP requests (default 2)" in capsys.readouterr().out

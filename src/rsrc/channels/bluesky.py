@@ -61,7 +61,8 @@ def register(subparsers):
     for parser in (search, replies, timeline):
         parser.add_argument("--limit", type=int, default=20, help="maximum posts, 1-100 (default 20)")
     for parser in (read, search, replies, timeline):
-        parser.add_argument("--max-requests", type=int, default=2 if parser is timeline else 1)
+        parser.add_argument("--max-requests", type=int, default=2 if parser is timeline else 1,
+                            help="total requests (default %(default)s)")
         parser.set_defaults(run=run)
 
 

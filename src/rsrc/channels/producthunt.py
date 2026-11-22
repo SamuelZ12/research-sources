@@ -34,9 +34,10 @@ def register(subparsers):
     board = actions.add_parser("leaderboard", help="ranked launches, Pacific time")
     board.add_argument("--date", help="day, ISO week, month or year (default today in Pacific time)")
     for command in (search, board):
-        command.add_argument("--limit", type=int, choices=range(1, 26), metavar="1-25", default=10)
+        command.add_argument("--limit", type=int, choices=range(1, 26), metavar="1-25", default=10,
+                             help="maximum results (default 10)")
     for command in (search, read, board):
-        command.add_argument("--max-requests", type=int, default=2)
+        command.add_argument("--max-requests", type=int, default=2, help="total MCP requests (default 2)")
         command.set_defaults(run=run)
 
 

@@ -37,10 +37,11 @@ def register(subparsers):
         p = actions.add_parser(action, help=help_)
         p.add_argument("query", metavar="NAME" if action == "search" else "ID_OR_URL_OR_NAME")
         p.add_argument("--country", help="two-letter storefront (default: URL country or us)")
-        p.add_argument("--limit", type=int, default=default)
+        p.add_argument("--limit", type=int, default=default,
+                       help="apps, 1-200 (default 10)" if action == "search" else "maximum reviews (default 30)")
         p.set_defaults(run=run)
         if action == "read":
-            p.add_argument("--sort", choices=SORT, default="recent")
+            p.add_argument("--sort", choices=SORT, default="recent", help="review order (default recent)")
             p.add_argument("--max-requests", type=int, default=8, help="total requests including app lookup (1-20)")
 
 

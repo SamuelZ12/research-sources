@@ -137,3 +137,8 @@ def test_next_rss_page_checked_before_returning_rows(capsys):
     second["feed"]["entry"][0]["id"]["label"] = "123"
     code, out = run(capsys, ["read", "874139669", "--limit", "3"], recording("app"), recording("rss"), second)
     assert code == 0 and sorted(x["id"] for x in out["items"][1:]) == sorted(["123", "14813499075", second["feed"]["entry"][1]["id"]["label"]])
+
+
+def test_read_help_shows_budget(capsys):
+    assert cli.main(["appstore", "read", "--help"]) == 0
+    assert "maximum reviews (default 30)" in capsys.readouterr().out
