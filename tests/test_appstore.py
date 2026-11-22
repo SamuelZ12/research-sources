@@ -116,7 +116,7 @@ def test_unavailable_vs_missing(capsys):
 
 
 @pytest.mark.parametrize("response,expected", [((429, b""), "rate_limited"), ((403, b""), "blocked"),
-                                               ((200, b"<html>"), "upstream_error"), ({}, "upstream_error")])
+                                               ((200, (FIXTURES.parent / "login_wall.html").read_bytes()), "blocked"), ({}, "upstream_error")])
 def test_failure_stops_at_first_response(capsys, response, expected):
     code, out = run(capsys, ["read", "874139669"], recording("app"), response)
     assert code == 1 and out["error"]["code"] == expected

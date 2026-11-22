@@ -53,6 +53,8 @@ def get(client, url, headers=None):
         raise Blocked("Apple refused access (HTTP 403)")
     if status == 401:
         raise AuthError("Apple requires authentication (HTTP 401)")
+    if body.lstrip().startswith(b"<"):
+        raise Blocked(f"Apple returned a page instead of JSON (HTTP {status})")
     if status != 200:
         raise HttpError(f"Apple answered HTTP {status}")
     try:
