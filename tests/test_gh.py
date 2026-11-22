@@ -297,7 +297,7 @@ def public(monkeypatch):
             response.headers = Message()
             return response
 
-        monkeypatch.setattr(gh.urllib.request, "urlopen", open_url)
+        monkeypatch.setattr(gh._Gh, "open_public", lambda self, request: open_url(request, gh.TIMEOUT))
         return calls
     return respond
 
@@ -311,6 +311,43 @@ def test_public_repo_has_same_content(rsrc, public, local):
     assert out["items"] == rsrc(args, FakeGh(ok(REPO), ok(README), ok(RELEASE)))[1]["items"]
     assert len(calls) == 3
     assert all(call.get_header("Authorization") is None for call in calls)
+
+
+@pytest.mark.parametrize("readme_status, expected_exit", [(200, 0), (404, 0), (403, 1)])
+def test_public_repo_reuses_and_closes_one_connection(rsrc, monkeypatch, readme_status, expected_exit):
+    replies = iter([(200, REPO), (readme_status, README if readme_status == 200 else "{}"), (200, RELEASE)])
+    events = []
+    class Connection:
+        def __init__(self, host, timeout):
+            events.append(host)
+
+        def request(self, method, path, headers):
+            events.append(path)
+
+        def getresponse(self):
+            status, body = next(replies)
+            response = BytesIO(body.encode())
+            response.headers = Message()
+            if status == 403:
+                response.headers["X-RateLimit-Remaining"] = "0"
+            response.status = status
+            response.reason = str(status)
+            return response
+
+        def close(self):
+            events.append("closed")
+
+    monkeypatch.setattr(gh.urllib.request, "getproxies", lambda: {})
+    monkeypatch.setattr(gh.http.client, "HTTPSConnection", Connection)
+    code, out = rsrc(["repo", "example-org/example-cli"], FakeGh(NOT_LOGGED_IN))
+    assert code == expected_exit
+    path = "/repos/example-org/example-cli"
+    if expected_exit:
+        assert out["error"]["code"] == "rate_limited"
+        assert events == ["api.github.com", path, path + "/readme", "closed"]
+    else:
+        assert out["items"][0]["raw"]["latest_release"] == json.loads(RELEASE)
+        assert events == ["api.github.com", path, path + "/readme", path + "/releases/latest", "closed"]
 
 
 def test_public_repository_search(rsrc, public):

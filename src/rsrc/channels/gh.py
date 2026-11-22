@@ -1,13 +1,14 @@
 """GitHub repositories and issues via gh or the anonymous REST API."""
 
 import http.client
+import io
 import json
 import re
 import time
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin, urlsplit
 
 from rsrc import proc
 from rsrc import envelope as env
@@ -62,6 +63,7 @@ class _Gh:
     """Runs gh calls and records one meta.attempts entry per call."""
 
     def __init__(self, ctx):
+        self.connection = None
         self.backend = BACKEND
         self.allow_public = ctx.environ.get("GH_HOST", "github.com").lower() == "github.com"
         self.runner = ctx.runner or proc.run
@@ -99,6 +101,29 @@ class _Gh:
         self._record("no_results" if value in ([], (0, [])) else "ok", ms)
         return value
 
+    def start_public_repo(self):
+        host = "api.github.com"
+        if "https" not in urllib.request.getproxies() or urllib.request.proxy_bypass(host):
+            self.connection = http.client.HTTPSConnection(host, timeout=TIMEOUT)
+
+    def open_public(self, request):
+        if self.connection is None:
+            return urllib.request.urlopen(request, timeout=TIMEOUT)
+        self.connection.request("GET", request.selector, headers=dict(request.header_items()))
+        response = self.connection.getresponse()
+        if 200 <= response.status < 300:
+            return response
+        with response:
+            body = response.read()
+        if response.status in (301, 302, 303, 307, 308) and response.headers.get("Location"):
+            url = urljoin(request.full_url, response.headers["Location"])
+            if urlsplit(url).scheme != "https":
+                raise _Failed("upstream_error", "Unexpected GitHub redirect")
+            redirect = urllib.request.Request(url, headers=dict(request.header_items()))
+            return urllib.request.urlopen(redirect, timeout=TIMEOUT)
+        raise urllib.error.HTTPError(request.full_url, response.status, response.reason,
+                                     response.headers, io.BytesIO(body))
+
     def public(self, path, parse, *, raw=False, missing_ok=False):
         self.backend = "github-rest"
         started = time.monotonic()
@@ -108,7 +133,7 @@ class _Gh:
                 "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
                 "User-Agent": "research-sources",
             })
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            with self.open_public(request) as response:
                 if response.headers.get_content_type() == "text/html":
                     raise _Failed("blocked", "GitHub returned an HTML page")
                 value = parse(response.read().decode())
@@ -181,6 +206,7 @@ def run_repo(args, ctx) -> dict:
         except _NoLogin:
             if not gh.allow_public:
                 raise
+            gh.start_public_repo()
             data = gh.public(path, _repo_record)
         name = data["full_name"]
         if name.lower() != requested.lower():
@@ -199,6 +225,9 @@ def run_repo(args, ctx) -> dict:
         return env.envelope(CHANNEL, "repo", input_, gh.backend, items,
                             meta={"attempts": gh.attempts, "notes": notes},
                             error=env.error(failure.code, failure.message))
+    finally:
+        if gh.connection is not None:
+            gh.connection.close()
 
     return env.envelope(CHANNEL, "repo", input_, gh.backend, [_repo_item(data, readme, release)],
                         meta={"attempts": gh.attempts, "notes": notes})
