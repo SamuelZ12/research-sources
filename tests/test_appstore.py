@@ -142,3 +142,18 @@ def test_next_rss_page_checked_before_returning_rows(capsys):
 def test_read_help_shows_budget(capsys):
     assert cli.main(["appstore", "read", "--help"]) == 0
     assert "maximum reviews (default 30)" in capsys.readouterr().out
+
+
+def test_a_read_never_requests_the_write_review_link_it_reads(capsys):
+    count = json.loads(json.dumps(wiki_count(1)).replace("324715238", "874139669"))
+    feed = json.loads(json.dumps(recording("empty_feed")).replace("324715238", "874139669"))
+    pending = iter([recording("app"), feed, count, recording("rows")])
+    requested = []
+
+    def transport(method, url, headers, body):
+        requested.append(url)
+        return 200, json.dumps(next(pending, {})).encode()
+
+    cli.main(["appstore", "read", "874139669"], cli.Context(transport=transport, sleep=lambda _: None))
+    assert count["writeUserReviewUrl"] not in requested
+    assert json.loads(capsys.readouterr().out)["ok"]
