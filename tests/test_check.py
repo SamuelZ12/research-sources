@@ -181,7 +181,7 @@ def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
 
 def test_live_x_reads_one_post_and_runs_one_search(rsrc, environ):
     transport, runner = FakeTransport((200, FX_STATUS), (200, FX_SEARCH)), FakeGh()
-    code, out = rsrc(["x", "--live-x"], environ=environ, runner=runner, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "fxtwitter"}, runner=runner, transport=transport)
 
     assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
     assert [url.split("?")[0] for url in transport.urls] == ["https://api.fxtwitter.com/2/status/20",
@@ -209,13 +209,13 @@ def test_live_x_sends_no_cookie_even_with_cookies_configured(rsrc, environ):
 
 def test_live_x_search_with_no_results_is_still_a_working_search(rsrc, environ):
     transport = FakeTransport((200, FX_STATUS), (200, b'{"code": 200, "results": []}'))
-    code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "fxtwitter"}, transport=transport)
     assert code == 0 and out["items"][0]["raw"]["live"]["search"] == "ok"
 
 
 def test_live_x_dead_search_fails_x_after_one_search_request(rsrc, environ):
     transport = FakeTransport((200, FX_STATUS), (404, b""))
-    code, out = rsrc(["x", "--live-x"], environ=environ, transport=transport)
+    code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "fxtwitter"}, transport=transport)
     assert code == 1 and out["error"]["code"] == "upstream_error"
     assert out["meta"]["sources"] == {"x": "upstream_error"} and len(transport.urls) == 2
     assert "fxtwitter search: HTTP 404" in out["error"]["message"] and "RSRC_X_SEARCH" in out["error"]["message"]
@@ -286,7 +286,7 @@ def test_partial_cookie_file_never_echoes_the_value(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(own),
                "XDG_CACHE_HOME": str(tmp_path / "cache")}
     code, out = rsrc(["x"], environ=environ)
-    assert code == 0 and "missing CT0" in out["items"][0]["text"]
+    assert code == 2 and "missing CT0" in out["items"][0]["text"]
     assert_no_secret_in_files(tmp_path, own)
 
 

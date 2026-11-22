@@ -296,10 +296,10 @@ def test_fxtwitter_top_uses_the_top_feed_and_pages_of_up_to_100(run):
     assert fx_params(fake.urls[0])["feed"] == ["top"] and fx_params(fake.urls[0])["count"] == ["100"]
 
 
-def test_fxtwitter_rate_limit_stops_without_switching_to_x_graphql(run):
+def test_fxtwitter_rate_limit_stops_without_switching_to_x_graphql(run, environ):
     # Cookies are available (default environ), yet nothing may go to x.com after the 429.
     fake = FakeTransport(fx=[(200, load("x_fx_search_latest.json")), (429, b"")])
-    code, env, _ = run(["search", "q", "--per-window", "40"], fake)
+    code, env, _ = run(["search", "q", "--per-window", "40"], fake, env=environ | {"RSRC_X_SEARCH": "fxtwitter,x-graphql"})
     assert code == 1 and env["error"]["code"] == "rate_limited"
     assert len(env["items"]) == 11 and len(fake.urls) == 2
     assert all(u.startswith("https://api.fxtwitter.com/") for u in fake.urls)
@@ -311,7 +311,8 @@ def test_fxtwitter_failure_is_upstream_error(run, status, requests):
     # (probed 2026-11-11), and FxTwitter intermittently 404s. Other 4xx would fail the same way again.
     fake = FakeTransport(fx=[(status, b"")] * requests)
     code, env, _ = run(["search", "q"], fake, env={})
-    assert code == 1 and env["error"] == {"code": "upstream_error", "message": f"fxtwitter search: HTTP {status}"}
+    assert code == 1 and env["error"]["code"] == "upstream_error"
+    assert env["error"]["message"].startswith(f"fxtwitter search: HTTP {status}. Public X search is unavailable.")
     assert len(fake.urls) == requests and env["meta"]["attempts"][0]["requests"] == requests
 
 
@@ -432,8 +433,12 @@ def offline(method, url, headers, body):
                      "syndication: cdn.syndication.twimg.com: network error: connection reset"),
 ])
 def test_unreachable_host_is_network_error(run, argv, message):
-    code, env, _ = run(argv, offline)
-    assert code == 1 and env["error"] == {"code": "network_error", "message": message}
+    code, env, _ = run(argv, offline, env=None if "--backend" in argv else {})
+    assert code == 1 and env["error"]["code"] == "network_error"
+    if argv[0] == "search" and "--backend" not in argv:
+        assert env["error"]["message"].startswith(message + ". Public X search is unavailable.")
+    else:
+        assert env["error"]["message"] == message
     assert env["meta"]["attempts"][0]["outcome"] == "network_error"
 
 
@@ -498,7 +503,7 @@ def test_fxtwitter_results_are_kept_without_fallback(run, environ):
 
 def test_no_fallback_when_setting_is_off(run, environ):
     fake = FakeTransport(fx=[(404, b"")] * 3)
-    code, env, _ = run(["search", "q"], fake)
+    code, env, _ = run(["search", "q"], fake, env={})
     assert code == 1 and env["error"]["code"] == "upstream_error" and env["backend"] == "fxtwitter"
     assert attempts(env) == [("fxtwitter", "upstream_error", 3)]
 
@@ -549,10 +554,10 @@ def test_bad_search_order_is_config_with_zero_requests(run, environ, value):
     assert fake.urls == [] and env["meta"]["attempts"] == []
 
 
-def test_blank_search_order_is_the_default(run, environ):
-    fake = FakeTransport(fx=[(200, load("x_fx_search_latest.json")), (200, FX_EMPTY)])
+def test_blank_search_order_uses_configured_pair(run, environ):
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json"))])
     code, env, _ = run(["search", "q"], fake, env={**environ, "RSRC_X_SEARCH": " ", "RSRC_X_FALLBACK": ""})
-    assert code == 0 and env["backend"] == "fxtwitter" and [a["backend"] for a in env["meta"]["attempts"]] == ["fxtwitter"]
+    assert code == 0 and env["backend"] == "x-graphql" and [a["backend"] for a in env["meta"]["attempts"]] == ["x-graphql"]
 
 
 def test_fallback_setting_is_read_from_the_cookie_file(run, environ, tmp_path):
@@ -583,7 +588,7 @@ def test_fallback_401_is_auth_failed_with_both_attempts(run, environ):
 def test_fxtwitter_404_cut_short_by_the_cap_is_upstream_error(run):
     # The 404 retry hitting --max-requests must not turn the outage into an empty ok result.
     fake = FakeTransport(fx=[(404, b"")] * 3)
-    code, env, _ = run(["search", "q", "--max-requests", "1"], fake)
+    code, env, _ = run(["search", "q", "--max-requests", "1"], fake, env={})
     assert code == 1 and env["ok"] is False and env["error"]["code"] == "upstream_error"
     assert attempts(env) == [("fxtwitter", "upstream_error", 1)] and len(fake.urls) == 1
 

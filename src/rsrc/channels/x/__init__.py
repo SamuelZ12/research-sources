@@ -10,12 +10,15 @@ as `error.message` unchanged.
 
 import argparse
 import re
+import shlex
+import shutil
+from contextlib import nullcontext
 import time
 from datetime import date
 
 from rsrc import checks
 from rsrc import envelope as env
-from rsrc.channels.x import fx, search
+from rsrc.channels.x import browser, fx, search
 from rsrc.channels.x.auth import BACKENDS, FX_BACKEND, CookieError, load_cookies, load_search_order
 from rsrc.channels.x.record import to_int
 from rsrc.http import CapReached, Client, HttpError
@@ -62,7 +65,7 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     """Add the actions to a subparsers object; return {action name: its parser}."""
     parsers = {}
     parsers["search"] = p = commands.add_parser(
-        "search", help="search X posts in RSRC_X_SEARCH order (default: fxtwitter, no login)")
+        "search", help="search X posts in RSRC_X_SEARCH order (default: configured cookie pair, else public search)")
     p.add_argument("query", help='X search query, e.g. \'"Letta Code" -filter:replies min_faves:5\'')
     p.add_argument("--since", type=iso_date, help="start date YYYY-MM-DD (inclusive); enables date windows")
     p.add_argument("--until", type=iso_date,
@@ -72,7 +75,7 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
                    help="max posts per window, or in total without --since (default 20)")
     p.add_argument("--backend", choices=BACKENDS, default=None,
                    help="use only this backend, ignoring RSRC_X_SEARCH. fxtwitter needs no login; "
-                        "x-graphql uses your X session cookies")
+                        "x-graphql uses your configured cookies; x-browser uses the X account signed in to Ego Lite")
     p.add_argument("--top", action="store_true", help="X's Top ranking instead of Latest")
     p.add_argument("--max-requests", type=positive_int, default=25,
                    help="hard cap on HTTP requests for this command (default 25)")
@@ -120,8 +123,28 @@ def run_search(args, ctx) -> dict:
              for i, run in enumerate(runs) if i != at]
     meta = {**result["meta"], "attempts": [a for run in runs for a in run["attempts"]],
             "notes": notes + result["meta"].get("notes", [])}
+    if (not args.backend and order == (FX_BACKEND,) and result["outcome"] in FALLBACK_ON):
+        result["error"]["message"] += ". Public X search is unavailable. " + browser_remedy(args)
     return env.envelope(CHANNEL, "search", input, result["backend"], result["items"], meta=meta,
                         error=result["error"])
+
+
+def browser_remedy(args):
+    if not shutil.which("ego-browser"):
+        return "ego-browser is unavailable. To install Ego Lite on macOS, run: open https://lite.ego.app"
+    command = ["rsrc", "x", "search", "--backend", "x-browser"]
+    for flag, default in (("since", None), ("until", None), ("window_days", 7),
+                          ("per_window", 20), ("max_requests", 25)):
+        value = getattr(args, flag)
+        if flag == "max_requests":
+            value = max(2, value)
+        if value != default:
+            command.extend(["--" + flag.replace("_", "-"), str(value)])
+    if args.top:
+        command.append("--top")
+    if args.max_requests < 2:
+        return "To use your signed-in Ego Lite account and allow two requests, run: " + shlex.join([*command, "--", args.query])
+    return "To use the X account signed in to Ego Lite, run: " + shlex.join([*command, "--", args.query])
 
 
 def _search(args, backend, ctx, max_requests) -> dict:
@@ -162,13 +185,16 @@ def search_posts(args, backend, client, environ, sink) -> tuple[int, bool]:
     windowed = search.window_queries(args.query, args.since, until, args.window_days)
     if backend == "x-graphql":
         cookies = load_cookies(environ)
-        searcher = search.Searcher(client, cookies, search.query_id_cache(environ))
+        backend_session = nullcontext(search.Searcher(client, cookies, search.query_id_cache(environ)))
+    elif backend == "x-browser":
+        backend_session = browser.Searcher(client, environ)
     else:
-        searcher = fx.Searcher(client)
+        backend_session = nullcontext(fx.Searcher(client))
     stats, capped = {}, False
     try:
-        for record in search.collect(searcher, windowed, args.per_window, "Top" if args.top else "Latest", stats):
-            sink(record)
+        with backend_session as searcher:
+            for record in search.collect(searcher, windowed, args.per_window, "Top" if args.top else "Latest", stats):
+                sink(record)
     except CapReached:
         capped = True
     return stats.get("dropped", 0), capped

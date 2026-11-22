@@ -114,7 +114,8 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
         raw["search_order"] = list(order)
     except auth.CookieError as e:
         raise _Failed(e.code, str(e), raw) from None
-    labels = {"fxtwitter": "fxtwitter (no login)", "x-graphql": "x-graphql with your X session"}
+    labels = {"fxtwitter": "fxtwitter (no login)", "x-graphql": "x-graphql with your X session",
+              "x-browser": "x-browser with the X account signed in to Ego Lite"}
     searching = f"search via {labels[order[0]]}"
     if len(order) > 1:
         searching += f", then {labels[order[1]]} on upstream_error or network_error"
@@ -136,7 +137,7 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
         if xc.FX_BACKEND in order:
             text += "; " + _live_search(ctx, attempts, raw, x_graphql)
         else:
-            text += "; searches run on x-graphql with your X session, which this check did not try"
+            text += f"; searches run on {labels[order[0]]}, which this check did not try"
     return text, raw
 
 

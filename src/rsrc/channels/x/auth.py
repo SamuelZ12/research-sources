@@ -44,12 +44,12 @@ def load_cookies(environ=os.environ, path=None) -> tuple[str, str]:
 
 
 FX_BACKEND = "fxtwitter"
-BACKENDS = (FX_BACKEND, "x-graphql")
+BACKENDS = (FX_BACKEND, "x-graphql", "x-browser")
 
 
 def load_search_order(environ) -> tuple[str, ...]:
     """The backends a default `x search` tries, first to last: RSRC_X_SEARCH from the environment,
-    else from the cookie file, else FxTwitter alone. A blank value counts as unset, like a cookie.
+    else from the cookie file. With no order, use a configured cookie pair or FxTwitter. A blank value counts as unset, like a cookie.
 
     RSRC_X_FALLBACK (the setting this replaced) is an error rather than ignored: ignoring it would
     silently turn a fallback off.
@@ -59,11 +59,18 @@ def load_search_order(environ) -> tuple[str, ...]:
     if environ.get("RSRC_X_FALLBACK", "").strip() or settings.get("RSRC_X_FALLBACK"):
         raise CookieError("RSRC_X_FALLBACK was replaced: remove it and set RSRC_X_SEARCH=fxtwitter,x-graphql "
                           f"(in {path} or the environment)")
-    value = environ.get("RSRC_X_SEARCH", "").strip() or settings.get("RSRC_X_SEARCH", "").strip() or FX_BACKEND
+    value = environ.get("RSRC_X_SEARCH", "").strip() or settings.get("RSRC_X_SEARCH", "").strip()
+    if not value:
+        if any(environ.get(k, "").strip() or settings.get(k) for k in KEYS):
+            load_cookies(environ, path)
+            return ("x-graphql",)
+        return (FX_BACKEND,)
     order = tuple(part.strip() for part in value.split(","))
+    if "x-browser" in order and len(order) > 1:
+        raise CookieError("select x-browser on its own to use your signed-in Ego Lite account")
     if any(backend not in BACKENDS for backend in order) or len(order) != len(set(order)):
-        raise CookieError("RSRC_X_SEARCH must list fxtwitter or x-graphql, separated by commas, "
-                          "with no duplicates or empty entries")
+        raise CookieError("RSRC_X_SEARCH accepts x-browser alone, or fxtwitter and x-graphql in order, "
+                          "separated by commas with no duplicates or empty entries")
     return order
 
 
