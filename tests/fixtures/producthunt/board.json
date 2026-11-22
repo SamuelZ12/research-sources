@@ -1,0 +1,77 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "isError": false,
+    "structuredContent": {
+      "status": "ok",
+      "data": {
+        "period": {
+          "date": "2026-11-21",
+          "launched_after": "2026-11-21",
+          "launched_before": "2026-11-21"
+        },
+        "results": [
+          {
+            "slug": "alter-contacts-ai-client-relationships",
+            "url": "https://www.producthunt.com/products/alter-contacts-ai-client-relationships?ref=mcp",
+            "website_url": "https://altercontacts.ai",
+            "domain": "altercontacts.ai",
+            "name": "AlterContacts",
+            "tagline": "AI client relationship assistant that thinks and does ahead",
+            "categories": [
+              {
+                "slug": "crm",
+                "name": "CRM software"
+              },
+              {
+                "slug": "ai-meeting-notetakers",
+                "name": "AI notetakers"
+              },
+              {
+                "slug": "ai-chief-of-staff",
+                "name": "AI Chief Of Staff"
+              }
+            ],
+            "pricing": null,
+            "open_source": false,
+            "yc": false,
+            "has_mcp_server": false,
+            "platforms": [],
+            "rating": null,
+            "reviews_count": 0,
+            "top_launch_points": 282,
+            "launches_total": 1,
+            "latest_launch_at": "2026-11-21T00:01:00-08:00",
+            "launches": [
+              {
+                "slug": "altercontacts",
+                "name": "AlterContacts",
+                "tagline": "AI client relationship assistant that thinks and does ahead",
+                "launched_at": "2026-11-21T00:01:00-08:00",
+                "points": 282,
+                "daily_rank": 1,
+                "url": "https://www.producthunt.com/posts/altercontacts?ref=mcp",
+                "rank": 1
+              }
+            ],
+            "thumbnail_url": "https://ph-files.imgix.net/046485e6-d8fe-4168-8047-978bd2b33c83.png?auto=format&fit=crop&frame=1&h=240&w=240",
+            "makers": [
+              {
+                "name": "diz"
+              },
+              {
+                "name": "Oliver Liu"
+              },
+              {
+                "name": "Hom Yang"
+              }
+            ]
+          }
+        ],
+        "has_more": true,
+        "next_cursor": "9bJgiWflsz9il0bg.3"
+      }
+    }
+  }
+}

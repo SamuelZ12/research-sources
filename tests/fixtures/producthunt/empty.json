@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "isError": false,
+    "structuredContent": {
+      "status": "ok",
+      "data": {
+        "interpreted_as": {
+          "kind": "nonsense",
+          "ambiguous": false
+        },
+        "applied": {
+          "sort": "relevance",
+          "suggested_filters": {}
+        },
+        "results": [],
+        "has_more": false,
+        "next_cursor": null,
+        "empty_reason": "no_match"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "isError": false,
+    "structuredContent": {
+      "status": "ok",
+      "data": {
+        "product": {
+          "slug": "linear",
+          "name": "Linear",
+          "tagline": "The product development system for teams and agents.",
+          "description": "Linear is a new species of product tool. Purpose-built for product teams with agent workflows at its core, it sets a new standard for planning and building products. Linear is the tool of choice for 20,000+ companies including OpenAI, Ramp, and Vercel.",
+          "url": "https://www.producthunt.com/products/linear?ref=mcp",
+          "thumbnail_url": "https://ph-files.imgix.net/9d9aa008-ca0e-4f10-84a1-211ae6875f45.png?auto=format&fit=crop&frame=1&h=240&w=240",
+          "reviews_rating": 4.93,
+          "reviews_count": 474,
+          "pricing_type": "free_options",
+          "mcp_server_urls": [
+            "https://mcp.linear.app/mcp"
+          ],
+          "website_url": "https://linear.app",
+          "domain": "linear.app"
+        },
+        "makers": [
+          {
+            "name": "Lasse Boisen Andersen"
+          }
+        ],
+        "review_highlights": [
+          {
+            "rating": 5,
+            "excerpt": "Linear is core to my product development. It's really helped my agents coordinate and keep track of requirements and ..."
+          }
+        ],
+        "matched_by": "slug"
+      }
+    }
+  }
+}
