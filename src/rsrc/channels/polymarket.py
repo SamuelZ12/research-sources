@@ -55,7 +55,7 @@ def run_search(args, ctx) -> dict:
     failure = None
     try:
         for page in range(1, MAX_REQUESTS + 1):
-            events, more = fetch_page(client, args.query, page)
+            events, more = fetch_page(client, args.query, page, args.limit)
             before = len(found)
             for event in events:
                 found.setdefault(str(event["id"]), event)
@@ -72,12 +72,14 @@ def run_search(args, ctx) -> dict:
                         error=env.error(failure.code, str(failure)) if failure else None)
 
 
-def fetch_page(client: Client, query: str, page: int) -> tuple[list[dict], bool]:
+def fetch_page(client: Client, query: str, page: int, limit: int | None = None) -> tuple[list[dict], bool]:
     """One GET of a page of open events matching `query`: the events, and whether more pages may follow
     (true unless the answer says otherwise).
 
     Raises HttpError, whose `code` is the envelope code for the kind of failure; nothing is retried."""
     params = {"q": query, "page": page, "events_status": "active", "keep_closed_markets": 0}
+    if limit is not None:
+        params["limit_per_type"] = limit
     status, body = client.request("GET", f"{API}?{urlencode(params)}", headers=HEADERS)
     if status == 429:
         raise RateLimited("Polymarket API rate limit (HTTP 429); stopped without retrying")

@@ -273,8 +273,17 @@ def test_search_makes_one_keyless_get_for_the_first_page(rsrc):
     assert method == "GET" and body is None
     assert url.startswith("https://gamma-api.polymarket.com/public-search?")
     assert transport.queries == [{"q": ["Claude Code & friends"], "page": ["1"], "events_status": ["active"],
-                                  "keep_closed_markets": ["0"]}]
+                                  "keep_closed_markets": ["0"], "limit_per_type": ["5"]}]
     assert {name.lower() for name in headers} == {"user-agent"}  # no cookie, no key
+
+
+def test_default_limit_returns_both_recorded_pages_in_one_request(rsrc):
+    recorded = events()
+    transport = FakeTransport(answer(recorded, has_more=True))
+    code, out = rsrc(["search", "Claude"], transport)
+    assert code == 0
+    assert [query["limit_per_type"] for query in transport.queries] == [["10"]]
+    assert [item["raw"] for item in out["items"]] == [polymarket.record(e) for e in recorded]
 
 
 def test_search_returns_one_item_per_event_in_the_apis_order(rsrc):
