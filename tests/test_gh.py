@@ -350,6 +350,18 @@ def test_public_repo_reuses_and_closes_one_connection(rsrc, monkeypatch, readme_
         assert events == ["api.github.com", path, path + "/readme", path + "/releases/latest", "closed"]
 
 
+def test_public_repo_404_explains_private_repositories(rsrc, public):
+    recorded = json.loads((FIXTURES / "gh_public_repo_404.json").read_text())
+    body = BytesIO(json.dumps(recorded["body"]).encode())
+    calls = public(HTTPError("https://api.github.com/repos/example-org/missing",
+                             recorded["status"], recorded["reason"], Message(), body))
+    code, out = rsrc(["repo", "example-org/missing"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and not out["ok"] and out["backend"] == "github-rest"
+    assert out["error"]["code"] == "not_found" and out["items"] == []
+    assert "does not exist or is private" in out["error"]["message"]
+    assert "gh auth login" in out["error"]["message"] and len(calls) == 1
+
+
 def test_public_repository_search(rsrc, public):
     repo = json.loads(REPO)
     repo["owner"]["node_id"] = "O_kgDOExample1"

@@ -144,7 +144,7 @@ class _Gh:
                 if exc.code == 404 and missing_ok:
                     outcome = "no_results"
                     return None
-                failure = _public_error(exc)
+                failure = _public_error(exc, path)
                 outcome = failure.code
                 raise failure from None
         except (ValueError, TypeError, KeyError, AttributeError):
@@ -159,7 +159,10 @@ class _Gh:
             self.attempts.append(env.attempt(self.backend, outcome, requests=1, ms=env.elapsed_ms(started)))
 
 
-def _public_error(exc):
+def _public_error(exc, path):
+    if exc.code == 404 and path.startswith("repos/") and path.count("/") == 2:
+        return _Failed("not_found", "The repository does not exist or is private. "
+                       "Run `gh auth login` to read private repositories your account can access.")
     limited = exc.code == 429 or (exc.code == 403 and (
         exc.headers.get("X-RateLimit-Remaining") == "0" or
         "Retry-After" in exc.headers or b"rate limit" in exc.read().lower()))
