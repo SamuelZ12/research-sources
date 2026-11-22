@@ -12,6 +12,8 @@ from rsrc.http import Client, HttpError, single_hop_transport, urllib_transport
 
 BACKEND = "ashby-posting-api"
 API = "https://api.ashbyhq.com/posting-api/job-board/"
+# Ashby refuses the default Python client name with HTTP 403 (seen 2026-11-22), so the tool names itself.
+HEADERS = {"User-Agent": "research-sources"}
 BOARD = re.compile(r"[\w .-]+")
 ROLE = re.compile(r"[a-zA-Z0-9_-]+")
 GUIDANCE = "Use the board name from the jobs.ashbyhq.com link on the company's careers page."
@@ -80,7 +82,7 @@ class Description(HTMLParser):
 def fetch(board, ctx):
     transport = single_hop_transport if ctx.transport is urllib_transport else ctx.transport
     client = Client(max_requests=1, transport=transport)
-    status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true")
+    status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
     if status == 404:
         raise Failure("not_found", f"Ashby board {board!r} was not found. {GUIDANCE}")
     if status == 429:
@@ -126,7 +128,8 @@ def posting(job, board):
             raise ValueError()
     except (TypeError, ValueError):
         raise HttpError("Ashby returned a malformed posting") from None
-    return env.item(id=role, title=job["title"], url=url, published_at=stamp, source="ashby", raw=job)
+    # The hiring company is the author of a posting: the board name as Ashby spells it in the job URL.
+    return env.item(id=role, title=job["title"], url=url, author=actual, published_at=stamp, source="ashby", raw=job)
 
 
 def matches(item, args):

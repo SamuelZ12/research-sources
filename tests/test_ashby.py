@@ -21,7 +21,8 @@ def run(capsys):
         out = json.loads(capsys.readouterr().out)
         assert len(calls) == (0 if code == 2 else 1)
         if calls:
-            assert calls[0] == ("GET", f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true", None, None)
+            assert calls[0] == ("GET", f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true",
+                                {"User-Agent": "research-sources"}, None)
         return code, out
     return invoke
 
@@ -32,6 +33,7 @@ def test_listing_and_filters(run):
     first, second = out["items"]
     assert first["raw"]["isRemote"] and "compensation" not in first["raw"]
     assert first["published_at"].endswith("Z") and first["text"] is None
+    assert first["author"] == second["author"] == "quartz"
     assert second["raw"]["compensation"]["compensationTierSummary"] == "$100K – $120K"
     assert run("search", "quartz", "--title", "DESIGN wid", "--location", "boston",
                "--team", "Product", "--since", "2020-01-01")[1]["items"] == [second]
