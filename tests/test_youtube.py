@@ -1,5 +1,7 @@
 """`rsrc youtube` through rsrc.cli.main with a fake runner and the recorded yt-dlp output."""
 
+import io
+from unittest.mock import Mock
 import json
 from pathlib import Path
 
@@ -458,6 +460,73 @@ def test_read_keeps_its_caption_file_in_a_directory_that_is_gone_afterwards(rsrc
     assert not directory.exists()
 
 
+@pytest.fixture
+def caption_http(monkeypatch):
+    """Stand in for YouTube after restoring the public URL prefix stripped from the recording."""
+    calls = []
+
+    def serve(payload, status=200):
+        class Connection:
+            def __init__(self, host, timeout):
+                assert host == "www.youtube.com" and 0 < timeout <= 30
+                self.sock = Mock()
+
+            def request(self, method, target, headers):
+                calls.append((method, target, headers))
+
+            def getresponse(self):
+                response = io.BytesIO(payload.encode())
+                response.status = status
+                response.length = None
+                return response
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(youtube, "getproxies", lambda: {})
+        monkeypatch.setattr(youtube.http.client, "HTTPSConnection", Connection)
+        return calls
+
+    return serve
+
+
+def with_caption_url(recording, tracks, code):
+    info = json.loads(recording)
+    for row in info[tracks][code]:
+        row["url"] = f"https://www.youtube.com/api/timedtext?v={info['id']}&" + row["url"].lstrip("?")
+    return json.dumps(info)
+
+
+@pytest.mark.parametrize("video,recording,tracks,track,vtt", [
+    (UPLOADED, META_UPLOADED, "subtitles", "en", UPLOADED_VTT),
+    (DUBBED, META_DUBBED, "automatic_captions", "en-orig", AUTOMATIC_VTT),
+])
+def test_read_gets_only_the_chosen_vtt_from_the_first_extraction(
+        rsrc, caption_http, video, recording, tracks, track, vtt):
+    calls = caption_http(vtt)
+    fake = FakeRunner(ok(with_caption_url(recording, tracks, track)))
+    code, out = rsrc(["read", video], fake)
+    assert code == 0 and len(fake.calls) == 1
+    [(method, target, headers)] = calls
+    assert method == "GET" and f"v={video}&" in target and "tlang=" not in target
+    assert out["items"][0]["text"] == youtube.policy.clean_vtt(vtt)
+    assert out["items"][0]["raw"]["transcript"]["track"] == track
+
+
+@pytest.mark.parametrize("status,body,error", [
+    (429, "", "rate_limited"), (403, "", "blocked"), (500, "", "upstream_error"),
+    (200, "<html>Sign in to confirm you're not a bot</html>", "blocked"),
+    (200, "<html>wrong response</html>", "upstream_error"),
+    (200, "x" * (youtube.MAX_CAPTION + 1), "upstream_error"),
+])
+def test_failed_direct_caption_get_returns_an_error_without_a_retry(rsrc, caption_http, status, body, error):
+    calls = caption_http(body, status)
+    fake = FakeRunner(ok(with_caption_url(META_UPLOADED, "subtitles", "en")))
+    code, out = rsrc(["read", UPLOADED], fake)
+    assert code == 1 and out["ok"] is False and out["error"]["code"] == error
+    assert len(calls) == len(fake.calls) == 1 and out["items"][0]["text"] is None
+
+
 def test_read_envelope_names_the_channel_action_and_input(rsrc):
     code, out = rsrc(["read", UPLOADED], read_uploaded())
 
@@ -586,7 +655,8 @@ def test_read_words_equal_to_the_transcript_length_cuts_nothing(rsrc):
     assert out["meta"]["notes"] == []
 
 
-def test_read_output_holds_no_caption_or_stream_address(rsrc, capsys):
+def test_read_output_holds_no_caption_or_stream_address(rsrc, caption_http):
+    caption_http(UPLOADED_VTT)
     info = json.loads(META_UPLOADED)
     address = "https://www.youtube.com/api/timedtext?v=C33hJGt-ySg&ip=203.0.113.9&signature=SIGNATURE&lang=en"
     info["subtitles"]["en"] = [{"ext": "vtt", "url": address, "name": "English"}]
@@ -594,7 +664,7 @@ def test_read_output_holds_no_caption_or_stream_address(rsrc, capsys):
                             "url": "https://rr1---sn-abc.googlevideo.com/videoplayback?ip=203.0.113.9&sig=SIGNATURE"})
     info["url"] = "https://rr1---sn-abc.googlevideo.com/videoplayback?ip=203.0.113.9"
 
-    code, out = rsrc(["read", UPLOADED], FakeRunner(ok(json.dumps(info)), caption_run(UPLOADED_VTT)))
+    code, out = rsrc(["read", UPLOADED], FakeRunner(ok(json.dumps(info))))
 
     printed = json.dumps(out)
     assert code == 0 and out["items"][0]["raw"]["transcript"]["status"] == "ok"
