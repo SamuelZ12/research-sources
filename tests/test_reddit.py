@@ -426,3 +426,102 @@ def test_each_run_gets_its_own_task_space(rsrc):
     rsrc(["search", "q"], fake)
     first, second = fake.input(0)["space"], fake.input(1)["space"]
     assert first.startswith("rsrc reddit ") and first != second
+
+
+def best_thread(post_id=THREAD["post"]["attrs"]["id"]):
+    # The thread fixture supplies recorded comment bodies and parent/depth relationships.
+    return {**THREAD, "post": {**THREAD["post"], "attrs": {**THREAD["post"]["attrs"], "id": post_id}},
+            "comments": [{**c, "attrs": {**c["attrs"], "postid": post_id,
+                                      "permalink": c["attrs"]["permalink"].replace("1xootop", post_id[3:])}} for c in THREAD["comments"]],
+            "comment_sort": "Sort by Best"}
+
+
+@pytest.mark.parametrize("n", [0, -1, 6])
+def test_comment_thread_limit_fails_before_search(rsrc, n):
+    fake = FakeEgo()
+    code, out = rsrc(["search", "test", "--with-comments", str(n)], fake)
+    assert code == 2 and not fake.calls
+
+
+def test_search_groups_best_comments_and_keeps_other_threads_on_failure(rsrc):
+    first, second, third = [r["context"]["post"]["id"] for r in SEARCH["posts"][:3]]
+    fake = FakeEgo(*map(printed, [SEARCH, best_thread(), page(**READ_STATES["missing"]), best_thread(third)]))
+    code, out = rsrc(["search", "q", "--with-comments"], fake)
+    assert code == 0 and out["error"] is None and len(fake.calls) == 4
+    assert fake.input(1)["url"].endswith("?sort=confidence")
+    posts = [i for i in out["items"] if i["raw"]["kind"] == "post"]
+    assert len(posts) == 7 and [i["id"] for i in posts[:3]] == [first, second, third]
+    assert out["meta"]["failed"] == [{"input": posts[1]["url"], "code": "not_found",
+                                      "message": "no such post at https://www.reddit.com/x"}]
+    roots = [c for c in THREAD["comments"] if c["attrs"]["depth"] == "0"][:3]
+    for i, c in zip(out["items"][1:1 + len(roots)], roots, strict=True):
+        assert i["id"] == c["attrs"]["thingid"] and i["text"] == c["text"]
+        assert i["raw"]["kind"] == "comment" and i["raw"]["attrs"]["postid"] == first
+    assert sum(a["requests"] for a in out["meta"]["attempts"]) == 4
+
+
+@pytest.mark.parametrize("failure,code_", [(page(page_text=BLOCK_TEXT), "blocked"),
+                                          (page(status=429), "rate_limited")])
+def test_block_stops_before_next_thread_and_preserves_all_posts(rsrc, failure, code_):
+    fake = FakeEgo(*map(printed, [SEARCH, best_thread(), failure]))
+    code, out = rsrc(["search", "q", "--with-comments", "5"], fake)
+    assert code == 1 and out["error"]["code"] == code_ and len(fake.calls) == 3
+    assert [i["id"] for i in out["items"] if i["raw"]["kind"] == "post"] == [
+        r["context"]["post"]["id"] for r in SEARCH["posts"]]
+    assert out["items"][1]["raw"]["kind"] == "comment"
+    assert len(out["meta"]["failed"]) == 1 and out["meta"]["failed"][0]["code"] == code_
+
+
+def test_search_rejects_unconfirmed_sort_and_wrong_parent(rsrc):
+    thread = best_thread()
+    thread["comments"][0]["attrs"]["postid"] = "t3_other"
+    for bad, reason in [(thread, "url_mismatch"), ({**thread, "comment_sort": "Sort by New"}, "upstream_error"),
+                        (READ_STATES["removed"], "url_mismatch")]:
+        code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(bad)))
+        assert code == 1 and out["error"]["code"] == reason and len(out["items"]) == 7
+
+
+def test_blocked_search_pagination_does_not_start_thread_reads(rsrc):
+    fake = FakeEgo(printed({**SEARCH, "status": 429}))
+    code, out = rsrc(["search", "q", "--with-comments"], fake)
+    assert code == 1 and len(fake.calls) == 1 and len(out["items"]) == 7
+    assert out["error"]["code"] == "rate_limited"
+
+
+def test_no_comments_is_success_and_removed_thread_is_named(rsrc):
+    thread = best_thread()
+    thread["comments"] = []
+    thread["post"]["attrs"]["comment-count"] = "0"
+    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(thread)))
+    assert code == 0 and out["meta"]["failed"] == []
+    thread["post"]["removal_notice"] = READ_STATES["removed"]["post"]["removal_notice"]
+    code, out = rsrc(["search", "q", "--with-comments", "1"], FakeEgo(printed(SEARCH), printed(thread)))
+    assert code == 1 and out["meta"]["failed"][0]["code"] == "not_found"
+
+
+def test_read_best_uses_reddits_confidence_sort(rsrc):
+    fake = FakeEgo(printed(THREAD))
+    code, out = rsrc(["read", "1xootop", "--sort", "best"], fake)
+    assert code == 0 and out["input"]["sort"] == "best"
+    assert fake.input()["url"].endswith("?sort=confidence")
+
+
+def test_recorded_best_order_keeps_scores_authors_and_links():
+    # Signed-in Best page for the first "mechanical keyboards" search hit.
+    thread = json.loads((FIXTURES / "reddit_best_comments.json").read_text())
+    post_id = thread["post"]["attrs"]["id"]
+    items, error = reddit.best_comments(thread, post_id)
+    assert error is None and len(items) == 3
+    for item, row in zip(items, thread["comments"], strict=True):
+        attrs = row["attrs"]
+        assert (item["id"], item["author"], item["engagement"]["score"]) == (
+            attrs["thingid"], attrs["author"], int(attrs["score"]))
+        assert item["url"] == reddit.BASE + attrs["permalink"] and item["published_at"]
+        assert item["text"] == row["text"] and item["raw"]["attrs"]["postid"] == post_id
+
+
+def test_search_replaced_by_login_keeps_posts_and_stops(rsrc):
+    fake = FakeEgo(printed({**SEARCH, "lost_results": True, "page_text": "Log in to continue"}))
+    code, out = rsrc(["search", "q", "--with-comments"], fake)
+    assert code == 1 and out["error"]["code"] == "blocked" and len(out["items"]) == 7
+    assert len(fake.calls) == 1

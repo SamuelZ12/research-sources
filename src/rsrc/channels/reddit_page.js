@@ -45,7 +45,8 @@ function readThread(attrs) {
   const own = (node, slot, owner) => [...node.querySelectorAll(`[slot="${slot}"]`)]
     .find((s) => s.closest(owner) === node);
   const post = document.querySelector("shreddit-post");
-  const comments = [...document.querySelectorAll("shreddit-comment")].map((c) => {
+  const selector = attrs.preview ? 'shreddit-comment[depth="0"]' : "shreddit-comment";
+  const comments = [...document.querySelectorAll(selector)].map((c) => {
     const body = own(c, "comment", "shreddit-comment");
     return { attrs: pick(c, attrs.comment), text: body ? body.innerText.trim() : null };
   });
@@ -55,7 +56,12 @@ function readThread(attrs) {
   const removal = [...post.querySelectorAll('[slot="post-message-banner"]')].find((banner) =>
     banner.closest("shreddit-post") === post && /\bremoved\b/i.test(banner.innerText));
   if (removal) record.removal_notice = removal.innerText.trim();
-  return { post: record, comments };
+  const result = { post: record, comments };
+  if (attrs.preview) {
+    result.comment_sort = document.querySelector('shreddit-sort-dropdown[sort-event="comment-sort"]')
+      ?.getAttribute("button-aria-label");
+  }
+  return result;
 }
 
 const UNIT = '[data-testid="sdui-post-unit"]';
@@ -66,20 +72,38 @@ try {
   const page = task.page("p1");
   await page.goto(INPUT.url, { timeout: 30000 });
   out.loads = 1;
-  if (INPUT.action === "search") {
+  const guarded = INPUT.comment_search || INPUT.action === "comments";
+  if (guarded) {
+    out.status = await page.evaluate(() => performance.getEntriesByType("navigation")[0]?.responseStatus);
+  }
+  const denied = [401, 403, 429].includes(out.status);
+  if (!denied && INPUT.action === "search") {
     await page.waitForSelector(`${UNIT}, search-results-page-tabs`, { timeout: 15000 }).catch(() => {});
     out.posts = await page.evaluate(readSearch);
     // Reddit renders about 7 results and loads more only as the page scrolls.
     for (let i = 0; i < INPUT.max_scrolls && out.posts.length < INPUT.limit; i++) {
       const before = out.posts.length;
+      if (guarded && !before) break;
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await page.waitForFunction((n) => document.querySelectorAll('[data-testid="sdui-post-unit"]').length > n,
                                  before, { timeout: 8000 }).catch(() => {});
-      out.posts = await page.evaluate(readSearch);
+      const next = await page.evaluate(readSearch);
+      if (guarded && before && !next.length) {
+        out.lost_results = true;
+        out.loads += 1;
+        break;
+      }
+      out.posts = next;
+      if (guarded) {
+        const status = await page.evaluate(() => performance.getEntriesByType("resource").find((r) =>
+          r.name.startsWith(location.origin + "/svc/shreddit/search/") && [401, 403, 429].includes(r.responseStatus)
+        )?.responseStatus);
+        if (status) { out.status = status; out.loads += 1; break; }
+      }
       if (out.posts.length <= before) break;
       out.loads += 1;
     }
-  } else {
+  } else if (!denied) {
     await page.waitForFunction(threadReady, undefined, { timeout: 15000 }).catch(() => {});
     Object.assign(out, await page.evaluate(readThread, INPUT.attrs));
   }

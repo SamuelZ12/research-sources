@@ -17,7 +17,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlencode, urljoin, quote
+from urllib.parse import urlencode, urljoin, urlsplit, quote
 
 from rsrc import checks, proc
 from rsrc import envelope as env
@@ -72,6 +72,8 @@ def register(subparsers) -> None:
     search.add_argument("--time", choices=TIMES, default="month", help="time range (default month)")
     search.add_argument("--sort", choices=SEARCH_SORTS, default="relevance", help="default relevance")
     search.add_argument("--limit", type=int, default=25, help=f"results, 1-{MAX_LIMIT} (default 25)")
+    search.add_argument("--with-comments", type=int, nargs="?", const=3, metavar="N",
+                        help="include the first three Best top-level comments on each of the first N threads (default 3, max 5)")
     search.set_defaults(run=run_search, action="search")
 
     read = actions.add_parser("read", help="one thread: the post and its top comments")
@@ -84,8 +86,13 @@ def register(subparsers) -> None:
 # --- runs ------------------------------------------------------------------------
 
 def run_search(args, ctx) -> dict:
+    comment_threads = getattr(args, "with_comments", None)
     input_ = {"query": args.query, "subreddit": args.subreddit, "time": args.time, "sort": args.sort,
               "limit": args.limit}
+    if comment_threads is not None:
+        if not 1 <= comment_threads <= 5:
+            return env.usage(CHANNEL, "search", "--with-comments must be between 1 and 5")
+        input_["with_comments"] = comment_threads
     if not args.query.strip():
         return env.usage(CHANNEL, "search", "QUERY must not be empty")
     if not 1 <= args.limit <= MAX_LIMIT:
@@ -94,17 +101,22 @@ def run_search(args, ctx) -> dict:
     if subreddit and not _SUBREDDIT.match(subreddit):
         return env.usage(CHANNEL, "search", f"--subreddit {args.subreddit!r} is not a subreddit name")
     url = search_url(args.query, subreddit, args.time, args.sort)
-    page, failure, attempt = _load(ctx, {"action": "search", "url": url, "limit": args.limit,
-                                         "max_scrolls": MAX_SCROLLS})
+    request = {"action": "search", "url": url, "limit": args.limit, "max_scrolls": MAX_SCROLLS}
+    if comment_threads:
+        request["comment_search"] = True
+    page, failure, attempt = _load(ctx, request)
     meta = {"attempts": [attempt]}
     if failure:
         return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta, error=env.error(*failure))
     records = page.get("posts") or []
+    access_error = access_failure(page) if comment_threads else None
+    if page.get("lost_results") and not access_error:
+        access_error = page_failure(page, "search")
     if not records:
-        if page.get("search_page"):
+        code, message = access_error or page_failure(page, "search")
+        if page.get("search_page") and (not comment_threads or code == "upstream_error"):
             attempt["outcome"] = "no_results"
             return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta)
-        code, message = page_failure(page, "search")
         attempt["outcome"] = code
         return env.envelope(CHANNEL, "search", input_, BACKEND, meta=meta, error=env.error(code, message))
     items, seen = [], set()
@@ -123,7 +135,91 @@ def run_search(args, ctx) -> dict:
         why = (f"stopped after {MAX_SCROLLS} scrolls" if page.get("loads", 0) > MAX_SCROLLS
                else "Reddit loaded no more results")
         meta["notes"] = [f"{len(items)} of --limit {args.limit}: {why}"]
+    if access_error:
+        attempt["outcome"] = access_error[0]
+        return env.envelope(CHANNEL, "search", input_, BACKEND, items, meta=meta, error=env.error(*access_error))
+    if comment_threads:
+        return with_comments(ctx, input_, items, meta, comment_threads)
     return env.envelope(CHANNEL, "search", input_, BACKEND, items, meta=meta)
+
+
+def with_comments(ctx, input_, posts, meta, count):
+    items, failed = [], []
+    meta["failed"] = failed
+    stop = None
+    for index, post in enumerate(posts):
+        post["raw"]["kind"] = "post"
+        items.append(post)
+        if index >= count or stop:
+            continue
+        # Only navigate to a validated Reddit post. Use the canonical path to avoid a redirect.
+        url = post["url"] or ""
+        match = _POST_URL.match(url)
+        browser_failed = False
+        if not match or "t3_" + match[1].lower() != post["id"]:
+            problem = ("url_mismatch", "search result permalink does not identify the returned post")
+        else:
+            url = BASE + urlsplit(url).path + "?sort=confidence"
+            page, problem, attempt = _load(ctx, {"action": "comments", "url": url,
+                                                 "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS,
+                                                           "preview": True}})
+            meta["attempts"].append(attempt)
+            browser_failed = bool(problem and problem[0] != "timeout")
+            if not problem:
+                comments, problem = best_comments(page, post["id"])
+                items.extend(comments)
+            if problem:
+                attempt["outcome"] = problem[0]
+        if problem:
+            code, message = problem
+            failed.append({"input": post["url"] or post["id"], "code": code, "message": message})
+            if browser_failed or code in ("blocked", "rate_limited", "auth_failed", "config"):
+                stop = env.error(code, message)
+    if failed and not stop and len(failed) == min(len(posts), count):
+        stop = env.error(failed[0]["code"], failed[0]["message"])
+    return env.envelope(CHANNEL, "search", input_, BACKEND, items, meta=meta, error=stop)
+
+
+def access_failure(page):
+    if page.get("status") in (401, 403, 429):
+        status = page["status"]
+        return "rate_limited" if status == 429 else "blocked", f"Reddit returned HTTP {status} at {page['url']}"
+    return None
+
+
+def best_comments(page, post_id):
+    denied = access_failure(page)
+    if denied:
+        return [], denied
+    thread = page.get("post")
+    if not thread:
+        return [], page_failure(page, "read")
+    attrs = thread.get("attrs") or {}
+    if attrs.get("id") != post_id:
+        return [], ("url_mismatch", f"asked for {post_id}, page shows {attrs.get('id')}")
+    if thread.get("removal_notice"):
+        return [], ("not_found", thread["removal_notice"])
+    if not page.get("comments") and _int(attrs.get("comment-count")) == 0:
+        return [], None
+    if page.get("comment_sort") not in ("Sort by Best", "Sort by Best (Default)"):
+        return [], ("upstream_error", f"could not confirm Reddit's Best comment order on {post_id}")
+    comments = []
+    for record in page.get("comments") or []:
+        attrs = record.get("attrs") or {}
+        if attrs.get("postid") != post_id:
+            return [], ("url_mismatch", f"comment belongs to {attrs.get('postid')}, expected {post_id}")
+        if attrs.get("depth") == "0" and record.get("text") and attrs.get("thingid"):
+            item = comment_item(record)
+            link = _POST_URL.match(item["url"] or "")
+            if not link or "t3_" + link[1].lower() != post_id:
+                return [], ("url_mismatch", f"comment permalink does not identify {post_id}")
+            item["raw"]["kind"] = "comment"
+            comments.append(item)
+            if len(comments) == 3:
+                break
+    if not comments:
+        return [], ("upstream_error", f"no readable top-level comments on {post_id}")
+    return comments, None
 
 
 def run_read(args, ctx) -> dict:
@@ -141,7 +237,8 @@ def run_read(args, ctx) -> dict:
         post_id, problem = parse_post(args.post)
         if problem:
             return env.usage(CHANNEL, "read", problem)
-    url = f"{BASE}/comments/{post_id}/?{urlencode({'sort': args.sort})}"
+    sort = "confidence" if args.sort == "best" else args.sort
+    url = f"{BASE}/comments/{post_id}/?{urlencode({'sort': sort})}"
     page, failure, attempt = _load(ctx, {"action": "read", "url": url,
                                          "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS}})
     meta["attempts"].append(attempt)

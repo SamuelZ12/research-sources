@@ -76,7 +76,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 | Channel | Commands |
 |---|---|
 | X | `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
-| Reddit | `rsrc reddit search QUERY`, `rsrc reddit read URL_OR_ID` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
+| Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
@@ -100,7 +100,7 @@ On github.com, `gh repo` and `gh issues --repo` try public REST first. With `bac
 
 A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
 
-YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read. Reddit returns `not_found` for a missing thread and `blocked` for a private or banned community or a login wall. A removed post may still return its record and a removal notice in `meta.notes`.
+YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read. Reddit returns `not_found` for a missing thread and `blocked` for a private or banned community or a login wall. A removed post may still return its record and a removal notice in `meta.notes`. Add `--with-comments` after a search query for up to three readable top-level comments in Reddit’s Best order on each of the first three threads. Pass `--with-comments 5` for five threads, the maximum. Each selected thread costs one extra page load.
 
 ## The envelope
 
