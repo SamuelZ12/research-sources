@@ -245,7 +245,8 @@ def run(args, ctx):
         inputs["timezone"] = ZONE
     if args.max_requests < 1 or (action == "search" and not args.query.strip()):
         return env.usage(CHANNEL, action, "expected a positive request cap and a nonempty query")
-    client = Client(max_requests=args.max_requests, transport=ctx.transport, sleep=ctx.sleep)
+    # A read is two calls to one official server (profile, then its launch record): no pause between them.
+    client = Client(max_requests=args.max_requests, min_interval=0, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     items, notes, error, truncated = [], [], None, None
     try:
