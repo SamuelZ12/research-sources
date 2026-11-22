@@ -161,7 +161,7 @@ def test_search_item_maps_the_recorded_line(rsrc):
         "url": "https://www.youtube.com/watch?v=BGscm2FMIG4",
         "title": "Claude Code: How To Build & Launch Your First Website",
         "author": "Zinho Automates",
-        "published_at": None,  # the page shows only an age; raw.timestamp is approximate
+        "published_at": "2026-11-16",
         "text": recorded["description"],
         "source": "youtube",
         "engagement": {"views": 9521},
@@ -169,6 +169,25 @@ def test_search_item_maps_the_recorded_line(rsrc):
     }
     assert recorded["description"].startswith("Claude Code: How To Build & Launch Your First Website. Host your")
     assert recorded["timestamp"] == 1794844800
+    assert out["meta"]["notes"] == [
+        "Search published_at dates are approximate, derived from the ages shown by YouTube."]
+    assert all(len(item["published_at"]) == 10 for item in out["items"])
+
+
+def test_search_with_only_an_approximate_timestamp_keeps_the_day(rsrc):
+    record = json.loads(SEARCH.splitlines()[0])
+    del record["upload_date"]
+    _, out = rsrc(["search", "Claude Code"], FakeRunner(ok(lines(record))))
+    assert out["items"][0]["published_at"] == "2026-11-16"
+    assert "approximate" in out["meta"]["notes"][0]
+
+
+@pytest.mark.parametrize("day", [None, "20260231", "2026", 20261116])
+def test_search_with_no_usable_upload_date_leaves_it_null(rsrc, day):
+    record = {**json.loads(SEARCH.splitlines()[0]), "upload_date": day, "timestamp": None}
+    code, out = rsrc(["search", "Claude Code"], FakeRunner(ok(lines(record))))
+    assert code == 0 and out["items"][0]["published_at"] is None
+    assert out["meta"]["notes"] == []
 
 
 def test_search_envelope_names_the_channel_and_counts_one_run(rsrc):

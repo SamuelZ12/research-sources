@@ -196,8 +196,12 @@ def run_search(args, ctx) -> dict:
     except _Failed as failure:
         return env.envelope(CHANNEL, "search", input_, BACKEND, meta={"attempts": [ytdlp.attempt(failure.code)]},
                             error=env.error(failure.code, failure.message))
-    return env.envelope(CHANNEL, "search", input_, BACKEND, [_search_item(r) for r in records],
-                        meta={"attempts": [ytdlp.attempt("ok" if records else "no_results")]})
+    items = [_search_item(r) for r in records]
+    notes = []
+    if any(item["published_at"] for item in items):
+        notes.append("Search published_at dates are approximate, derived from the ages shown by YouTube.")
+    return env.envelope(CHANNEL, "search", input_, BACKEND, items,
+                        meta={"attempts": [ytdlp.attempt("ok" if items else "no_results")], "notes": notes})
 
 
 def _search_lines(stdout: str) -> list[dict]:
@@ -218,12 +222,13 @@ def _search_lines(stdout: str) -> list[dict]:
 
 
 def _search_item(record: dict) -> dict:
+    date = _day(record.get("upload_date")) or _utc(record.get("timestamp"))
     return env.item(
         id=record["id"],
         url=WATCH + record["id"],
         title=_text(record.get("title")),
         author=_text(record.get("channel")),
-        published_at=None,  # the results page shows only an age; raw.timestamp is approximate
+        published_at=date[:10] if date else None,
         text=_text(record.get("description")),
         source=SOURCE,
         engagement=_counts(views=record.get("view_count")),
