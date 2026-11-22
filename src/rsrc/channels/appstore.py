@@ -237,7 +237,8 @@ def run(args, ctx):
     if read:
         inputs.update(sort=args.sort, max_requests=cap)
     meta, items, error = {"notes": []}, [], None
-    client = Client(max_requests=cap, transport=ctx.transport, sleep=ctx.sleep)
+    # A read is two to four calls to Apple (the app, then its reviews); a short pause keeps paging polite.
+    client = Client(max_requests=cap, min_interval=0.2, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
         apps = catalog(client, country, term=q, app_id=ident, limit=50 if read else args.limit)
