@@ -1,0 +1,124 @@
+{
+  "feed": [
+    {
+      "post": {
+        "uri": "at://did:plc:example0/app.bsky.feed.post/3n2rdohndrk2t",
+        "likeCount": 70,
+        "replyCount": 1,
+        "repostCount": 10,
+        "quoteCount": 2,
+        "author": {
+          "handle": "atproto.com",
+          "did": "did:plc:example0",
+          "displayName": "AT Protocol Developers"
+        },
+        "record": {
+          "$type": "app.bsky.feed.post",
+          "text": "As with atproto global, spaces has affordances for moderation built into the protocol. Here's how it works.\n\natproto.com/blog/moderat...",
+          "createdAt": "2026-11-20T19:39:59.542Z",
+          "facets": [
+            {
+              "features": [
+                {
+                  "$type": "app.bsky.richtext.facet#link",
+                  "uri": "https://atproto.com/blog/moderation-in-spaces"
+                }
+              ],
+              "index": {
+                "byteEnd": 136,
+                "byteStart": 109
+              }
+            }
+          ]
+        },
+        "embed": {
+          "$type": "app.bsky.embed.external#view",
+          "external": {
+            "uri": "https://atproto.com/blog/moderation-in-spaces",
+            "title": "Moderation in Spaces",
+            "description": "Moderation is critical to global atproto and just as important to get right for spaces."
+          }
+        }
+      }
+    },
+    {
+      "post": {
+        "uri": "at://did:plc:example0/app.bsky.feed.post/3n2r644xp2k2r",
+        "likeCount": 91,
+        "replyCount": 0,
+        "repostCount": 4,
+        "quoteCount": 1,
+        "author": {
+          "handle": "atproto.com",
+          "did": "did:plc:example0",
+          "displayName": "AT Protocol Developers"
+        },
+        "record": {
+          "$type": "app.bsky.feed.post",
+          "text": "Atmosphere Conf in a converted train station, this team knows their audience",
+          "createdAt": "2026-11-20T18:00:15.659Z"
+        },
+        "embed": {
+          "$type": "app.bsky.embed.record#view",
+          "record": {
+            "$type": "app.bsky.embed.record#viewRecord",
+            "uri": "at://did:plc:example1/app.bsky.feed.post/3n2r2wnzprk2y",
+            "value": {
+              "$type": "app.bsky.feed.post",
+              "createdAt": "2026-11-20T17:03:31.001Z",
+              "embed": {
+                "$type": "app.bsky.embed.external",
+                "external": {
+                  "associatedRefs": [
+                    {
+                      "$type": "com.atproto.repo.strongRef",
+                      "cid": "bafyreihkjetvgbhvzf2ihsqpybpzkmdpkpee3dt43q6d6rbwx6t2bacig4",
+                      "uri": "at://did:plc:example1/site.standard.document/3n2r2weq7bc24"
+                    },
+                    {
+                      "$type": "com.atproto.repo.strongRef",
+                      "cid": "bafyreifxc4qmpd5nhhghag2o3k5c2sra3qnxg7fzk7evvvu4trfhx7xpwy",
+                      "uri": "at://did:plc:example1/site.standard.publication/3m367bemk3c2i"
+                    }
+                  ],
+                  "description": "AtmosphereConf 2027 is being held at De Rijtuigenloods in Amersfoort, The Netherlands. Join us April 29th - May 2nd, 2027.",
+                  "thumb": {
+                    "$type": "blob",
+                    "ref": {
+                      "$link": "bafkreibhpy62nv534e6eql2rufhln7aqllmmyxsicoy3f2nucbgbl7v7qq"
+                    },
+                    "mimeType": "image/webp",
+                    "size": 203844
+                  },
+                  "title": "Venue Announcement: De Rijtuigenloods, Amersfoort",
+                  "uri": "https://news.atmosphereconf.org/3n2r2weq7bc24?utm_source=bluesky&utm_medium=social&utm_campaign=publish&utm_content=did%3Aplc%3Alehcqqkwzcwvjvw66uthu5oq%2F3n2r2wnzprk2y"
+                }
+              },
+              "facets": [
+                {
+                  "features": [
+                    {
+                      "$type": "app.bsky.richtext.facet#mention",
+                      "did": "did:plc:example2"
+                    }
+                  ],
+                  "index": {
+                    "byteEnd": 57,
+                    "byteStart": 38
+                  }
+                }
+              ],
+              "langs": [
+                "en-US"
+              ],
+              "text": "We're happy to announce the venue for @atmosphereconf.org 2027: De Rijtuigenloods in Amersfoort, Netherlands"
+            },
+            "author": {
+              "handle": "atmosphere.community"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

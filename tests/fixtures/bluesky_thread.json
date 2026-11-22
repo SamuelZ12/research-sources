@@ -1,0 +1,75 @@
+{
+  "thread": {
+    "$type": "app.bsky.feed.defs#threadViewPost",
+    "post": {
+      "uri": "at://did:plc:example0/app.bsky.feed.post/3n2opitxdyc2j",
+      "likeCount": 1925,
+      "replyCount": 768,
+      "repostCount": 340,
+      "quoteCount": 1157,
+      "author": {
+        "handle": "bsky.app",
+        "did": "did:plc:example0",
+        "displayName": "Bluesky"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "v1.138 is live!\n\nView counts are available in beta! Now you can see how many people your posts are reaching. The numbers are private — they only appear on your own posts and only to you. To turn them on, enable beta features here: bsky.app/settings/bet.... Let us know what you think.",
+        "createdAt": "2026-11-19T18:33:36.813Z",
+        "facets": [
+          {
+            "features": [
+              {
+                "$type": "app.bsky.richtext.facet#link",
+                "uri": "https://bsky.app/settings/beta-features"
+              }
+            ],
+            "index": {
+              "byteEnd": 257,
+              "byteStart": 233
+            }
+          }
+        ]
+      },
+      "embed": {
+        "$type": "app.bsky.embed.video#view"
+      }
+    },
+    "replies": [
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:example0/app.bsky.feed.post/3n2opitysuc2j",
+          "likeCount": 942,
+          "replyCount": 43,
+          "repostCount": 86,
+          "quoteCount": 14,
+          "author": {
+            "handle": "bsky.app",
+            "did": "did:plc:example0",
+            "displayName": "Bluesky"
+          },
+          "record": {
+            "$type": "app.bsky.feed.post",
+            "text": "We’ve also made it easier to share posts from Bluesky. When you tap the arrow icon on mobile, you’ll now have the option of sharing directly to your other apps.",
+            "createdAt": "2026-11-19T18:33:36.814Z",
+            "reply": {
+              "parent": {
+                "cid": "bafyreihjpuz225u5djer7b6oqj5aszoqcblsjogyzlkr2ipw65cz3sk45m",
+                "uri": "at://did:plc:example0/app.bsky.feed.post/3n2opitxdyc2j"
+              },
+              "root": {
+                "cid": "bafyreihjpuz225u5djer7b6oqj5aszoqcblsjogyzlkr2ipw65cz3sk45m",
+                "uri": "at://did:plc:example0/app.bsky.feed.post/3n2opitxdyc2j"
+              }
+            }
+          },
+          "embed": {
+            "$type": "app.bsky.embed.video#view"
+          }
+        },
+        "replies": []
+      }
+    ]
+  }
+}
