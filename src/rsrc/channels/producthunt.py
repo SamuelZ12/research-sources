@@ -119,7 +119,7 @@ def target(value):
         case ["posts", launch]:
             return None, launch
         case ["p", _, _]:
-            raise Failure("upstream_error", "Product Hunt MCP does not expose forum discussions or replies")
+            raise Failure("usage", "Product Hunt MCP does not expose forum discussions or replies")
     raise Failure("usage", "unrecognized Product Hunt URL path")
 
 

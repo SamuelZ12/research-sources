@@ -102,7 +102,8 @@ def test_broken_empty(capsys):
 
 def test_forum_does_not_resolve_to_product(capsys):
     code, out, calls = command(capsys, ["read", "https://www.producthunt.com/p/linear/thread"])
-    assert code == 1 and not calls and "forum discussions" in out["error"]["message"]
+    assert code == 2 and out["error"]["code"] == "usage" and not calls
+    assert "forum discussions" in out["error"]["message"]
 
 
 @pytest.mark.parametrize("field,value", [("rank", 2), ("rank", True), ("launched_at", "2026-11-20T23:59:00-08:00"),
