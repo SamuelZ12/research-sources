@@ -533,9 +533,8 @@ def test_read_gets_only_the_chosen_vtt_from_the_first_extraction(
 
 
 @pytest.mark.parametrize("status,body,error", [
-    (429, "", "rate_limited"), (403, "", "blocked"), (500, "", "upstream_error"),
+    (429, "", "rate_limited"),
     (200, "<html>Sign in to confirm you're not a bot</html>", "blocked"),
-    (200, "<html>wrong response</html>", "upstream_error"),
     (200, "x" * (youtube.MAX_CAPTION + 1), "upstream_error"),
 ])
 def test_failed_direct_caption_get_returns_an_error_without_a_retry(rsrc, caption_http, status, body, error):
@@ -544,6 +543,19 @@ def test_failed_direct_caption_get_returns_an_error_without_a_retry(rsrc, captio
     code, out = rsrc(["read", UPLOADED], fake)
     assert code == 1 and out["ok"] is False and out["error"]["code"] == error
     assert len(calls) == len(fake.calls) == 1 and out["items"][0]["text"] is None
+
+
+@pytest.mark.parametrize("status,body", [
+    (403, ""), (500, ""), (200, "<html>wrong response</html>"),
+])
+def test_a_refused_or_broken_direct_caption_get_falls_back_to_one_caption_run(rsrc, caption_http, status, body):
+    calls = caption_http(body, status)
+    fake = FakeRunner(ok(with_caption_url(META_UPLOADED, "subtitles", "en")), caption_run(UPLOADED_VTT))
+    code, out = rsrc(["read", UPLOADED], fake)
+    assert code == 0 and out["ok"] is True and len(calls) == 1 and len(fake.calls) == 2
+    assert out["items"][0]["text"] == youtube.policy.clean_vtt(UPLOADED_VTT)
+    [note] = [n for n in out["meta"]["notes"] if "direct caption request failed" in n]
+    assert "used a yt-dlp caption run" in note
 
 
 def test_read_envelope_names_the_channel_action_and_input(rsrc):

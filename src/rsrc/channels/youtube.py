@@ -101,6 +101,12 @@ class _Failed(Exception):
         self.rejected = rejected or []
 
 
+class _DirectFailed(_Failed):
+    """The direct caption GET failed in a way yt-dlp's own downloader may not: the read falls back to it.
+
+    Never raised for a rate limit, a login or bot check, a timeout or an oversized file."""
+
+
 class _YtDlp:
     """Counts a command's yt-dlp runs and direct caption request in its one `meta.attempts` entry.
 
@@ -366,7 +372,7 @@ def _transcript(ytdlp: _YtDlp, video_id: str, info: dict, words: int, notes: lis
         if track is None:
             text, made = _recognise(ytdlp, video_id, info, record["language"])
         else:
-            text = policy.clean_vtt(_caption_text(ytdlp, video_id, info, track, source))
+            text = policy.clean_vtt(_caption_text(ytdlp, video_id, info, track, source, notes))
             made = {"source": f"youtube-{source}", "track": track}
         spoken = text.split()
         if not spoken:
@@ -386,11 +392,14 @@ def _transcript(ytdlp: _YtDlp, video_id: str, info: dict, words: int, notes: lis
     return " ".join(spoken[:words]), record, None
 
 
-def _caption_text(ytdlp: _YtDlp, video_id: str, info: dict, track: str, source: str) -> str:
+def _caption_text(ytdlp: _YtDlp, video_id: str, info: dict, track: str, source: str, notes: list[str]) -> str:
     """Read the selected VTT from the same extraction that established its language.
 
-    Keep yt-dlp's downloader for other URL shapes and for OS proxy configurations.
-    Only choose the downloader before the request. A failed GET ends the read.
+    Keep yt-dlp's downloader for other URL shapes and for OS proxy configurations. A rate limit,
+    a login or bot check, a timeout or an oversized file on the direct GET ends the read. Any
+    other failure of it (a refused or expired address, a server error, a body that is not WebVTT,
+    a dropped connection) falls back to one yt-dlp caption run, as before this shortcut existed,
+    and a note says so.
     """
     rows = info["subtitles" if source == "uploaded" else "automatic_captions"][track]
     row = next((r for r in reversed(rows) if r.get("ext") == "vtt"), {})
@@ -404,7 +413,10 @@ def _caption_text(ytdlp: _YtDlp, video_id: str, info: dict, track: str, source: 
                 raise _Failed("upstream_error", "caption address does not identify the selected original video track")
             headers = info.get("http_headers") or {}
             agent = headers.get("User-Agent") if isinstance(headers, dict) else None
-            return _fetch_vtt(ytdlp, parts.path + "?" + parts.query, agent)
+            try:
+                return _fetch_vtt(ytdlp, parts.path + "?" + parts.query, agent)
+            except _DirectFailed as failure:
+                notes.append(f"direct caption request failed ({failure.message}); used a yt-dlp caption run")
     return _caption_file(ytdlp, video_id, track, source)
 
 
@@ -421,10 +433,8 @@ def _fetch_vtt(ytdlp: _YtDlp, target: str, agent: str | None) -> str:
         response = connection.getresponse()
         if response.status == 429:
             raise _Failed("rate_limited", "YouTube caption request returned HTTP 429")
-        if response.status in (401, 403):
-            raise _Failed("blocked", f"YouTube refused the caption request (HTTP {response.status})")
         if response.status != 200:
-            raise _Failed("upstream_error", f"YouTube caption request returned HTTP {response.status}")
+            raise _DirectFailed("upstream_error", f"YouTube caption request returned HTTP {response.status}")
         data = bytearray()
         while len(data) <= MAX_CAPTION:
             remaining = deadline - time.monotonic()
@@ -438,11 +448,11 @@ def _fetch_vtt(ytdlp: _YtDlp, target: str, agent: str | None) -> str:
     except TimeoutError:
         raise _Failed("timeout", "YouTube caption request timed out") from None
     except (OSError, http.client.HTTPException, ValueError):
-        raise _Failed("network_error", "YouTube caption request failed") from None
+        raise _DirectFailed("network_error", "YouTube caption request failed") from None
     finally:
         connection.close()
     if response.length:
-        raise _Failed("upstream_error", "YouTube caption download ended early")
+        raise _DirectFailed("upstream_error", "YouTube caption download ended early")
     if len(data) > MAX_CAPTION:
         raise _Failed("upstream_error", "YouTube caption file exceeds the size limit")
     text = data.decode("utf-8-sig", errors="replace")
@@ -452,7 +462,7 @@ def _fetch_vtt(ytdlp: _YtDlp, target: str, agent: str | None) -> str:
             raise _Failed("rate_limited", "YouTube returned a rate limit for the caption request")
         if any(phrase in lower for phrase in _BLOCK):
             raise _Failed("blocked", "YouTube returned a login or bot check for the caption request")
-        raise _Failed("upstream_error", "YouTube returned an invalid WebVTT caption file")
+        raise _DirectFailed("upstream_error", "YouTube returned an invalid WebVTT caption file")
     return text
 
 
