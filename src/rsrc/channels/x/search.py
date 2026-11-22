@@ -156,7 +156,7 @@ def _epoch(day: date) -> int:
     return int(datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp())
 
 
-def collect(searcher, windowed, per_window, product="Latest", stats=None):
+def collect(searcher, windowed, per_window, product="Latest", stats=None, limit=None):
     """Yield up to `per_window` new posts per window, deduplicated across all windows.
 
     `searcher` is this module's Searcher or `fx.Searcher`: `page(query, product, cursor, count)`
@@ -173,7 +173,10 @@ def collect(searcher, windowed, per_window, product="Latest", stats=None):
     for query, start, end in windowed:
         got, cursor, window_seen = 0, None, set()
         while got < per_window:
-            records, next_cursor = searcher.page(query, product, cursor, min(searcher.page_size, per_window - got))
+            count = min(searcher.page_size, per_window - got)
+            if limit:
+                count = min(count, limit - len(seen))
+            records, next_cursor = searcher.page(query, product, cursor, count)
             fresh = False
             for record in records:
                 if record["id"] in window_seen:
@@ -188,11 +191,24 @@ def collect(searcher, windowed, per_window, product="Latest", stats=None):
                 seen.add(record["id"])
                 got += 1
                 yield record
+                if limit and len(seen) >= limit:
+                    return
                 if got >= per_window:
                     break
-            if not next_cursor or next_cursor == cursor or not fresh:
-                break
-            cursor = next_cursor
+            if got >= per_window:
+                reason = "per-window limit reached"
+            elif not next_cursor:
+                reason = "no more result pages"
+            elif next_cursor == cursor:
+                reason = "backend repeated its cursor"
+            elif not fresh:
+                reason = "page contained no new posts"
+            else:
+                cursor = next_cursor
+                continue
+            if limit:
+                stats.setdefault("ends", []).append(reason)
+            break
 
 
 def _in_window(created_at, start, end) -> bool:

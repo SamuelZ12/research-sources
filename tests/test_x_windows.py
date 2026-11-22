@@ -187,3 +187,28 @@ def test_bad_date_is_a_usage_error(run):
     fake = FakeSearch(lambda q, cursor, count: ([], None))
     code, _, env = run(["q", "--since", "2026-13-01"], fake)
     assert code == 2 and fake.requests == [] and env["error"]["code"] == "usage"
+
+
+def test_limit_and_remaining_page_size(run):
+    ids = iter(range(80))
+    fake = FakeSearch(lambda q, c, n: ([str(next(ids)) for _ in range(n)], f"{c}x"))
+    _, posts, doc = run(["q", "--limit", "30"], fake)
+    assert len(posts) == 30 and [r["count"] for r in fake.requests] == [20, 10]
+    assert not doc["meta"]["notes"]
+
+
+def test_limit_across_windows(run):
+    fake = FakeSearch(lambda q, c, n: ([f"{q}-{i}" for i in range(n)], None))
+    _, posts, _ = run(["q", "--limit", "5", "--per-window", "3", "--since", "2026-10-01",
+                       "--until", "2026-11-01"], fake)
+    assert len(posts) == 5 and [r["count"] for r in fake.requests] == [3, 2]
+
+
+@pytest.mark.parametrize(("options", "reason"), [
+    (["--per-window", "2"], "per-window limit"),
+    (["--max-requests", "1"], "request cap"),
+    ([], "backend repeated its cursor")])
+def test_short_limit_explains_why(run, options, reason):
+    fake = FakeSearch(lambda q, c, n: ([f"{c}-1", f"{c}-2"], "same"))
+    _, posts, doc = run(["q", "--limit", "30", *options], fake)
+    assert len(posts) < 30 and reason in doc["meta"]["notes"][-1]

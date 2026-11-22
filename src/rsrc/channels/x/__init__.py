@@ -71,8 +71,9 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     p.add_argument("--until", type=iso_date,
                    help="end date YYYY-MM-DD (exclusive); default: tomorrow UTC when --since is given")
     p.add_argument("--window-days", type=positive_int, default=7, help="days per window (default 7)")
-    p.add_argument("--per-window", type=positive_int, default=20,
-                   help="max posts per window, or in total without --since (default 20)")
+    p.add_argument("--limit", type=positive_int, help="max unique posts in total, across all date windows")
+    p.add_argument("--per-window", type=positive_int,
+                   help="max unique posts per date window (defaults to --limit, otherwise 20)")
     p.add_argument("--backend", choices=BACKENDS, default=None,
                    help="use only this backend, ignoring RSRC_X_SEARCH. fxtwitter needs no login; "
                         "x-graphql uses your configured cookies; x-browser uses the X account signed in to Ego Lite")
@@ -100,8 +101,10 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
 
 def run_search(args, ctx) -> dict:
     input = {"query": args.query, "since": _iso(args.since), "until": _iso(args.until),
-             "window_days": args.window_days, "per_window": args.per_window, "top": args.top,
+             "window_days": args.window_days, "per_window": args.per_window or args.limit or 20, "top": args.top,
              "backend": args.backend, "max_requests": args.max_requests}
+    if args.limit is not None:
+        input["limit"] = args.limit
     try:
         order = (args.backend,) if args.backend else load_search_order(ctx.environ)
     except CookieError as e:
@@ -134,7 +137,7 @@ def browser_remedy(args):
         return "ego-browser is unavailable. To install Ego Lite on macOS, run: open https://lite.ego.app"
     command = ["rsrc", "x", "search", "--backend", "x-browser"]
     for flag, default in (("since", None), ("until", None), ("window_days", 7),
-                          ("per_window", 20), ("max_requests", 25)):
+                          ("per_window", None), ("limit", None), ("max_requests", 25)):
         value = getattr(args, flag)
         if flag == "max_requests":
             value = max(2, value)
@@ -154,7 +157,7 @@ def _search(args, backend, ctx, max_requests) -> dict:
     started = time.monotonic()
     run = {"backend": backend, "items": items, "meta": {}, "error": None}
     try:
-        dropped, capped = search_posts(args, backend, client, ctx.environ,
+        stats, capped = search_posts(args, backend, client, ctx.environ,
                                        lambda record: items.append(to_item(record)))
     except (UsageError, CookieError, HttpError) as e:
         code = error_code(e)
@@ -164,15 +167,22 @@ def _search(args, backend, ctx, max_requests) -> dict:
     outcome = "ok" if items else "no_results"
     if capped:
         run["meta"]["truncated"] = "request_cap"
-    if dropped:
-        run["meta"]["notes"] = [f"{dropped} post(s) outside their date window dropped"]
+    notes = []
+    if dropped := stats.get("dropped"):
+        notes.append(f"{dropped} post(s) outside their date window dropped")
+    if args.limit and len(items) < args.limit:
+        reasons = list(dict.fromkeys(stats.get("ends", [])))
+        if capped:
+            reasons.append("request cap reached")
+        notes.append(f"Returned {len(items)} of {args.limit} requested posts: " + ", ".join(reasons))
+    run["meta"]["notes"] = notes
     return {**run, "outcome": outcome, "attempts": [_attempt(backend, outcome, client, started)]}
 
 
-def search_posts(args, backend, client, environ, sink) -> tuple[int, bool]:
+def search_posts(args, backend, client, environ, sink) -> tuple[dict, bool]:
     """Run a search from parsed `search` args on `backend`, passing each record to `sink(record)`.
 
-    Returns (posts dropped for falling outside their date window, whether the request cap stopped the search).
+    Returns collection statistics and whether the request cap stopped the search.
     Raises UsageError (bad arguments), CookieError (missing cookies, x-graphql only) and HttpError
     (incl. AuthError, RateLimited) as they occur.
     """
@@ -193,11 +203,13 @@ def search_posts(args, backend, client, environ, sink) -> tuple[int, bool]:
     stats, capped = {}, False
     try:
         with backend_session as searcher:
-            for record in search.collect(searcher, windowed, args.per_window, "Top" if args.top else "Latest", stats):
+            per_window = args.per_window or args.limit or 20
+            for record in search.collect(searcher, windowed, per_window, "Top" if args.top else "Latest",
+                                         stats, limit=args.limit):
                 sink(record)
     except CapReached:
         capped = True
-    return stats.get("dropped", 0), capped
+    return stats, capped
 
 
 def run_read(args, ctx) -> dict:
