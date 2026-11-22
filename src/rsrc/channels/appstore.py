@@ -101,11 +101,13 @@ def catalog(client, country, *, term=None, app_id=None, limit=25):
             raise Mismatch("App Store listing has a different ID or storefront")
         if row["kind"] != "software":
             raise ValueError
-        raw = {k: row.get(k) for k in ("primaryGenreName", "averageUserRating", "userRatingCount", "version",
+        raw = {k: row.get(k) for k in ("primaryGenreName", "version",
                                        "currentVersionReleaseDate")}
         apps.append(env.item(id=ident, url=row["trackViewUrl"], title=string(row["trackName"]),
                              author=string(row["artistName"]), published_at=utc(raw["currentVersionReleaseDate"]),
-                             source="appstore", raw={**raw, "country": country, "kind": "app"}))
+                             source="appstore", engagement={"rating": row.get("averageUserRating"),
+                                                            "ratings": row.get("userRatingCount")},
+                             raw={**raw, "country": country, "kind": "app"}))
     return apps
 
 
@@ -115,8 +117,8 @@ def review(app, ident, title, author, date, body, stars, votes, total_votes, ver
         raise ValueError
     return env.item(id=str(number(ident)), title=string(title), author=string(author), published_at=utc(date),
                     text=string(body), url=app["url"].split("?")[0] + "?see-all=reviews", source="appstore",
-                    engagement={"helpful_votes": number(votes), "total_votes": number(total_votes)}, raw={"kind": "review", "app_id": app["id"],
-                    "country": app["raw"]["country"], "rating": stars, "version": version})
+                    engagement={"rating": stars, "helpful_votes": number(votes), "total_votes": number(total_votes)},
+                    raw={"kind": "review", "app_id": app["id"], "country": app["raw"]["country"], "version": version})
 
 
 def rss(client, app, page, sort):

@@ -31,7 +31,8 @@ def test_search(capsys):
     code, out = run(capsys, ["search", "Signal"], recording("app"))
     a = out["items"][0]
     assert code == 0 and a["id"] == "874139669" and a["title"] == "Signal - Private Messenger"
-    assert a["author"] and a["raw"]["userRatingCount"] and a["raw"]["version"]
+    assert a["engagement"]["rating"] == recording("app")["results"][0]["averageUserRating"]
+    assert a["author"] and a["engagement"]["ratings"] and a["raw"]["version"]
 
 
 @pytest.mark.parametrize("target", ["Signal - Private Messenger", "874139669", "https://apps.apple.com/us/app/id874139669"])
@@ -41,7 +42,7 @@ def test_read(capsys, target):
     assert code == 0 and app["raw"]["kind"] == "app"
     assert first["id"] == "14813499075" and first["published_at"] == "2026-11-20T17:25:52Z"
     assert first["raw"]["version"] == "8.38" and first["engagement"]["helpful_votes"] == 0
-    assert first["text"] and first["raw"]["rating"] == 5 and first["published_at"] >= second["published_at"]
+    assert first["text"] and first["engagement"]["rating"] == 5 and first["published_at"] >= second["published_at"]
 
 
 def test_ambiguous_name_returns_choices_without_reading(capsys):
