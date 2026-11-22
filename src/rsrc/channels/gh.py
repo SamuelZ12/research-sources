@@ -1,15 +1,14 @@
 """GitHub repositories and issues via gh or the anonymous REST API."""
 
 import http.client
-import io
 import json
 import re
 import time
-import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from urllib.parse import urlencode, urljoin, urlsplit
 
+from rsrc.http import CapReached, Client, NetworkError, single_hop_transport, urllib_transport
 from rsrc import proc
 from rsrc import envelope as env
 
@@ -69,6 +68,13 @@ class _Gh:
         self.runner = ctx.runner or proc.run
         self.attempts: list[dict] = []
 
+        transport = self.transport if ctx.transport is urllib_transport else ctx.transport
+        self.client = Client(max_requests=20, min_interval=0, transport=transport)
+
+    def close(self):
+        if self.connection is not None:
+            self.connection.close()
+
     def _record(self, outcome: str, ms) -> None:
         self.attempts.append(env.attempt(BACKEND, outcome, ms=ms))
 
@@ -101,81 +107,85 @@ class _Gh:
         self._record("no_results" if value in ([], (0, [])) else "ok", ms)
         return value
 
-    def start_public_repo(self):
-        host = "api.github.com"
-        if "https" not in urllib.request.getproxies() or urllib.request.proxy_bypass(host):
-            self.connection = http.client.HTTPSConnection(host, timeout=TIMEOUT)
-
-    def open_public(self, request):
+    def transport(self, method, url, headers, body):
+        target = urlsplit(url)
+        if target.netloc != "api.github.com":
+            return single_hop_transport(method, url, headers, body)
         if self.connection is None:
-            return urllib.request.urlopen(request, timeout=TIMEOUT)
-        self.connection.request("GET", request.selector, headers=dict(request.header_items()))
-        response = self.connection.getresponse()
-        if 200 <= response.status < 300:
-            return response
-        with response:
-            body = response.read()
-        if response.status in (301, 302, 303, 307, 308) and response.headers.get("Location"):
-            url = urljoin(request.full_url, response.headers["Location"])
-            if urlsplit(url).scheme != "https":
-                raise _Failed("upstream_error", "Unexpected GitHub redirect")
-            redirect = urllib.request.Request(url, headers=dict(request.header_items()))
-            return urllib.request.urlopen(redirect, timeout=TIMEOUT)
-        raise urllib.error.HTTPError(request.full_url, response.status, response.reason,
-                                     response.headers, io.BytesIO(body))
+            if "https" in urllib.request.getproxies() and not urllib.request.proxy_bypass(target.hostname):
+                return single_hop_transport(method, url, headers, body)
+            self.connection = http.client.HTTPSConnection(target.hostname, timeout=TIMEOUT)
+        self.connection.request(method, target.path + ("?" + target.query if target.query else ""), headers=headers)
+        with self.connection.getresponse() as response:
+            return response.status, response.headers, response.read()
 
     def public(self, path, parse, *, raw=False, missing_ok=False):
         self.backend = "github-rest"
         started = time.monotonic()
+        previous = self.client.requests_made
         outcome = "upstream_error"
+        url = "https://api.github.com/" + path
+        headers = {"Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
+                   "User-Agent": "research-sources"}
         try:
-            request = urllib.request.Request("https://api.github.com/" + path, headers={
-                "Accept": "application/vnd.github.raw" if raw else "application/vnd.github+json",
-                "User-Agent": "research-sources",
-            })
-            with self.open_public(request) as response:
-                if response.headers.get_content_type() == "text/html":
-                    raise _Failed("blocked", "GitHub returned an HTML page")
-                value = parse(response.read().decode())
+            while True:
+                status, response_headers, body = self.client.request_with_headers("GET", url, headers)
+                if not isinstance(status, int) or not 100 <= status <= 599:
+                    raise _Failed("upstream_error", "Invalid GitHub HTTP status")
+                fields = {k.lower(): v for k, v in response_headers.items()}
+                if status not in (301, 302, 303, 307, 308):
+                    break
+                location = fields.get("location")
+                if not location:
+                    raise _Failed("upstream_error", "Missing GitHub redirect location")
+                url = urljoin(url, location)
+                target = urlsplit(url)
+                if target.scheme != "https" or not target.hostname or target.username is not None:
+                    raise _Failed("upstream_error", "Unexpected GitHub redirect")
+                if target.netloc != "api.github.com":
+                    headers = {"User-Agent": "research-sources"}
+            if status == 404 and missing_ok:
+                outcome = "no_results"
+                return None
+            if status != 200:
+                raise _rest_error(status, fields, body, path)
+            if fields.get("content-type", "").split(";")[0].strip().lower() == "text/html":
+                raise _Failed("blocked", "GitHub returned an HTML page")
+            value = parse(body.decode())
             outcome = "no_results" if value == (0, []) else "ok"
             return value
-        except urllib.error.HTTPError as exc:
-            with exc:
-                if exc.code == 404 and missing_ok:
-                    outcome = "no_results"
-                    return None
-                failure = _public_error(exc, path)
-                outcome = failure.code
-                raise failure from None
         except (ValueError, TypeError, KeyError, AttributeError):
             raise _Failed(outcome, "GitHub returned an incomplete or malformed response") from None
-        except (OSError, http.client.HTTPException):
+        except CapReached:
+            raise _Failed(outcome, "GitHub request cap reached") from None
+        except NetworkError:
             outcome = "network_error"
             raise _Failed(outcome, "Could not read GitHub API response") from None
         except _Failed as failure:
             outcome = failure.code
             raise
         finally:
-            self.attempts.append(env.attempt(self.backend, outcome, requests=1, ms=env.elapsed_ms(started)))
+            self.attempts.append(env.attempt(self.backend, outcome, requests=self.client.requests_made - previous,
+                                             ms=env.elapsed_ms(started)))
 
 
-def _public_error(exc, path):
-    if exc.code == 404 and path.startswith("repos/") and path.count("/") == 2:
+def _rest_error(status, headers, body, path):
+    if status == 404 and path.startswith("repos/") and path.count("/") == 2:
         return _Failed("not_found", "The repository does not exist or is private. "
                        "Run `gh auth login` to read private repositories your account can access.")
-    limited = exc.code == 429 or (exc.code == 403 and (
-        exc.headers.get("X-RateLimit-Remaining") == "0" or
-        "Retry-After" in exc.headers or b"rate limit" in exc.read().lower()))
+    limited = status == 429 or (status == 403 and (
+        headers.get("x-ratelimit-remaining") == "0" or "retry-after" in headers
+        or b"rate limit" in body.lower() or b"abuse detection" in body.lower()))
     if limited:
-        reset = exc.headers.get("X-RateLimit-Reset", "")
+        reset = headers.get("x-ratelimit-reset", "")
         when = "reset time unavailable"
-        if reset.isdigit() and len(reset) <= 11:
+        if reset.isascii() and reset.isdigit() and len(reset) <= 11:
             when = "resets at " + datetime.fromtimestamp(int(reset), UTC).isoformat()
-        elif exc.headers.get("Retry-After"):
-            when = "retry after " + exc.headers["Retry-After"] + " seconds"
+        elif re.fullmatch(r"[0-9]{1,10}", headers.get("retry-after", "")):
+            when = "retry after " + headers["retry-after"] + " seconds"
         return _Failed("rate_limited", f"GitHub public rate limit ({when}). Run `gh auth login` for a higher limit.")
-    code = {401: "auth_failed", 403: "blocked", 404: "not_found"}.get(exc.code, "upstream_error")
-    return _Failed(code, f"GitHub returned HTTP {exc.code}")
+    code = {401: "auth_failed", 403: "blocked", 404: "not_found"}.get(status, "upstream_error")
+    return _Failed(code, f"GitHub returned HTTP {status}")
 
 
 def classify(result: proc.Result) -> tuple[str, str]:
@@ -209,7 +219,6 @@ def run_repo(args, ctx) -> dict:
         except _NoLogin:
             if not gh.allow_public:
                 raise
-            gh.start_public_repo()
             data = gh.public(path, _repo_record)
         name = data["full_name"]
         if name.lower() != requested.lower():
@@ -229,8 +238,7 @@ def run_repo(args, ctx) -> dict:
                             meta={"attempts": gh.attempts, "notes": notes},
                             error=env.error(failure.code, failure.message))
     finally:
-        if gh.connection is not None:
-            gh.connection.close()
+        gh.close()
 
     return env.envelope(CHANNEL, "repo", input_, gh.backend, [_repo_item(data, readme, release)],
                         meta={"attempts": gh.attempts, "notes": notes})
@@ -395,6 +403,8 @@ def _search(ctx, action, input_, argv, to_item) -> dict:
     except _Failed as failure:
         return env.envelope(CHANNEL, action, input_, gh.backend, [], meta={"attempts": gh.attempts},
                             error=env.error(failure.code, failure.message))
+    finally:
+        gh.close()
     return env.envelope(CHANNEL, action, input_, gh.backend, [to_item(r) for r in records],
                         meta={"attempts": gh.attempts})
 

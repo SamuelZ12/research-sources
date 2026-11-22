@@ -143,3 +143,28 @@ def test_redirect_transport_returns_the_location_without_following_it():
     assert redirected == (302, b"/landing")
     assert direct == (200, b"")
     assert seen == ["/start", "/landing"]
+
+
+def test_request_with_headers_shares_the_cap_and_accepts_both_transport_shapes():
+    replies = iter([(403, {"X-RateLimit-Remaining": "0"}, b"limited"), (200, b"ok")])
+    client = Client(max_requests=2, min_interval=0, transport=lambda *args: next(replies))
+    assert client.request_with_headers("GET", "https://example.org") == (
+        403, {"X-RateLimit-Remaining": "0"}, b"limited")
+    assert client.request("GET", "https://example.org") == (200, b"ok")
+    with pytest.raises(CapReached):
+        client.request_with_headers("GET", "https://example.org")
+
+
+def test_single_hop_transport_exposes_redirect_headers_without_following():
+    from rsrc.http import single_hop_transport
+
+    server, seen = serve_redirect()
+    try:
+        client = Client(transport=single_hop_transport)
+        url = f"http://127.0.0.1:{server.server_port}/start"
+        status, headers, data = client.request_with_headers("GET", url, {"Authorization": "Bearer test-value"})
+        assert (status, headers["Location"], data) == (302, "/landing", b"")
+        assert seen == ["/start"]
+    finally:
+        server.shutdown()
+        server.server_close()

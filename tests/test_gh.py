@@ -288,16 +288,19 @@ def public(monkeypatch):
     def respond(*responses):
         queue = iter(responses)
 
-        def open_url(request, timeout):
-            calls.append(request)
+        def transport(self, method, url, headers, body):
+            calls.append(gh.urllib.request.Request(url, headers=headers))
             value = next(queue)
+            if isinstance(value, HTTPError):
+                with value:
+                    return value.code, value.headers, value.read()
             if isinstance(value, Exception):
                 raise value
-            response = BytesIO(value.encode())
-            response.headers = Message()
-            return response
+            if isinstance(value, tuple):
+                return value
+            return 200, {}, value.encode()
 
-        monkeypatch.setattr(gh._Gh, "open_public", lambda self, request: open_url(request, gh.TIMEOUT))
+        monkeypatch.setattr(gh._Gh, "transport", transport)
         return calls
     return respond
 
@@ -582,3 +585,24 @@ def test_proc_run_file_limit_passes_argv_env_and_cwd_unchanged(tmp_path):
 def test_proc_run_file_limit_missing_executable():
     with pytest.raises(proc.Missing):
         proc.run(["rsrc-no-such-executable-7f3a"], timeout=5, file_limit=1000)
+
+def test_redirect_hops_count_and_external_requests_drop_api_headers(rsrc, public):
+    rename, readme, external = json.loads((FIXTURES / "gh_redirects.json").read_text())
+
+    def redirect(entry):
+        return entry["status"], {"Location": entry["location"]}, b""
+
+    calls = public(redirect(rename), REPO, redirect(readme), (302, {"Location": external["url"]}, b""),
+                   redirect(external), README, RELEASE)
+    code, out = rsrc(["repo", "mitsuhiko/flask"], FakeGh(NOT_LOGGED_IN))
+    assert code == 0 and out["backend"] == "github-rest"
+    assert [r.full_url for r in calls][4:6] == [external["url"], external["location"]]
+    assert [r.get_header("Accept") for r in calls[2:6]] == ["application/vnd.github.raw"] * 2 + [None] * 2
+    assert [a["requests"] for a in out["meta"]["attempts"] if a["backend"] == "github-rest"] == [2, 4, 1]
+
+
+def test_redirect_cap_stops_before_another_get(rsrc, public):
+    calls = public(*[(301, {"Location": "/loop"}, b"")] * 20)
+    code, out = rsrc(["repo", "a/b"], FakeGh(NOT_LOGGED_IN))
+    assert code == 1 and "request cap" in out["error"]["message"]
+    assert len(calls) == next(a["requests"] for a in out["meta"]["attempts"] if a["backend"] == "github-rest") == 20

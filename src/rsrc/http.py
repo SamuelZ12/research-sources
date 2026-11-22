@@ -49,14 +49,29 @@ _no_redirects = urllib.request.build_opener(_NoRedirect)
 
 
 def urllib_transport(method, url, headers, body):
+    status, _, data = _urllib_response(method, url, headers, body)
+    return status, data
+
+
+def _urllib_response(method, url, headers, body):
     headers = headers or {}
     opener = _no_redirects if any(k.lower() == "cookie" for k in headers) else _follow_redirects
-    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    return _open(opener, method, url, headers, body)
+
+
+def _open(opener, method, url, headers, body):
+    request = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
     try:
-        with opener.open(request, timeout=TIMEOUT_S) as response:
-            return response.status, response.read()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
+        response = opener.open(request, timeout=TIMEOUT_S)
+    except urllib.error.HTTPError as exc:
+        response = exc
+    with response:
+        return response.status, response.headers, response.read()
+
+
+def single_hop_transport(method, url, headers, body):
+    """Return the response headers and body, including for an unfollowed redirect."""
+    return _open(_no_redirects, method, url, headers, body)
 
 
 def redirect_transport(method, url, headers, body):
@@ -76,13 +91,18 @@ class Client:
         self.max_requests = max_requests
         self.min_interval = min_interval
         self.requests_made = 0
-        self._transport = transport
+        self._transport = _urllib_response if transport is urllib_transport else transport
         self._clock = clock
         self._sleep = sleep
         self._last = None
 
     def request(self, method, url, headers=None, body=None) -> tuple[int, bytes]:
         """Return (status, body) for any HTTP status; raise NetworkError if no response arrives."""
+        status, _, data = self.request_with_headers(method, url, headers, body)
+        return status, data
+
+    def request_with_headers(self, method, url, headers=None, body=None):
+        """Return (status, headers, body). Legacy pair transports supply empty headers."""
         if self.max_requests is not None and self.requests_made >= self.max_requests:
             raise CapReached(f"request cap of {self.max_requests} reached")
         if self._last is not None:
@@ -91,9 +111,16 @@ class Client:
                 self._sleep(wait)
         self.requests_made += 1
         try:
-            return self._transport(method, url, headers, body)
+            response = self._transport(method, url, headers, body)
+            if len(response) == 2:
+                status, data = response
+                return status, {}, data
+            return response
         except (OSError, http.client.HTTPException) as e:
-            reason = getattr(e, "reason", None) or e
+            reason = str(getattr(e, "reason", None) or e)
+            for key, value in (headers or {}).items():
+                if key.lower() == "authorization" and any(part in reason for part in value.split()[1:] or [value]):
+                    reason = "authenticated request failed"
             raise NetworkError(f"{urlsplit(url).netloc}: network error: {reason}") from None
         finally:
             self._last = self._clock()
