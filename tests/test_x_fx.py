@@ -49,7 +49,11 @@ def test_post_urls_and_bare_ids_resolve(arg):
     assert parse_id(arg) == "2117770299454177696"
 
 
-@pytest.mark.parametrize("arg", ["hello", "https://x.com/bkdgiffug", "1", "https://x.com/i/article/2097761142995308544"])
+@pytest.mark.parametrize("arg", [
+    "hello", "https://x.com/bkdgiffug", "1", "https://x.com/i/article/2097761142995308544",
+    "https://x.com/alice/article/123abc", "https://notx.com/alice/article/2117770299454177696",
+    "https://x.com/alice/article/\uff11\uff12\uff13", "\uff11\uff12\uff13",
+])
 def test_non_post_arguments_are_rejected(arg):
     assert parse_id(arg) is None
 
@@ -96,6 +100,15 @@ def test_fxtwitter_malformed_article_is_ignored(article):
     status = load("x_fx_status.json")["status"]
     status["article"] = article
     assert status_record(status)["article"] is None
+
+
+def test_fxtwitter_article_survives_a_null_entity_and_an_empty_atomic_placeholder():
+    status = load("x_fx_status.json")["status"]
+    status["article"] = {"id": "42", "title": "Title", "content": {
+        "blocks": [{"type": "atomic", "text": "", "entityRanges": [{"key": "1"}]}],
+        "entityMap": [None, {"key": "1", "value": {"type": "TWEET", "data": {"tweetId": "7"}}}],
+    }}
+    assert status_record(status)["article"]["text"] == "[post: https://x.com/i/status/7]"
 
 
 def test_fxtwitter_reply_carries_parent_id():

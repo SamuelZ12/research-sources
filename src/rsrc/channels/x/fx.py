@@ -21,10 +21,11 @@ FX_TRIES = 3  # FxTwitter intermittently 404s valid posts
 SEARCH_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/search
 FEEDS = {"Latest": "latest", "Top": "top"}
 POST_URL_RE = re.compile(
-    r"(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status|(?![iI]/)[^/?#]+/article)/(\d{2,20})"
+    r"(?<![\w-])(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status|(?![iI]/)[^/?#]+/article)/(\d{2,20})(?=[/?#]|$)",
+    re.ASCII,
 )
 ARTICLE_LINK_RE = re.compile(r"(?:x|twitter)\.com/[iI]/article/\d{2,20}(?:[/?#]|$)")
-BARE_ID_RE = re.compile(r"^\d{2,20}$")
+BARE_ID_RE = re.compile(r"^\d{2,20}$", re.ASCII)
 TIMELINE_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/profile/{handle}/statuses
 TIMELINE_MAX = 200  # posts per `x timeline`: about 10 requests
 ACCOUNT_RE = re.compile(r"^(?:(?:https?://)?(?:www\.|mobile\.)?(?:x|twitter)\.com/)?@?([A-Za-z0-9_]{1,15})"
@@ -287,8 +288,8 @@ def fx_article(article) -> dict | None:
     blocks, entities = content.get("blocks"), content.get("entityMap", {})
     if not isinstance(blocks, list):
         return None
-    if isinstance(entities, list) and all(isinstance(entry, dict) for entry in entities):
-        entries = ((entry.get("key"), entry.get("value")) for entry in entities)
+    if isinstance(entities, list):
+        entries = ((entry.get("key"), entry.get("value")) for entry in entities if isinstance(entry, dict))
     elif isinstance(entities, dict):
         entries = entities.items()
     else:
@@ -312,11 +313,9 @@ def fx_article(article) -> dict | None:
         if not isinstance(block, dict):
             continue
         kind, text = block.get("type"), block.get("text")
-        if not isinstance(kind, str) or not isinstance(text, str) or not text:
-            continue
         if kind == "atomic":
             text = _article_embed(block.get("entityRanges"), embeds)
-        if text:
+        if isinstance(kind, str) and isinstance(text, str) and text:
             paragraphs.append(ARTICLE_BLOCK_PREFIX.get(kind, "") + text)
     if not paragraphs:
         return None
