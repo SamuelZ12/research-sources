@@ -16,12 +16,13 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import getproxies
 
 from rsrc import envelope as env
 from rsrc import proc
 from rsrc.channels import youtube_original as policy
+from rsrc import http as rsrc_http
 
 CHANNEL = "youtube"
 BACKEND = "yt-dlp"
@@ -202,8 +203,47 @@ def run_search(args, ctx) -> dict:
     notes = []
     if any(item["published_at"] for item in items):
         notes.append("Search published_at dates are approximate, derived from the ages shown by YouTube.")
+    attempts = [ytdlp.attempt("ok" if items else "no_results")]
+    error = None
+    missing = [item for item in items if not item["author"]]
+    if missing:
+        error = _channel_names(missing, ctx, attempts, notes)
     return env.envelope(CHANNEL, "search", input_, BACKEND, items,
-                        meta={"attempts": [ytdlp.attempt("ok" if items else "no_results")], "notes": notes})
+                        meta={"attempts": attempts, "notes": notes}, error=error)
+
+
+def _channel_names(missing, ctx, attempts, notes):
+    """Ask YouTube for each missing byline, stopping on a service failure."""
+    client = rsrc_http.Client(min_interval=0, transport=ctx.transport)
+    started = time.monotonic()
+    error = None
+    recovered = 0
+    try:
+        for item in missing:
+            url = "https://www.youtube.com/oembed?" + urlencode({"url": item["url"], "format": "json"})
+            status, body = client.request("GET", url)
+            if status in (400, 404):
+                continue
+            rsrc_http.raise_refusal(status, body, "YouTube oEmbed")
+            if status != 200:
+                raise rsrc_http.HttpError(f"YouTube oEmbed returned HTTP {status}")
+            data = json.loads(body)
+            if (isinstance(data, dict) and data.get("type") == "video"
+                    and f'src="https://www.youtube.com/embed/{item["id"]}?' in str(data.get("html"))
+                    and isinstance(name := data.get("author_name"), str) and name.strip()):
+                item["author"] = name.strip()
+                recovered += 1
+    except rsrc_http.HttpError as exc:
+        error = env.error(exc.code, str(exc))
+    except (ValueError, RecursionError):
+        error = env.error("upstream_error", "YouTube oEmbed returned invalid JSON")
+    if recovered:
+        notes.append(f"YouTube oEmbed supplied channel names for {recovered} of {len(missing)} results missing them.")
+    if remaining := len(missing) - recovered:
+        notes.append(f"Search results with unavailable channel names: {remaining}.")
+    outcome = error["code"] if error else "ok" if recovered == len(missing) else "partial"
+    attempts.append(env.attempt("youtube-oembed", outcome, client.requests_made, env.elapsed_ms(started)))
+    return error
 
 
 def _search_lines(stdout: str) -> list[dict]:

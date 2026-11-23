@@ -1,0 +1,28 @@
+[
+  {
+    "search": {
+      "id": "Jz4QT0vH-MU",
+      "title": "Give Me 10 Minutes and I'll Make Claude Code 100x Smarter",
+      "creators": null,
+      "timestamp": 1795374000
+    },
+    "oembed": {
+      "type": "video",
+      "html": "<iframe width=\"200\" height=\"113\" src=\"https://www.youtube.com/embed/Jz4QT0vH-MU?feature=oembed\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen title=\"Give Me 10 Minutes and I&#39;ll Make Claude Code 100x Smarter\"></iframe>",
+      "author_name": "Eric Tech"
+    }
+  },
+  {
+    "search": {
+      "id": "8GCqVb4c_yQ",
+      "title": "Claude Code: How to Build & Deploy Your First AI App",
+      "creators": null,
+      "timestamp": 1795219200
+    },
+    "oembed": {
+      "type": "video",
+      "html": "<iframe width=\"200\" height=\"113\" src=\"https://www.youtube.com/embed/8GCqVb4c_yQ?feature=oembed\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen title=\"Claude Code: How to Build &amp; Deploy Your First AI App\"></iframe>",
+      "author_name": "Zinho Automates"
+    }
+  }
+]
