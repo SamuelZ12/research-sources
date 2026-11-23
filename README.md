@@ -205,6 +205,14 @@ uv run pytest -q
 
 The tests also run the browser page scripts under Node.js, so install Node first.
 
+To reproduce the Chrome transport's cookie-isolation test, start a dedicated test Chrome with remote debugging enabled. From this checkout, replace the address with its loopback debugging address and run:
+
+```sh
+uv run python tests/manual/chrome_cookie.py http://127.0.0.1:9333 /tmp/rsrc-cdp-exchange.json
+```
+
+The probe serves a local plain-text page, sets a temporary synthetic HttpOnly cookie, and verifies that the server receives it on a fetch. It checks every received protocol message for the value before writing the normalized exchange. After closing its tab, it asks Chrome for that specific target to verify closure. The probe requires no X or Reddit login.
+
 A change is welcome when it keeps these true:
 
 - **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
