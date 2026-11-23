@@ -61,9 +61,9 @@ class _Failed(Exception):
 
 
 def run(args, ctx) -> dict:
-    names = list(dict.fromkeys(args.channels)) or [name for name in NAMES if name != "linkedin"]
+    names = list(dict.fromkeys(args.channels)) or list(NAMES)
     input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
-    probes = {"linkedin": lambda attempts: probe_linkedin(ctx),
+    probes = {"linkedin": lambda attempts: probe_linkedin(ctx, attempts),
               "bluesky": lambda attempts: bluesky.probe(ctx, attempts, _Failed),
               "x": lambda attempts: probe_x(ctx, args.live_x, attempts),
               "ashby": lambda attempts: probe_ashby(ctx, attempts),
@@ -410,13 +410,12 @@ def probe_ashby(ctx, attempts):
     return "Linear's public Ashby board answered", {"board": "linear"}
 
 
-def probe_linkedin(ctx):
-    folder = linkedin.config_dir(ctx.environ)
-    try:
-        enabled, limit = linkedin.settings(folder)
-        row = linkedin.state(folder)
-    except (OSError, linkedin.Failure):
-        raise _Failed("config", "Cannot read LinkedIn settings or usage.") from None
-    used = row["used"] if row["day"] == linkedin.datetime.now(linkedin.UTC).date().isoformat() else 0
-    return "LinkedIn local status (no page loaded)", {
-        "enabled": enabled, "daily_limit": limit, "used": used, "locked": (folder / "linkedin.locked").exists()}
+LINKEDIN_POST = "https://www.linkedin.com/feed/update/urn:li:activity:7204256477832753153/"
+
+
+def probe_linkedin(ctx, attempts):
+    answer = linkedin.run(SimpleNamespace(url=LINKEDIN_POST), ctx)
+    attempts.extend(answer["meta"]["attempts"])
+    if answer["error"]:
+        raise _Failed(answer["error"]["code"], answer["error"]["message"])
+    return "LinkedIn returned a public post", {"post_id": answer["items"][0]["id"]}

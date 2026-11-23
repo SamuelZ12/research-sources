@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes the ten default channels: Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes the default channels: a public LinkedIn post, Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 Requirements by channel:
 
@@ -86,7 +86,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
 | Ashby | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` |
-| LinkedIn | `rsrc linkedin read URL` (opt-in, public post and rendered comments) |
+| LinkedIn | `rsrc linkedin read URL` (public post and comments) |
 | All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
 
 `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
@@ -199,11 +199,11 @@ Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged
 
 All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low. On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
 
-## LinkedIn with your own browser
+## LinkedIn public posts
 
-LinkedIn reads are off by default. Ego Lite loads the post as the account signed in to your browser. LinkedIn restricts automated access and can restrict that account. To opt in yourself, set `enabled=true` in `~/.config/rsrc/linkedin.env`. The optional `daily_limit` setting defaults to 20 document loads per UTC day. Reads share a 30-second gap and reserve allowance before navigation, including a possible post redirect.
+`rsrc linkedin read URL` reads a public LinkedIn post in one HTTPS request. It accepts post permalinks and feed update URLs, requires no setup, sends no cookies and never opens a browser or follows a redirect. LinkedIn’s terms restrict automated access.
 
-`rsrc linkedin read URL` returns the post first, followed by comments already on the page. The reader checks the post card’s own permalinks and public visibility label. LinkedIn sometimes replaces an activity URL with a different post ID. If the card only identifies the new ID, the read returns `url_mismatch` with the card’s permalink. Check `raw.time_source` before quoting a date derived from a post ID. A sign-in wall, account warning, challenge, HTTP 429 or interrupted navigation leaves a lock. Inspect your account yourself before manually removing `~/.config/rsrc/linkedin.locked`. `rsrc check linkedin` reads the local settings and usage without opening a tab.
+The first item contains the post text, author, publication timestamp and available engagement counts. Comments from the public page follow it. When LinkedIn reports more comments than it supplies, `meta.notes` gives both counts. Videos can include a transcript and duration in `raw`. A refusal ends the read. `rsrc check linkedin` reads one public post.
 
 ## What it does not do
 

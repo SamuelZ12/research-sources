@@ -1,50 +1,21 @@
-"""Read one rendered LinkedIn post under a persistent, per-user allowance."""
-import fcntl
+"""Read the structured data on one public LinkedIn post page."""
 import json
-import math
-import os
 import re
 import time
-import uuid
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import datetime
+from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
 
-from rsrc import envelope as env, proc
-from rsrc.channels import reddit
+from rsrc import envelope as env, http
 
-SCRIPT = Path(__file__).with_name("linkedin_page.js")
-OFF = ("LinkedIn is off. Reads load LinkedIn pages as the account signed in to your browser. "
-       "LinkedIn's terms restrict automated access and your account can be restricted. "
-       "To opt in yourself, set enabled=true in ~/.config/rsrc/linkedin.env.")
-GAP = 30
-BACKEND = "ego-linkedin"
-UTC = timezone.utc
+BACKEND = "linkedin-public"
+WAIT = "Wait before making another LinkedIn request."
 
 
-class Failure(Exception):
+class Failure(http.HttpError):
     def __init__(self, code, message):
         super().__init__(message)
         self.code = code
-
-
-def config_dir(environ):
-    return Path(environ.get("HOME", str(Path.home()))) / ".config/rsrc"
-
-
-def settings(folder):
-    try:
-        lines = (folder / "linkedin.env").read_text().splitlines()
-    except FileNotFoundError:
-        lines = []
-    values = dict(line.split("=", 1) for line in lines if "=" in line and not line.startswith("#"))
-    try:
-        limit = int(values.get("daily_limit", "20"))
-        if limit < 1:
-            raise ValueError
-    except ValueError:
-        raise Failure("config", "Set daily_limit to a positive integer in linkedin.env.") from None
-    return values.get("enabled") == "true", limit
 
 
 def target(value):
@@ -61,122 +32,167 @@ def target(value):
     raise Failure("usage", "This command reads posts. Supply a LinkedIn post or feed update URL.")
 
 
-def locked(reason):
-    return (f"LinkedIn is locked ({reason}). Open LinkedIn yourself in Ego Lite and resolve it, "
-            "then manually remove ~/.config/rsrc/linkedin.locked.")
-
-
-def state(folder):
-    path = folder / "linkedin-usage.json"
-    try:
-        row = json.loads(path.read_text())
-        if (type(row["used"]) is not int or row["used"] < 0 or not isinstance(row["day"], str)
-                or not math.isfinite(row["last"])):
-            raise ValueError
-        return row
-    except FileNotFoundError:
-        return {"day": "", "used": 0, "last": 0}
-    except (KeyError, ValueError, TypeError):
-        raise Failure("config", "LinkedIn usage state is unreadable. Inspect linkedin-usage.json manually.") from None
-
-
-def store(path, data):
-    temp = path.with_suffix(".tmp")
-    with temp.open("w") as out:
-        out.write(data)
-        out.flush()
-        os.fsync(out.fileno())
-    os.replace(temp, path)
-    fd = os.open(path.parent, os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-
-
 def register(subparsers):
-    p = subparsers.add_parser("linkedin", help="read a LinkedIn post (opt-in)")
+    p = subparsers.add_parser("linkedin", help="read a LinkedIn post")
     actions = p.add_subparsers(dest="action", required=True)
     read = actions.add_parser("read")
     read.add_argument("url")
     read.set_defaults(run=run)
 
 
-def run(args, ctx):
-    attempts, notes, items = [], [], []
-    backend = None
-    error = None
-    folder = config_dir(ctx.environ)
+class PostPage(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.posts = []
+        self.cards = []
+        self.page_key = self.title = self.canonical = ""
+        self.capture = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "script" and attrs.get("type") == "application/ld+json":
+            self.capture = "json"
+        elif tag == "title":
+            self.capture = "title"
+        elif tag == "link" and attrs.get("rel") == "canonical":
+            self.canonical = string(attrs.get("href"))
+        elif tag == "meta" and attrs.get("name") == "pageKey":
+            self.page_key = attrs.get("content") or ""
+        elif tag == "article" and "main-feed-activity-card" in string(attrs.get("class")).split():
+            self.cards.append(attrs)
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "title"):
+            self.capture = None
+
+    def handle_data(self, data):
+        if self.capture == "title":
+            self.title += data
+        if self.capture == "json":
+            try:
+                post = json.loads(data)
+            except ValueError:
+                return
+            if isinstance(post, dict) and post.get("@type") in ("SocialMediaPosting", "VideoObject"):
+                self.posts.append(post)
+
+
+def string(value):
+    return value.strip() if isinstance(value, str) else ""
+
+
+def timestamp(record):
+    value = string(record.get("datePublished"))
     try:
-        enabled, limit = settings(folder)
-        if not enabled:
-            raise Failure("config", OFF)
+        if datetime.fromisoformat(value).utcoffset() is not None:
+            return value
+    except ValueError:
+        pass
+    return None
+
+
+def author(record):
+    person = record.get("author") or record.get("creator")
+    return string(person.get("name")) if isinstance(person, dict) else None
+
+
+def counts(record):
+    fields = {"LikeAction": "reactions", "CommentAction": "comments", "ShareAction": "reposts"}
+    stats = record.get("interactionStatistic")
+    result = {}
+    for stat in stats if isinstance(stats, list) else [stats]:
+        if isinstance(stat, dict):
+            field = fields.get(string(stat.get("interactionType")).rsplit("/", 1)[-1])
+            count = stat.get("userInteractionCount")
+            if field and type(count) is int and count >= 0:
+                result[field] = count
+    total = record.get("commentCount")
+    if type(total) is int and total >= 0:
+        result["comments"] = total
+    return result
+
+
+def parse(status, headers, body, identity):
+    if status == 999:
+        raise http.Blocked(f"LinkedIn refused access (HTTP 999). {WAIT}")
+    http.raise_refusal(status, b"", "LinkedIn", WAIT)
+    location = headers.get("Location", "").lower()
+    if 300 <= status < 400:
+        if any(part in location for part in ("/login", "/authwall", "/uas/")):
+            raise http.AuthError(f"LinkedIn redirected to sign-in (HTTP {status}). {WAIT}")
+        raise http.Blocked(f"LinkedIn redirected the post request (HTTP {status}). {WAIT}")
+    page = PostPage()
+    page.feed(body.decode("utf-8", "replace"))
+    page.close()
+    wall_title = page.title if page.page_key != "d_public_post" else ""
+    marker = (page.page_key + " " + wall_title).lower()
+    if any(word in page.page_key.lower() for word in ("authwall", "login", "signup")) or re.match(
+            r"(linkedin (?:login|sign in)|sign in|log in)", wall_title.strip(), re.I):
+        raise http.AuthError(f"LinkedIn returned a sign-in wall. {WAIT}")
+    if any(word in marker for word in ("checkpoint", "challenge", "security verification", "captcha")):
+        raise http.Blocked(f"LinkedIn returned a challenge. {WAIT}")
+    if status in (404, 410):
+        raise http.NotFound(f"LinkedIn has no public post at this address (HTTP {status}).")
+    if status != 200 or page.page_key != "d_public_post" or len(page.posts) != 1:
+        if body.lstrip().startswith(b"<") and not page.posts:
+            raise http.Blocked(f"LinkedIn returned a page without a readable public post (HTTP {status}). {WAIT}")
+        raise http.HttpError(f"Expected one public LinkedIn post (HTTP {status}).")
+    return post_items(page, identity)
+
+
+def post_items(page, identity):
+    post = page.posts[0]
+    try:
+        canonical_id, url = target(page.canonical)
+        record_id, _ = target(string(post.get("@id")))
+    except Failure:
+        raise http.HttpError("Post has no identifiable permalink.") from None
+    if record_id != canonical_id:
+        raise Failure("url_mismatch", "The post data identifies a different post from the page permalink.")
+    featured = f"urn:li:activity:{canonical_id}"
+    cards = [card for card in page.cards if card.get("data-featured-activity-urn") == featured
+             and card.get("data-activity-urn") == featured]
+    if len(cards) != 1:
+        raise http.HttpError("The page lacks a matching featured post card.")
+    if canonical_id != identity and cards[0].get("data-attributed-urn") not in (
+            f"urn:li:ugcPost:{identity}", f"urn:li:share:{identity}"):
+        raise Failure("url_mismatch", "The public page identifies a different post.")
+    text = string(post.get("articleBody")) or string(post.get("description"))
+    if not text or not author(post):
+        raise http.HttpError("The public page lacks the post body or author.")
+    raw = {"kind": "post", "type": post["@type"]}
+    for key in ("duration", "transcript"):
+        if string(post.get(key)):
+            raw[key] = post[key]
+    engagement = counts(post)
+    items = [env.item(id=identity, url=url, author=author(post), text=text, title=string(post.get("headline")) or None,
+                      published_at=timestamp(post), engagement=engagement, raw=raw, source="linkedin")]
+    comments = post.get("comment")
+    for row in comments if isinstance(comments, list) else [comments]:
+        if isinstance(row, dict) and string(row.get("text")):
+            items.append(env.item(text=string(row["text"]), author=author(row), published_at=timestamp(row),
+                                  engagement=counts(row), source="linkedin", raw={"kind": "comment", "post_id": identity}))
+    notes = []
+    total = engagement.get("comments")
+    if total is not None and len(items) - 1 < total:
+        notes.append(f"The public page supplied {len(items) - 1} of {total} comments.")
+    if not items[0]["published_at"]:
+        notes.append("The page supplied no exact publication time.")
+    return items, notes
+
+
+def run(args, ctx):
+    transport = http.single_hop_transport if ctx.transport is http.urllib_transport else ctx.transport
+    client = http.Client(min_interval=3, max_requests=1, transport=transport)
+    start = time.monotonic()
+    items, notes, attempts, error = [], [], [], None
+    try:
         identity, url = target(args.url)
-        with (folder / "linkedin.guard").open("a") as guard:
-            try:
-                fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                raise Failure("rate_limited", "A LinkedIn read is in progress. Wait for it to finish.") from None
-            marker = folder / "linkedin.locked"
-            if marker.exists():
-                raise Failure("blocked", locked(marker.read_text().strip()))
-            now = datetime.now(UTC)
-            day = now.date().isoformat()
-            row = state(folder)
-            used = row["used"] if day == row["day"] else 0
-            if used >= limit:
-                reset = (now.date() + timedelta(days=1)).isoformat()
-                raise Failure("rate_limited", f"LinkedIn daily allowance used. Resets {reset} 00:00 UTC.")
-            wait = math.ceil(row["last"] + GAP - now.timestamp())
-            if wait > 0:
-                raise Failure("rate_limited", f"LinkedIn minimum gap. Wait {wait} seconds.")
-            # An interrupted or unobserved navigation requires human inspection.
-            store(marker, "previous read did not finish")
-            # Reserve room for one post-to-post redirect before releasing any document.
-            reserved = min(2, limit - used)
-            usage_path = folder / "linkedin-usage.json"
-            store(usage_path, json.dumps(dict(day=day, used=used + reserved, last=now.timestamp())))
-            name = "rsrc linkedin " + uuid.uuid4().hex
-            inp = dict(url=url, id=identity, space=name, allowance=reserved, gap=GAP, day=day, owner_pid=os.getpid())
-            script = "const INPUT = " + json.dumps(inp) + ";\n" + SCRIPT.read_text()
-            start = time.monotonic()
-            backend = BACKEND
-            try:
-                result = ctx.runner(["ego-browser", "nodejs", "-e", script], 90)
-            except proc.Missing:
-                marker.unlink()
-                raise Failure("config", "Ego Lite is unavailable. Install ego-browser and start Ego Lite.") from None
-            except proc.Timeout:
-                raise Failure("timeout", locked("previous read did not finish")) from None
-            line = reddit.result_line(result, "RSRC_LINKEDIN ")
-            if result.code or not line:
-                raise Failure("blocked", locked("previous read did not finish"))
-            page = json.loads(line[len("RSRC_LINKEDIN "):])
-            backend = page.get("backend", BACKEND)
-            loads = page["loads"]
-            if type(loads) is not int or not 0 <= loads <= reserved:
-                raise Failure("upstream_error", locked("invalid load receipt"))
-            store(usage_path, json.dumps(dict(day=day, used=used + loads, last=time.time())))
-            code = page.get("error")
-            attempts.append(env.attempt(backend, code or "ok", loads, env.elapsed_ms(start)))
-            if page.get("lock"):
-                store(marker, page["lock"])
-                raise Failure(code, locked(page["lock"]))
-            if code:
-                marker.unlink()
-                raise Failure(code, page["message"])
-            item = page["item"]
-            if item["id"] != identity or not item["text"] or not item["author"]:
-                raise Failure("upstream_error", "Incomplete browser response. " + locked("previous read did not finish"))
-            if not item.get("published_at"):
-                d = datetime.fromtimestamp((int(identity) >> 22) / 1000, UTC)
-                item["published_at"] = d.isoformat(timespec="seconds")
-                notes.append("Approximate UTC time from the requested post ID. The page supplied no publication timestamp.")
-            item["raw"]["time_source"] = "id_approximate" if notes else "page"
-            items.append(env.item(**item, source="linkedin"))
-            items.extend(env.item(**comment, source="linkedin") for comment in page.get("comments", []))
-            marker.unlink()
-    except Failure as exc:
+        status, headers, body = client.request_with_headers("GET", url, {"User-Agent": "research-sources"})
+        items, notes = parse(status, headers, body, identity)
+    except http.HttpError as exc:
         error = env.error(exc.code, str(exc))
-    return env.envelope("linkedin", "read", None, backend, items, error=error,
+    if client.requests_made:
+        attempts.append(env.attempt(BACKEND, error["code"] if error else "ok", 1, env.elapsed_ms(start)))
+    return env.envelope("linkedin", "read", None, BACKEND if attempts else None, items, error=error,
                         meta={"attempts": attempts, "notes": notes})

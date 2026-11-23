@@ -127,27 +127,28 @@ def healthy_runner() -> FakeGh:
 
 # all channels
 
+LINKEDIN_POST = (Path(__file__).parent / "fixtures/linkedin_post.html").read_bytes()
 PH_FIX = Path(__file__).parent / "fixtures" / "producthunt"
 PH_RESPONSE = (200, (PH_FIX / "search.json").read_bytes())
 
 
 def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, environ, tmp_path):
-    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'))
+    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST))
     code, out = rsrc([], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"]) == ("check", "check")
-    assert out["input"] == {"channels": ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby"], "live_x": False,
+    assert out["input"] == {"channels": ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
                             "live_reddit": False}
-    assert [i["id"] for i in out["items"]] == ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby"]
+    assert [i["id"] for i in out["items"]] == ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
     assert all(set(i) == set(ITEM_KEYS) and i["source"] == i["id"] for i in out["items"])
     assert out["meta"]["sources"] == {"x": "ok", "gh": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
-                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok"}
+                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     assert transport.urls == [HN_PROBE_URL, POLYMARKET_PROBE_URL,
                               "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=python&sort=latest&limit=1",
                               check.producthunt.ENDPOINT,
                               "https://itunes.apple.com/search?entity=software&country=us&term=Wikipedia&limit=1",
-                              "https://api.ashbyhq.com/posting-api/job-board/linear?includeCompensation=true"]
+                              "https://api.ashbyhq.com/posting-api/job-board/linear?includeCompensation=true", check.LINKEDIN_POST]
     assert [argv[0] for argv in runner.argvs] == ["gh", "gh", "ego-browser", "yt-dlp"]  # no `uv` run
     assert runner.argvs[:2] == [["gh", "auth", "status"], ["gh", "api", "rate_limit"]]
     [ego, youtube_probe] = runner.argvs[2:]
@@ -161,7 +162,7 @@ def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, 
     assert "4999/5000" in gh["text"] and "search 30" in gh["text"]
     assert gh["raw"]["rate_limit"]["core"]["remaining"] == 4999
     assert [a["backend"] for a in out["meta"]["attempts"]] == ["gh", "gh", "ego-browser", "algolia", "gamma",
-                                                               "yt-dlp", "api.bsky.app", "producthunt-mcp", "itunes", "ashby-posting-api"]
+                                                               "yt-dlp", "api.bsky.app", "producthunt-mcp", "itunes", "ashby-posting-api", "linkedin-public"]
     assert_no_secret_in_files(tmp_path, Path(environ["RSRC_X_ENV"]))
 
 
@@ -281,11 +282,11 @@ def test_missing_cookies_leave_x_ok_and_name_the_unavailable_backend(rsrc, tmp_p
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
                "PATH": programs(tmp_path, "yt-dlp", "deno")}
     code, out = rsrc([], environ=environ, runner=healthy_runner(),
-                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}')))
+                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert out["meta"]["sources"] == {"x": "ok", "gh": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
-                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok"}
+                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     x = out["items"][0]
     assert "x-graphql unavailable: missing AUTH_TOKEN, CT0" in x["text"]
     assert x["raw"]["file_exists"] is False and x["raw"]["x_graphql"] == "unavailable"
@@ -525,14 +526,14 @@ def test_polymarket_probe_without_a_response_is_network_error(rsrc, environ):
 def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(cookie_file(tmp_path, mode=0o644)), "XDG_CACHE_HOME": str(tmp_path / "cache")}
     code, out = rsrc([], environ=environ, runner=FakeGh(proc.Timeout("slow"), proc.Missing("ego-browser")),
-                     transport=FakeTransport(*((503, b""),) * 6))
+                     transport=FakeTransport(*((503, b""),) * 7))
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "config" and out["error"]["message"].startswith("x: ")
     assert out["meta"]["sources"] == {"x": "config", "gh": "timeout", "reddit": "config",
                                       "hn": "upstream_error", "polymarket": "upstream_error", "youtube": "config",
                                       "bluesky": "upstream_error", "producthunt": "upstream_error",
-                                      "appstore": "upstream_error", "ashby": "upstream_error"}
-    assert len(out["items"]) == 10
+                                      "appstore": "upstream_error", "ashby": "upstream_error", "linkedin": "upstream_error"}
+    assert len(out["items"]) == 11
 
 
 def test_every_checked_channel_failing_with_runtime_error_exits_1(rsrc, environ):

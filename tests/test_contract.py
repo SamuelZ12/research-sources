@@ -12,6 +12,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
 
 HTTP_COMMANDS = {
+    linkedin: ["linkedin", "read", check.LINKEDIN_POST],
     hn: ["hn", "search", "q"],
     polymarket: ["polymarket", "search", "q"],
     appstore: ["appstore", "search", "q"],
@@ -21,7 +22,6 @@ HTTP_COMMANDS = {
     gh: ["gh", "search", "q"],
 }
 NOT_HTTP = {
-    linkedin: "reads one rendered post in Ego Lite",
     x: "FxTwitter's 403 and 404 carry post states, and the signed routes report 401 and 403 as auth_failed",
     reddit: "pages load in Ego; the one HTTP request reads a share-link redirect",
     youtube: "yt-dlp runs as a subprocess",

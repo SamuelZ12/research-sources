@@ -1,129 +1,78 @@
 import json
-from concurrent.futures import ThreadPoolExecutor
-from threading import Event
-from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 
-from rsrc import cli, proc
-from rsrc.channels import linkedin as li
+from rsrc import cli
+from rsrc.channels import check
 
-ID = "7444787076895637504"
-URL = "https://www.linkedin.com/feed/update/urn:li:activity:" + ID + "/"
+FIX = Path(__file__).parent / "fixtures"
+VIDEO = (FIX / "linkedin_video.html").read_bytes()
+POST = (FIX / "linkedin_post.html").read_bytes()
+ALIAS = "https://ca.linkedin.com/posts/our-recent-segment-on-cnbc-covers-all-things-ugcPost-7442323735535202304-YPvZ/?trk=example"
+URL = check.LINKEDIN_POST
 
 
-@pytest.fixture
-def setup(tmp_path):
-    ctx = cli.Context(environ={"HOME": str(tmp_path)})
-    folder = li.config_dir(ctx.environ)
-    folder.mkdir(parents=True)
-    (folder / "linkedin.env").write_text("enabled=true\ndaily_limit=2")
-    return folder, ctx, SimpleNamespace(url=URL)
+def read(capsys, url, answer):
+    calls = []
+
+    def send(method, address, headers, body):
+        calls.append(address)
+        assert method == "GET" and headers == {"User-Agent": "research-sources"} and body is None
+        return answer
+
+    ctx = cli.Context(environ={}, transport=send, runner=lambda *_: pytest.fail("opened browser"))
+    code = cli.main(["linkedin", "read", url], ctx)
+    return code, json.loads(capsys.readouterr().out), calls
+
+
+def test_video_alias(capsys):
+    code, out, calls = read(capsys, ALIAS, (200, VIDEO))
+    assert code == 0 and calls == [ALIAS.split("?")[0].replace("//ca.", "//www.")]
+    post, first, second = out["items"]
+    assert post["author"] == "Aaru" and "7442325358646853632" in post["url"]
+    assert post["id"] == "7442323735535202304" and post["text"].endswith("Squawk Box team.")
+    assert post["raw"]["transcript"] and post["raw"]["duration"] == "PT12M19S"
+    assert post["published_at"] == "2026-03-24T21:43:57.172Z"
+    assert post["engagement"] == {"reactions": 450, "comments": 29}
+    assert first["author"] == "Reader 1" and first["engagement"] == {"reactions": 8}
+    assert second["published_at"] and second["text"]
+    assert "2 of 29" in out["meta"]["notes"][0]
+
+
+def test_social_post(capsys):
+    code, out, calls = read(capsys, URL, (200, POST))
+    post = out["items"][0]
+    assert code == 0 and calls == [URL]
+    assert post["text"].endswith("https://pika.art/blog") and post["author"] == "Pika"
+    assert post["published_at"] == "2024-06-05T23:03:12.908Z"
+    assert out["items"][1]["raw"]["post_id"] == post["id"]
 
 
 @pytest.mark.parametrize("url", ["https://linkedin.com/in/alex", "https://linkedin.com/company/x",
-                                 "https://linkedin.com/jobs/view/20", "https://linkedin.com.evil.test/posts/a"])
-def test_usage_before_browser(setup, url):
-    _, ctx, args = setup
-    args.url = url
-    ctx.runner = lambda *_: pytest.fail("browser opened")
-    assert li.run(args,ctx)["error"]["code"] == "usage"
+                                 "https://linkedin.com/search/results/all", "https://linkedin.com/feed/",
+                                 "https://linkedin.com/jobs/view/20", URL.replace(".com", ".com.evil.test")])
+def test_reject_before_request(capsys, url):
+    code, out, calls = read(capsys, url, (200, POST))
+    assert code == 2 and out["error"]["code"] == "usage" and not calls
 
 
-def test_off_every_action(setup, capsys):
-    folder, ctx, _ = setup
-    (folder / "linkedin.env").unlink()
-    ctx.runner = lambda *_: pytest.fail("browser opened")
-    assert cli.main(["linkedin", "read", URL], ctx) == 2
-    assert json.loads(capsys.readouterr().out)["error"]["message"] == li.OFF
-
-
-def reply(value):
-    return proc.Result(0, "RSRC_LINKEDIN " + json.dumps({"loads": 1, **value}), "")
-
-
-def test_count_before_dispatch_and_lock(setup):
-    folder, ctx, args = setup
-    started, finish = Event(), Event()
-    def run(*_):
-        assert li.state(folder)["used"] == 2
-        started.set()
-        assert finish.wait(3)
-        return reply({"error":"rate_limited","lock":"HTTP 429"})
-    ctx.runner = run
-    with ThreadPoolExecutor() as pool:
-        first = pool.submit(li.run,args,ctx)
-        assert started.wait(3)
-        assert li.run(args,ctx)["error"]["code"] == "rate_limited"
-        finish.set()
-        assert first.result()["error"]["code"] == "rate_limited"
-    assert "HTTP 429" in li.run(args,ctx)["error"]["message"]
-
-
-def test_signin_locks_channel(setup):
-    folder,ctx,args = setup
-    ctx.runner = lambda *_: reply({"error":"auth_failed","lock":"sign-in required"})
-    assert li.run(args,ctx)["error"]["code"] == "auth_failed"
-    assert "sign-in required" in (folder/"linkedin.locked").read_text()
-
-
-def test_gap_cap(setup):
-    folder,ctx,args = setup
-    ctx.runner = lambda *_: reply({"error":"not_found","message":"Post unavailable"})
-    assert li.run(args,ctx)["error"]["code"] == "not_found"
-    assert "minimum gap" in li.run(args,ctx)["error"]["message"]
-    row = li.state(folder)
-    row["used"] = 2
-    li.store(folder/"linkedin-usage.json",json.dumps(row))
-    assert "Resets" in li.run(args,ctx)["error"]["message"]
-
-
-def test_crash_stays_closed(setup):
-    folder,ctx,args = setup
-    def crash(*_):
-        raise proc.Timeout()
-    ctx.runner = crash
-    assert li.run(args,ctx)["error"]["code"] == "timeout"
-    assert li.state(folder)["used"] == 2
-    assert li.run(args,ctx)["error"]["code"] == "blocked"
-
-
-def test_explicit_check_is_local(setup, capsys):
-    _, ctx, _ = setup
-    ctx.runner = ctx.transport = lambda *_: pytest.fail("external request")
-    assert cli.main(["check", "linkedin"], ctx) == 0
-    raw = json.loads(capsys.readouterr().out)["items"][0]["raw"]
-    assert raw == {"enabled": True, "locked": False, "daily_limit": 2, "used": 0}
-
-
-def test_mismatched_post_never_succeeds(setup):
-    _, ctx, args = setup
-    ctx.runner = lambda *_: reply({"item": {"id": "other"}})
-    result = li.run(args, ctx)
-    assert not result["ok"] and not result["items"]
-    assert result["error"]["code"] == "upstream_error"
-
-
-def test_rendered_post_and_comments(setup):
-    from pathlib import Path
-
-    folder, ctx, args = setup
-    fixture = Path(__file__).parent / "fixtures/linkedin_public_post.json"
-    page = json.loads(fixture.read_text())
-    args.url = page["item"]["url"]
-    ctx.runner = lambda *_: reply(page)
-    out = li.run(args, ctx)
-    assert out["ok"] and out["items"][0]["author"] == "Aaru"
-    assert out["items"][0]["raw"]["time_source"] == "id_approximate"
-    assert out["items"][0]["engagement"] == {"reactions": 450, "comments": 29, "reposts": 26}
-    assert [i["raw"]["kind"] for i in out["items"]] == ["post"] + ["comment"] * 4
-    assert li.state(folder)["used"] == 1
-
-
-def test_explicit_page_timestamp(setup):
-    _, ctx, args = setup
-    date = "2026-07-01T12:00:00Z"
-    ctx.runner = lambda *_: reply({"item": dict(id=ID, author="A company", text="Example",
-                                               published_at=date, raw={"kind":"post"})})
-    item = li.run(args,ctx)["items"][0]
-    assert item["published_at"] == date and item["raw"]["time_source"] == "page"
+@pytest.mark.parametrize("answer,expected", [
+    ((404, (FIX / "linkedin_missing.html").read_bytes()), "not_found"),
+    ((307, {}, b""), "blocked"),
+    ((302, {"Location": "/authwall"}, b""), "auth_failed"),
+    ((200, b"<title>Sign in | LinkedIn</title>"), "auth_failed"),
+    ((200, b'<meta name="pageKey" content="checkpoint_challenge">'), "blocked"),
+    ((403, b""), "blocked"), ((999, b""), "blocked"), ((429, b""), "rate_limited"),
+    ((200, b"<html>"), "blocked"), ((200, b""), "upstream_error"),
+    ((200, VIDEO), "url_mismatch"),
+    ((200, POST.replace(b"7204256477832753153", b"7204256477832753154", 1)), "url_mismatch"),
+    ((200, POST.replace(b"data-featured-activity-urn=", b"data-unrelated=")), "upstream_error"),
+    ((200, POST.replace(b'"articleBody"', b'"summary"')), "upstream_error"),
+])
+def test_unreadable(capsys, answer, expected):
+    code, out, calls = read(capsys, URL, answer)
+    assert code == 1 and calls == [URL] and not out["items"] and not out["ok"]
+    assert out["error"]["code"] == expected
+    if expected in ("blocked", "auth_failed", "rate_limited"):
+        assert "Wait" in out["error"]["message"]
