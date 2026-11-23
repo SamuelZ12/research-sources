@@ -382,6 +382,8 @@ def _metadata(ytdlp: _YtDlp, video_id: str) -> tuple[dict, str | None]:
 
 def _warning(stderr: str) -> str | None:
     """The first 200 characters of yt-dlp's warnings, from the first one on, as one line without addresses."""
+    # An unrecognised media codec affects playback formats, not the caption listing.
+    stderr = re.sub(r"(?m)^WARNING: Unknown codec [\w.-]+[ \t]*$", "", stderr)
     at = stderr.lower().find("warning:")
     return " ".join(_URL.sub("<url>", stderr[at:]).split())[:WARNING_HEAD] if at >= 0 else None
 

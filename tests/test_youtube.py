@@ -1460,3 +1460,15 @@ def test_search_recovers_only_confirmed_channel_names(rsrc, second):
     assert out["meta"]["attempts"][-1]["requests"] == 2
     assert any("unavailable" in n for n in out["meta"]["notes"]) == (second != "found")
     assert code == (1 if second in ("rate_limit", "forbidden") else 0)
+
+
+def test_unknown_media_codec_keeps_captions_but_never_masks_a_second_warning(rsrc):
+    codec_warning = "WARNING: Unknown codec iamf.001.001.Opus\n"
+    fake = FakeRunner(ok(META_UPLOADED, stderr=codec_warning), caption_run(UPLOADED_VTT))
+    code, out = rsrc(["read", UPLOADED], fake)
+    assert code == 0 and out["items"][0]["raw"]["transcript"]["words"] == 558
+
+    fake = FakeRunner(ok(META_UPLOADED, stderr=codec_warning + SIGNATURE_WARNING))
+    code, out = rsrc(["read", UPLOADED], fake)
+    assert code == 0 and out["items"][0]["raw"]["transcript"]["status"] == "incomplete_metadata"
+    assert out["items"][0]["text"] is None and len(fake.calls) == 1
