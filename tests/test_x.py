@@ -400,7 +400,7 @@ def test_read_article_url_returns_the_article_from_the_publishing_post(run):
     assert item["raw"]["text"] == "https://x.com/i/article/2097761142995308544"
 
 
-def test_read_renders_article_blocks_and_keeps_distinct_links_in_order(run):
+def test_read_renders_article_blocks_skips_malformed_parts_and_keeps_links_in_order(run):
     fake = FakeTransport(fx=[(200, load("x_fx_article_blocks.json"))])
     code, env, _ = run(["read", "https://x.com/example/status/1234567890"], fake)
     assert code == 0 and env["meta"]["rejected"] == []
@@ -408,7 +408,7 @@ def test_read_renders_article_blocks_and_keeps_distinct_links_in_order(run):
     assert item["title"] == "Article formatting"
     assert item["text"] == (
         "# Heading\n\n## Section\n\n### Subsection\n\n> Please log in\n\n- Bullet\n\n1. Step\n\n"
-        "  echo hello\n\n[post: https://x.com/i/status/1234567892]\n\nExtra text"
+        "  echo hello\n\n[post: https://x.com/i/status/1234567892]\n\n```\nuv tool install rsrc\n```\n\nExtra text"
     )
     assert item["raw"]["article"]["links"] == ["https://example.com/first", "https://example.com/second"]
 

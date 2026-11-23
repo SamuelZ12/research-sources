@@ -18,6 +18,8 @@
           {"type": "code-block", "text": "  echo hello"},
           {"type": "atomic", "text": " ", "entityRanges": [{"key": 2, "offset": 0, "length": 1}]},
           {"type": "atomic", "text": " ", "entityRanges": [{"key": 3, "offset": 0, "length": 1}]},
+          {"type": "atomic", "text": " ", "entityRanges": [{"key": 5, "offset": 0, "length": 1}]},
+          null,
           {"type": "header-one", "text": ""},
           {"type": "unknown", "text": "Extra text"}
         ],
@@ -26,7 +28,10 @@
           "2": {"type": "TWEET", "data": {"tweetId": "1234567892"}},
           "3": {"type": "MEDIA", "data": {}},
           "1": {"type": "LINK", "data": {"url": "https://example.com/second"}},
-          "0": {"type": "LINK", "data": {"url": "https://example.com/first"}}
+          "0": {"type": "LINK", "data": {"url": "https://example.com/first"}},
+          "5": {"type": "MARKDOWN", "data": {"markdown": "```\nuv tool install rsrc\n```\n"}},
+          "6": {"type": "LINK", "data": {}},
+          "7": {"type": "TWEET", "data": {"tweetId": "not-a-number"}}
         }
       }
     }

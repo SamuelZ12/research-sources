@@ -294,43 +294,37 @@ def fx_article(article) -> dict | None:
     else:
         return None
 
+    # A malformed entity or block is skipped; it never costs the rest of the article.
     links, embeds = [], {}
     for key, value in entries:
-        if not isinstance(key, (str, int)) or not isinstance(value, dict):
-            return None
-        kind, data = value.get("type"), value.get("data")
-        if kind not in ("LINK", "TWEET"):
+        if not isinstance(key, (str, int)) or not isinstance(value, dict) or not isinstance(value.get("data"), dict):
             continue
-        if not isinstance(data, dict):
-            return None
-        if kind == "LINK":
-            url = data.get("url")
-            if not isinstance(url, str) or not url:
-                return None
-            links.append(url)
-        else:
-            tweet_id = str(data.get("tweetId"))
-            if not tweet_id.isdecimal():
-                return None
-            embeds[str(key)] = f"[post: https://x.com/i/status/{tweet_id}]"
+        kind, data = value.get("type"), value["data"]
+        if kind == "LINK" and isinstance(data.get("url"), str) and data["url"]:
+            links.append(data["url"])
+        elif kind == "TWEET" and str(data.get("tweetId")).isdecimal():
+            embeds[str(key)] = f"[post: https://x.com/i/status/{data['tweetId']}]"
+        elif kind == "MARKDOWN" and isinstance(data.get("markdown"), str):
+            embeds[str(key)] = data["markdown"].strip()
 
     paragraphs = []
     for block in blocks:
         if not isinstance(block, dict):
-            return None
+            continue
         kind, text = block.get("type"), block.get("text")
-        if not isinstance(kind, str) or not isinstance(text, str):
-            return None
-        if not text:
+        if not isinstance(kind, str) or not isinstance(text, str) or not text:
             continue
         if kind == "atomic":
             text = _article_embed(block.get("entityRanges"), embeds)
         if text:
             paragraphs.append(ARTICLE_BLOCK_PREFIX.get(kind, "") + text)
+    if not paragraphs:
+        return None
     return {"id": article_id, "title": title, "text": "\n\n".join(paragraphs), "links": list(dict.fromkeys(links))}
 
 
 def _article_embed(ranges, embeds: dict[str, str]) -> str:
+    """The embedded post marker or Markdown an atomic block points at, or \"\" (images and others)."""
     if isinstance(ranges, list):
         for entry in ranges:
             if isinstance(entry, dict) and (post := embeds.get(str(entry.get("key")))):
