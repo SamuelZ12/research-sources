@@ -78,3 +78,23 @@ def test_unreadable(capsys, answer, expected):
     assert out["error"]["code"] == expected
     if expected in ("blocked", "auth_failed", "rate_limited"):
         assert "Wait" in out["error"]["message"]
+
+
+def test_forum_post_type_among_other_cards(capsys):
+    """A person's post can be typed DiscussionForumPosting, on a page that also lists their other posts."""
+    page = (FIX / "linkedin_forum_post.html").read_bytes()
+    address = "https://www.linkedin.com/posts/author-1_inexact-title-activity-7508928597705904128-zzzz/"
+    code, out, calls = read(capsys, address, (200, page))
+    assert code == 0 and calls == ["https://www.linkedin.com/feed/update/urn:li:activity:7508928597705904128/"]
+    post, comment = out["items"]
+    assert post["author"] == "Author 1" and post["raw"]["type"] == "DiscussionForumPosting"
+    assert post["published_at"] == "2026-09-24T16:41:26.839Z"
+    assert post["engagement"]["comments"] == 45 and comment["text"] == "Rendered comment 1."
+    assert "1 of 45" in out["meta"]["notes"][0]
+
+
+def test_unparsed_post_page_is_not_a_block(capsys):
+    page = b'<meta name="pageKey" content="d_public_post"><p>layout this reader does not know</p>'
+    code, out, _ = read(capsys, URL, (200, page))
+    assert code == 1 and out["error"]["code"] == "upstream_error" and not out["items"]
+

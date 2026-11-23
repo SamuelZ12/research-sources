@@ -73,7 +73,13 @@ class PostPage(HTMLParser):
                 post = json.loads(data)
             except ValueError:
                 return
-            if isinstance(post, dict) and post.get("@type") in ("SocialMediaPosting", "VideoObject"):
+            # LinkedIn labels posts with several schema types (SocialMediaPosting, VideoObject,
+            # DiscussionForumPosting). The record that names a post address is the post.
+            if isinstance(post, dict) and isinstance(post.get("@type"), str):
+                try:
+                    target(string(post.get("@id")))
+                except Failure:
+                    return
                 self.posts.append(post)
 
 
@@ -138,9 +144,9 @@ def parse(status, headers, body, identity):
     if status in (404, 410):
         raise http.NotFound(f"LinkedIn has no public post at this address (HTTP {status}).")
     if status != 200 or page.page_key != "d_public_post" or len(page.posts) != 1:
-        if body.lstrip().startswith(b"<") and not page.posts:
+        if body.lstrip().startswith(b"<") and not page.posts and page.page_key != "d_public_post":
             raise http.Blocked(f"LinkedIn returned a page without a readable public post (HTTP {status}). {WAIT}")
-        raise http.HttpError(f"Expected one public LinkedIn post (HTTP {status}).")
+        raise http.HttpError(f"LinkedIn returned a post page this reader could not parse (HTTP {status}).")
     return post_items(page, identity)
 
 
