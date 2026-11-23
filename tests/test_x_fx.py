@@ -40,13 +40,16 @@ class FakeWeb:
     "https://twitter.com/bkdgiffug/status/2117770299454177696/photo/1",
     "https://mobile.twitter.com/bkdgiffug/statuses/2117770299454177696",
     "https://x.com/i/web/status/2117770299454177696",
+    "https://x.com/bkdgiffug/article/2117770299454177696",
+    "https://www.twitter.com/bkdgiffug/article/2117770299454177696?s=20",
+    "mobile.x.com/bkdgiffug/article/2117770299454177696",
     "2117770299454177696",
 ])
 def test_post_urls_and_bare_ids_resolve(arg):
     assert parse_id(arg) == "2117770299454177696"
 
 
-@pytest.mark.parametrize("arg", ["hello", "https://x.com/bkdgiffug", "1"])
+@pytest.mark.parametrize("arg", ["hello", "https://x.com/bkdgiffug", "1", "https://x.com/i/article/2097761142995308544"])
 def test_non_post_arguments_are_rejected(arg):
     assert parse_id(arg) is None
 

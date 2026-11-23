@@ -373,6 +373,13 @@ def test_read_unparseable_input_is_usage_without_requests(run):
     assert env["meta"]["failed"] == [{"input": "hello", "code": "usage", "message": "not a post URL or ID"}]
 
 
+def test_read_article_id_link_asks_for_the_post_without_requests(run):
+    fake = FakeTransport()
+    code, env, _ = run(["read", "https://x.com/i/article/2097761142995308544"], fake)
+    assert code == 2 and env["error"]["code"] == "usage" and fake.urls == []
+    assert "read the post that links to the article" in env["error"]["message"]
+
+
 def test_read_rate_limit_stops_before_later_inputs(run):
     fake = FakeTransport(fx=[(200, load("x_fx_status.json")), (429, b"")])
     code, env, _ = run(["read", POST, "2117770299454177697", "2117770299454177698"], fake)

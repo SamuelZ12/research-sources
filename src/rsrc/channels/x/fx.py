@@ -20,7 +20,10 @@ HEADERS = {"user-agent": "Mozilla/5.0"}
 FX_TRIES = 3  # FxTwitter intermittently 404s valid posts
 SEARCH_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/search
 FEEDS = {"Latest": "latest", "Top": "top"}
-POST_URL_RE = re.compile(r"(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status)/(\d{2,20})")
+POST_URL_RE = re.compile(
+    r"(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status|(?![iI]/)[^/?#]+/article)/(\d{2,20})"
+)
+ARTICLE_LINK_RE = re.compile(r"(?:x|twitter)\.com/[iI]/article/\d{2,20}(?:[/?#]|$)")
 BARE_ID_RE = re.compile(r"^\d{2,20}$")
 TIMELINE_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/profile/{handle}/statuses
 TIMELINE_MAX = 200  # posts per `x timeline`: about 10 requests
@@ -69,7 +72,10 @@ def read(client, arg, *, syndication_client=None) -> dict:
     """Try the independent syndication endpoint immediately when FxTwitter reports absence."""
     post_id = parse_id(arg)
     if not post_id:
-        return {"id": arg, "error": "not a post URL or ID", "code": "usage"}
+        message = "not a post URL or ID"
+        if ARTICLE_LINK_RE.search(arg):
+            message = "This URL contains an article ID. Use `rsrc x read` to read the post that links to the article."
+        return {"id": arg, "error": message, "code": "usage"}
     # Snowflake IDs place the millisecond timestamp above 22 worker/sequence bits.
     timestamp_ms = (int(post_id) >> 22) + 1288834974657
     if timestamp_ms > datetime.now(timezone.utc).timestamp() * 1000 + 86_400_000:
