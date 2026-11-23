@@ -111,6 +111,22 @@ def test_fxtwitter_article_survives_a_null_entity_and_an_empty_atomic_placeholde
     assert status_record(status)["article"]["text"] == "[post: https://x.com/i/status/7]"
 
 
+def test_fxtwitter_article_keeps_code_indentation_and_ignores_blank_or_bad_parts():
+    status = load("x_fx_status.json")["status"]
+    status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [
+        {"type": "unstyled", "text": "   "},
+        {"type": "atomic", "text": " ", "entityRanges": [{"key": "1"}]},
+        {"type": "atomic", "text": " ", "entityRanges": [{"key": "2"}]},
+    ], "entityMap": {"1": {"type": "MARKDOWN", "data": {"markdown": "\n    first()\n    second()\n"}},
+                     "2": {"type": "TWEET", "data": {"tweetId": "\uff11\uff12\uff13"}}}}}
+    assert status_record(status)["article"]["text"] == "    first()\n    second()"
+    status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [{"type": "unstyled", "text": "Body"}],
+                                                                   "entityMap": None}}
+    assert status_record(status)["article"]["text"] == "Body"
+    status["article"]["content"]["blocks"] = [{"type": "unstyled", "text": " \n "}]
+    assert status_record(status)["article"] is None
+
+
 def test_fxtwitter_reply_carries_parent_id():
     post = status_record(load("x_fx_status_reply.json")["status"])
     assert post["reply_to_id"] == "2114277761355305339"

@@ -293,7 +293,7 @@ def fx_article(article) -> dict | None:
     elif isinstance(entities, dict):
         entries = entities.items()
     else:
-        return None
+        entries = ()
 
     # A malformed entity or block is skipped; it never costs the rest of the article.
     links, embeds = [], {}
@@ -303,10 +303,10 @@ def fx_article(article) -> dict | None:
         kind, data = value.get("type"), value["data"]
         if kind == "LINK" and isinstance(data.get("url"), str) and data["url"]:
             links.append(data["url"])
-        elif kind == "TWEET" and str(data.get("tweetId")).isdecimal():
+        elif kind == "TWEET" and re.fullmatch(r"[0-9]+", str(data.get("tweetId"))):
             embeds[str(key)] = f"[post: https://x.com/i/status/{data['tweetId']}]"
         elif kind == "MARKDOWN" and isinstance(data.get("markdown"), str):
-            embeds[str(key)] = data["markdown"].strip()
+            embeds[str(key)] = data["markdown"].strip("\n")
 
     paragraphs = []
     for block in blocks:
@@ -315,7 +315,7 @@ def fx_article(article) -> dict | None:
         kind, text = block.get("type"), block.get("text")
         if kind == "atomic":
             text = _article_embed(block.get("entityRanges"), embeds)
-        if isinstance(kind, str) and isinstance(text, str) and text:
+        if isinstance(kind, str) and isinstance(text, str) and text.strip():
             paragraphs.append(ARTICLE_BLOCK_PREFIX.get(kind, "") + text)
     if not paragraphs:
         return None
