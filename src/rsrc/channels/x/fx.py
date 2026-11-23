@@ -32,6 +32,14 @@ ACCOUNT_RE = re.compile(r"^(?:(?:https?://)?(?:www\.|mobile\.)?(?:x|twitter)\.co
 # First path segments of x.com pages that are not accounts.
 NOT_ACCOUNTS = frozenset({"i", "home", "explore", "search", "settings", "notifications", "messages",
                           "hashtag", "intent", "share", "compose", "login", "signup", "tos", "privacy"})
+ARTICLE_BLOCK_PREFIX = {
+    "header-one": "# ",
+    "header-two": "## ",
+    "header-three": "### ",
+    "blockquote": "> ",
+    "unordered-list-item": "- ",
+    "ordered-list-item": "1. ",
+}
 
 
 def parse_id(arg: str) -> str | None:
@@ -265,8 +273,69 @@ def status_record(status: dict) -> dict:
         quoted={"id": quote.get("id"), "author": (quote.get("author") or {}).get("screen_name"),
                 "text": quote.get("text"), "media": fx_media(quote)} if quote else None,
         media=fx_media(status),
+        article=fx_article(status.get("article")),
         source="fxtwitter",
     )
+
+
+def fx_article(article) -> dict | None:
+    if not isinstance(article, dict):
+        return None
+    article_id, title, content = article.get("id"), article.get("title"), article.get("content")
+    if not isinstance(article_id, str) or not isinstance(title, str) or not isinstance(content, dict):
+        return None
+    blocks, entities = content.get("blocks"), content.get("entityMap", {})
+    if not isinstance(blocks, list):
+        return None
+    if isinstance(entities, list) and all(isinstance(entry, dict) for entry in entities):
+        entries = ((entry.get("key"), entry.get("value")) for entry in entities)
+    elif isinstance(entities, dict):
+        entries = entities.items()
+    else:
+        return None
+
+    links, embeds = [], {}
+    for key, value in entries:
+        if not isinstance(key, (str, int)) or not isinstance(value, dict):
+            return None
+        kind, data = value.get("type"), value.get("data")
+        if kind not in ("LINK", "TWEET"):
+            continue
+        if not isinstance(data, dict):
+            return None
+        if kind == "LINK":
+            url = data.get("url")
+            if not isinstance(url, str) or not url:
+                return None
+            links.append(url)
+        else:
+            tweet_id = str(data.get("tweetId"))
+            if not tweet_id.isdecimal():
+                return None
+            embeds[str(key)] = f"[post: https://x.com/i/status/{tweet_id}]"
+
+    paragraphs = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            return None
+        kind, text = block.get("type"), block.get("text")
+        if not isinstance(kind, str) or not isinstance(text, str):
+            return None
+        if not text:
+            continue
+        if kind == "atomic":
+            text = _article_embed(block.get("entityRanges"), embeds)
+        if text:
+            paragraphs.append(ARTICLE_BLOCK_PREFIX.get(kind, "") + text)
+    return {"id": article_id, "title": title, "text": "\n\n".join(paragraphs), "links": list(dict.fromkeys(links))}
+
+
+def _article_embed(ranges, embeds: dict[str, str]) -> str:
+    if isinstance(ranges, list):
+        for entry in ranges:
+            if isinstance(entry, dict) and (post := embeds.get(str(entry.get("key")))):
+                return post
+    return ""
 
 
 def fx_media(status: dict) -> list[dict]:

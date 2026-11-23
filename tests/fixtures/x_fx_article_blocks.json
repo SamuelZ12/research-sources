@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "status": {
+    "id": "1234567890",
+    "author": {"screen_name": "example"},
+    "text": "https://x.com/i/article/1234567891",
+    "article": {
+      "id": "1234567891",
+      "title": "Article formatting",
+      "content": {
+        "blocks": [
+          {"type": "header-one", "text": "Heading"},
+          {"type": "header-two", "text": "Section"},
+          {"type": "header-three", "text": "Subsection"},
+          {"type": "blockquote", "text": "Please log in"},
+          {"type": "unordered-list-item", "text": "Bullet"},
+          {"type": "ordered-list-item", "text": "Step"},
+          {"type": "code-block", "text": "  echo hello"},
+          {"type": "atomic", "text": " ", "entityRanges": [{"key": 2, "offset": 0, "length": 1}]},
+          {"type": "atomic", "text": " ", "entityRanges": [{"key": 3, "offset": 0, "length": 1}]},
+          {"type": "header-one", "text": ""},
+          {"type": "unknown", "text": "Extra text"}
+        ],
+        "entityMap": {
+          "4": {"type": "LINK", "data": {"url": "https://example.com/first"}},
+          "2": {"type": "TWEET", "data": {"tweetId": "1234567892"}},
+          "3": {"type": "MEDIA", "data": {}},
+          "1": {"type": "LINK", "data": {"url": "https://example.com/second"}},
+          "0": {"type": "LINK", "data": {"url": "https://example.com/first"}}
+        }
+      }
+    }
+  }
+}

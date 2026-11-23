@@ -91,6 +91,8 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 
 `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
 
+`rsrc x read` accepts a numeric post ID or a status or article URL on x.com or twitter.com. Article URLs use `x.com/HANDLE/article/POST_ID`. When FxTwitter supplies an article, either URL returns the article title and body. For an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
+
 Bluesky search returns one page, newest first (`--top` for ranked results). Filter by author, domain, exact URL or UTC dates. Anonymous search uses `api.bsky.app`; Bluesky has disabled it before. Post reads, replies up to three levels deep and timelines use a separate public host.
 
 Product Hunt search and leaderboards return up to 25 results. The leaderboard defaults to today in Pacific time and accepts a day, ISO week, month or year. A product profile includes makers, links and selected review excerpts without authors or dates. A launch URL selects its own tagline, date and points. Points include votes and other engagement. The server does not expose launch discussions.

@@ -83,8 +83,9 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     p.add_argument("--max-requests", type=positive_int, default=25,
                    help="hard cap on HTTP requests for this command (default 25)")
 
-    parsers["read"] = p = commands.add_parser("read", help="read posts by URL or ID (no login)")
-    p.add_argument("posts", nargs="+", metavar="URL_OR_ID", help="x.com/twitter.com status URL or numeric ID")
+    parsers["read"] = p = commands.add_parser("read", help="read posts and articles (no login)")
+    p.add_argument("posts", nargs="+", metavar="URL_OR_ID",
+                   help="x.com/twitter.com status or article URL, or numeric post ID")
 
     parsers["replies"] = p = commands.add_parser("replies", help="replies to a post (no login)")
     p.add_argument("post", metavar="URL_OR_ID", help="x.com/twitter.com status URL or numeric ID")
@@ -264,7 +265,8 @@ def run_read(args, ctx) -> dict:
             failures.append((code, f"{arg}: {record['error']}"))
             continue
         attempts.append(env.attempt(record["source"], "ok", requests, env.elapsed_ms(started)))
-        kept, rejection = checks.screen_read(to_item(record), fx.parse_id(arg))
+        post = {key: record[key] for key in ("id", "url", "text")}
+        _, rejection = checks.screen_read(post, fx.parse_id(arg))
         if rejection:
             rejected.append(rejection)
             if rejection["reason"] == "blocked_page":
@@ -272,7 +274,7 @@ def run_read(args, ctx) -> dict:
             else:
                 failures.append(("url_mismatch", f"{arg}: returned post {record['id']} is not the requested post"))
             continue
-        items.append(kept)
+        items.append(to_item(record))
     error = None
     if not items and failures and meta.get("truncated") is None:
         error = env.error(*failures[0])
@@ -385,8 +387,10 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
 
 def to_item(record: dict) -> dict:
     counts = {k: record[k] for k in ENGAGEMENT if record.get(k) is not None}
-    return env.item(id=record["id"], url=record["url"], title=None, author=record["author"],
-                    published_at=record["created_at"], text=record["text"], source=record["source"],
+    article = record["article"]
+    return env.item(id=record["id"], url=record["url"], title=article["title"] if article else None,
+                    author=record["author"], published_at=record["created_at"],
+                    text=article["text"] if article else record["text"], source=record["source"],
                     engagement=counts or None, raw=record)
 
 

@@ -14,7 +14,7 @@ Run `rsrc …`; if `rsrc` is not on PATH, ask the user to install it (`uv tool i
 | Question | Command |
 |---|---|
 | What people on X think about a topic | `rsrc x search QUERY --since YYYY-MM-DD` (loop below) |
-| A specific x.com/twitter.com post | `rsrc x read URL_OR_ID [URL_OR_ID …]` (then "One X post" below) |
+| A specific x.com/twitter.com post or article | `rsrc x read URL_OR_ID [URL_OR_ID …]` (then "One X post or article" below) |
 | Replies to a post | `rsrc x replies URL_OR_ID [--rank likes\|recency] [--limit 100]` |
 | Who an X account is and what it posts | `rsrc x timeline HANDLE_OR_URL [--limit 20]` (then "One X account" below) |
 | What people on Reddit say about a topic | `rsrc reddit search QUERY [--subreddit NAME] [--time hour\|day\|week\|month\|year\|all] [--sort relevance\|hot\|top\|new\|comments] [--limit 25] [--with-comments [N]]` (default past month, relevance) |
@@ -76,9 +76,13 @@ Every command prints exactly one JSON object on stdout:
 
 **Cite only URLs this tool returned in `items`.** An x.com URL from anywhere else (Grok, a web page, a summary) gets checked with `rsrc x read` before you quote or count it.
 
-## One X post
+## One X post or article
 
-`x read` puts the post text in `text` and the post's photos, videos and GIFs in `raw.media`: `{"type", "url", "duration"}` each, `duration` in seconds; a quoted post's are in `raw.quoted.media`. What a photo shows and what a video says are only in the files. To explain, summarize or quote a post, open every entry first:
+`x read` accepts a post ID or a status or article URL on x.com or twitter.com. Use `x.com/HANDLE/article/POST_ID` for an article URL. If you have an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
+
+For a post with an article from FxTwitter, `title` and `text` contain the article title and body. Links are in `raw.article.links`, and embedded posts appear in the body as `[post: URL]`. The item ID and URL identify the publishing post, and `raw.text` keeps the post text. For other posts, `text` contains the post text.
+
+The post's photos, videos and GIFs are in `raw.media`, with `type`, `url` and `duration` in seconds. A quoted post's media are in `raw.quoted.media`. Open every entry before you explain, summarize or quote a post.
 
 - `photo`: download it and view it.
 - `video`: `vidscribe URL -v`, then read the transcript and the frames it lists.

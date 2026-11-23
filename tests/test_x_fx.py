@@ -64,6 +64,38 @@ def test_fxtwitter_status_maps_to_record():
     assert post["created_at"] == "2026-11-04T00:06:00Z"
     assert (post["likes"], post["reposts"], post["replies"], post["views"]) == (9, 3, 14, 1140)
     assert post["lang"] == "zh" and post["reply_to_id"] is None and post["source"] == "fxtwitter"
+    assert post["article"] is None
+
+
+def test_fxtwitter_article_maps_to_record():
+    post = status_record(load("x_fx_article.json")["status"])
+    assert post["text"] == "https://x.com/i/article/2097761142995308544"
+    assert post["article"] == {
+        "id": "2097761142995308544",
+        "title": "Software is about to eat the world much faster",
+        "text": "Fifteen years ago, I wrote that software is eating the world\n\n"
+                "An infinite market demands infinite ambition.",
+        "links": [
+            "https://www.wsj.com/articles/SB10001424053111903480904576512250915629460",
+            "https://a16z.com/the-techno-optimist-manifesto/",
+        ],
+    }
+
+
+@pytest.mark.parametrize("article", [
+    [],
+    {"id": [], "title": "Title", "content": {"blocks": []}},
+    {"id": "42", "content": {"blocks": []}},
+    {"id": "42", "title": "Title", "content": "body"},
+    {"id": "42", "title": "Title", "content": {"blocks": {}}},
+    {"id": "42", "title": "Title", "content": {"blocks": [None]}},
+    {"id": "42", "title": "Title", "content": {"blocks": [{"type": [], "text": "body"}]}},
+    {"id": "42", "title": "Title", "content": {"blocks": [], "entityMap": [None]}},
+])
+def test_fxtwitter_malformed_article_is_ignored(article):
+    status = load("x_fx_status.json")["status"]
+    status["article"] = article
+    assert status_record(status)["article"] is None
 
 
 def test_fxtwitter_reply_carries_parent_id():

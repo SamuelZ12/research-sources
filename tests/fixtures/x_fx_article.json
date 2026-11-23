@@ -1,0 +1,49 @@
+{
+  "code": 200,
+  "status": {
+    "id": "2097762851788398971",
+    "url": "https://x.com/pmarca/status/2097762851788398971",
+    "text": "https://x.com/i/article/2097761142995308544",
+    "author": {
+      "screen_name": "pmarca"
+    },
+    "article": {
+      "id": "2097761142995308544",
+      "title": "Software is about to eat the world much faster",
+      "content": {
+        "blocks": [
+          {
+            "type": "unstyled",
+            "text": "Fifteen years ago, I wrote that software is eating the world"
+          },
+          {
+            "type": "unstyled",
+            "text": "An infinite market demands infinite ambition."
+          }
+        ],
+        "entityMap": [
+          {
+            "key": "0",
+            "value": {
+              "data": {
+                "url": "https://www.wsj.com/articles/SB10001424053111903480904576512250915629460"
+              },
+              "mutability": "Mutable",
+              "type": "LINK"
+            }
+          },
+          {
+            "key": "1",
+            "value": {
+              "data": {
+                "url": "https://a16z.com/the-techno-optimist-manifesto/"
+              },
+              "mutability": "Mutable",
+              "type": "LINK"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

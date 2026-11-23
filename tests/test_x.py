@@ -134,6 +134,7 @@ def test_windowed_search_keeps_every_in_window_post(run):
     code, env, _ = run([*GQL, "q", "--since", "2026-10-08", "--until", "2026-11-05", "--window-days", "28"], fake)
     assert code == 0
     assert [i["raw"] for i in env["items"]] == parse_page(load("x_graphql_latest.json"))[0]
+    assert all(i["raw"]["article"] is None for i in env["items"])
     assert env["meta"]["attempts"][0]["requests"] == len(fake.urls) == 1 and env["meta"]["notes"] == []
 
 
@@ -326,16 +327,20 @@ def test_read_keeps_good_post_and_records_unresolvable_one(run):
     assert code == 0 and env["ok"] is True and env["error"] is None
     assert env["backend"] == "fxtwitter"
     assert [i["raw"] for i in env["items"]] == [status_record(load("x_fx_status.json")["status"])]
-    assert env["items"][0]["source"] == "fxtwitter"
+    [item] = env["items"]
+    assert item["source"] == "fxtwitter"
+    assert item["title"] is None and item["text"] == load("x_fx_status.json")["status"]["text"]
+    assert item["raw"]["article"] is None
     assert env["meta"]["failed"] == [{"input": missing, "code": "not_found",
                                       "message": "fxtwitter: HTTP 404; syndication: HTTP 404"}]
     assert [(a["backend"], a["outcome"], a["requests"]) for a in env["meta"]["attempts"]] == [
         ("fxtwitter", "ok", 1), ("fxtwitter", "not_found", 2)]
 
 
-def test_read_rejects_a_post_whose_id_differs_from_the_request(run):
+@pytest.mark.parametrize("arg", ["1234567890", "https://x.com/example/article/1234567890"])
+def test_read_rejects_a_post_whose_id_differs_from_the_request(run, arg):
     fake = FakeTransport(fx=[(200, load("x_fx_status.json"))])
-    code, env, _ = run(["read", "1234567890"], fake)
+    code, env, _ = run(["read", arg], fake)
     assert code == 1 and env["ok"] is False
     assert env["error"]["code"] == "url_mismatch"
     assert env["items"] == []
@@ -354,6 +359,7 @@ def test_read_falls_back_to_syndication(run):
     fake = FakeTransport(fx=[(500, b"")] * 3, syndication=[(200, load("x_syndication.json"))])
     code, env, _ = run(["read", POST], fake)
     assert code == 0 and env["items"][0]["source"] == "syndication"
+    assert env["items"][0]["raw"]["article"] is None
     assert sum("api.fxtwitter.com" in u for u in fake.urls) == 3
     assert env["meta"]["attempts"][0]["backend"] == "syndication"
 
@@ -378,6 +384,43 @@ def test_read_article_id_link_asks_for_the_post_without_requests(run):
     code, env, _ = run(["read", "https://x.com/i/article/2097761142995308544"], fake)
     assert code == 2 and env["error"]["code"] == "usage" and fake.urls == []
     assert "read the post that links to the article" in env["error"]["message"]
+
+
+def test_read_article_url_returns_the_article_from_the_publishing_post(run):
+    fake = FakeTransport(fx=[(200, load("x_fx_article.json"))])
+    code, env, _ = run(["read", "https://x.com/pmarca/article/2097762851788398971"], fake)
+    assert code == 0 and env["meta"]["rejected"] == []
+    assert fake.urls == ["https://api.fxtwitter.com/2/status/2097762851788398971"]
+    [item] = env["items"]
+    assert item["id"] == "2097762851788398971"
+    assert item["url"] == "https://x.com/pmarca/status/2097762851788398971"
+    assert item["title"] == "Software is about to eat the world much faster"
+    assert item["text"] == ("Fifteen years ago, I wrote that software is eating the world\n\n"
+                            "An infinite market demands infinite ambition.")
+    assert item["raw"]["text"] == "https://x.com/i/article/2097761142995308544"
+
+
+def test_read_renders_article_blocks_and_keeps_distinct_links_in_order(run):
+    fake = FakeTransport(fx=[(200, load("x_fx_article_blocks.json"))])
+    code, env, _ = run(["read", "https://x.com/example/status/1234567890"], fake)
+    assert code == 0 and env["meta"]["rejected"] == []
+    [item] = env["items"]
+    assert item["title"] == "Article formatting"
+    assert item["text"] == (
+        "# Heading\n\n## Section\n\n### Subsection\n\n> Please log in\n\n- Bullet\n\n1. Step\n\n"
+        "  echo hello\n\n[post: https://x.com/i/status/1234567892]\n\nExtra text"
+    )
+    assert item["raw"]["article"]["links"] == ["https://example.com/first", "https://example.com/second"]
+
+
+def test_read_malformed_article_keeps_the_post_text(run):
+    status = load("x_fx_article.json")
+    status["status"]["article"]["content"]["blocks"] = "not a block list"
+    code, env, _ = run(["read", "2097762851788398971"], FakeTransport(fx=[(200, status)]))
+    assert code == 0
+    [item] = env["items"]
+    assert item["title"] is None and item["text"] == "https://x.com/i/article/2097761142995308544"
+    assert item["raw"]["article"] is None
 
 
 def test_read_rate_limit_stops_before_later_inputs(run):
