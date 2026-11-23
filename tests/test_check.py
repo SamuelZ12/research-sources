@@ -183,7 +183,7 @@ def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
     code, out = rsrc(["community"], environ=environ, runner=runner, transport=transport)
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "usage" and "invalid channel 'community'" in out["error"]["message"]
-    assert out["error"]["message"].endswith("(choose from x, gh, reddit, hn, polymarket, youtube, bluesky, producthunt, appstore, ashby)")
+    assert out["error"]["message"].endswith("(choose from x, gh, reddit, hn, polymarket, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
     assert runner.argvs == [] and transport.urls == []
 
 

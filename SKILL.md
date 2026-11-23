@@ -1,6 +1,6 @@
 ---
 name: research-sources
-description: Use for direct reads or searches web search misses on X/Twitter, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, GitHub repos and issues, Polymarket odds, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
+description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, GitHub repos and issues, Polymarket odds, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
 ---
 
 # research-sources (`rsrc`)
@@ -114,6 +114,10 @@ Done when every claim traces to a post URL from `items`, and each window searche
 Query operators pass through to X: `"exact phrase"`, `from:` / `to:` / `@handle`, `filter:replies` / `-filter:replies`, `min_faves:10` / `min_replies:5` / `min_retweets:5`, `lang:en`, `url:github.com`, `A OR B`, `-word`. Give dates only through `--since`/`--until` (YYYY-MM-DD, UTC; `--until` is exclusive, so `--until 2026-11-01` covers October 31); combining date flags with `since:`/`until:` in the query returns `usage`.
 
 X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrome` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads can cut long posts short and expose only likes; say so when quoting. When both public sources confirm a missing post, the read returns `not_found`. IDs dated more than a day in the future return it locally.
+
+## LinkedIn
+
+Use `rsrc linkedin read URL` for a specific public post. The user opts in personally. Item one is the post and later items are comments visible at read time. Use `raw.time_source` to distinguish a page timestamp from an approximate date derived from the ID. On failure report the error and stop. Leave enablement, allowance changes and lock removal to the user. `rsrc check linkedin` is local.
 
 ## Reddit
 

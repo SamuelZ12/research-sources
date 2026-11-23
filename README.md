@@ -5,7 +5,7 @@
 **Status:** early, with one maintainer. Developed and tested on macOS only. FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification now lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional). `rsrc x read`, `rsrc x replies` and `rsrc x timeline` still work without a login.
 
 - **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store, Ashby and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in.
-- **One output shape.** Ten sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
+- **One output shape.** Eleven sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
 - **Stops on rate limits.** A rate-limited backend stops. A repository-scoped GitHub read can restart with your login after exhausting the shared public allowance.
 - **No Python dependencies.** Standard library only. The tests run offline.
@@ -39,7 +39,7 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes all ten: Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes the ten default channels: Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 Requirements by channel:
 
@@ -86,6 +86,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
 | Ashby | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` |
+| LinkedIn | `rsrc linkedin read URL` (opt-in, public post and rendered comments) |
 | All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
 
 `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
@@ -197,6 +198,12 @@ Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged
 - X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.
 
 All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low. On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
+
+## LinkedIn with your own browser
+
+LinkedIn reads are off by default. Ego Lite loads the post as the account signed in to your browser. LinkedIn restricts automated access and can restrict that account. To opt in yourself, set `enabled=true` in `~/.config/rsrc/linkedin.env`. The optional `daily_limit` setting defaults to 20 document loads per UTC day. Reads share a 30-second gap and reserve allowance before navigation, including a possible post redirect.
+
+`rsrc linkedin read URL` returns the post first, followed by comments already on the page. The reader checks the post card’s own permalinks and public visibility label. LinkedIn sometimes replaces an activity URL with a different post ID. If the card only identifies the new ID, the read returns `url_mismatch` with the card’s permalink. Check `raw.time_source` before quoting a date derived from a post ID. A sign-in wall, account warning, challenge, HTTP 429 or interrupted navigation leaves a lock. Inspect your account yourself before manually removing `~/.config/rsrc/linkedin.locked`. `rsrc check linkedin` reads the local settings and usage without opening a tab.
 
 ## What it does not do
 

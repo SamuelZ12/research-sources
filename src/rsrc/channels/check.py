@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from rsrc import checks, chrome, proc
 from rsrc import envelope as env
-from rsrc.channels import appstore, ashby
+from rsrc.channels import appstore, ashby, linkedin
 from rsrc.channels import gh as ghc
 from rsrc.channels import bluesky
 from rsrc.channels import hn as hnc
@@ -19,7 +19,7 @@ from rsrc.channels.x import auth, connection, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
-NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby")
+NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
@@ -61,9 +61,10 @@ class _Failed(Exception):
 
 
 def run(args, ctx) -> dict:
-    names = list(dict.fromkeys(args.channels)) or list(NAMES)
+    names = list(dict.fromkeys(args.channels)) or [name for name in NAMES if name != "linkedin"]
     input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
-    probes = {"bluesky": lambda attempts: bluesky.probe(ctx, attempts, _Failed),
+    probes = {"linkedin": lambda attempts: probe_linkedin(ctx),
+              "bluesky": lambda attempts: bluesky.probe(ctx, attempts, _Failed),
               "x": lambda attempts: probe_x(ctx, args.live_x, attempts),
               "ashby": lambda attempts: probe_ashby(ctx, attempts),
               "appstore": lambda attempts: probe_appstore(ctx, attempts),
@@ -407,3 +408,15 @@ def probe_ashby(ctx, attempts):
     if answer["error"]:
         raise _Failed(answer["error"]["code"], answer["error"]["message"])
     return "Linear's public Ashby board answered", {"board": "linear"}
+
+
+def probe_linkedin(ctx):
+    folder = linkedin.config_dir(ctx.environ)
+    try:
+        enabled, limit = linkedin.settings(folder)
+        row = linkedin.state(folder)
+    except (OSError, linkedin.Failure):
+        raise _Failed("config", "Cannot read LinkedIn settings or usage.") from None
+    used = row["used"] if row["day"] == linkedin.datetime.now(linkedin.UTC).date().isoformat() else 0
+    return "LinkedIn local status (no page loaded)", {
+        "enabled": enabled, "daily_limit": limit, "used": used, "locked": (folder / "linkedin.locked").exists()}
