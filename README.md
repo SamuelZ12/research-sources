@@ -45,7 +45,7 @@ Requirements by channel:
 
 | Channel | Needs |
 |---|---|
-| `x` | Nothing for public reads. Search with Google Chrome (`rsrc x connect`), Ego Lite, or a cookie pair while public search is unavailable |
+| `x` | Nothing for public reads. Search with Ego Lite, a cookie pair, or Google Chrome (`rsrc x connect`, experimental) while public search is unavailable |
 | `hn` | Nothing |
 | `polymarket` | Nothing |
 | `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
@@ -154,6 +154,8 @@ Every item has the same nine fields. Unavailable fields are `null`. YouTube sear
 | `1` | Runtime failure; items read so far stay in `items` | `auth_failed`, `rate_limited`, `blocked`, `url_mismatch`, `not_found`, `upstream_error`, `network_error`, `timeout` |
 
 ## X with your own session (optional)
+
+The Google Chrome route is experimental. It has been checked with an existing X session placed in the dedicated profile. In one test of a first sign-in typed into that window, X answered "We've temporarily limited your login." If X refuses the sign-in, stop and use Ego Lite or a cookie pair instead.
 
 With Google Chrome installed, run these two commands. Between them, sign in to X yourself in the Chrome window the first command opens.
 
