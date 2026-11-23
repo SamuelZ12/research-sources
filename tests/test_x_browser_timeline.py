@@ -1,9 +1,14 @@
+import http.client
 import json
+import urllib.request
+from io import BytesIO
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from rsrc.channels.x import browser
+from rsrc.http import TIMEOUT_S, urllib_transport
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HANDLE = "sama"
@@ -88,3 +93,28 @@ def test_direct_timeline_keeps_verified_posts_when_capped(run_x):
     assert code == 0 and len(doc["items"]) == 1 + len(expected_tweets())
     assert doc["meta"]["truncated"] == "request_cap"
     assert doc["meta"]["attempts"][0]["requests"] == 2
+
+
+@pytest.mark.parametrize("status,error", [(200, None), (401, "auth_failed"), (403, "auth_failed"),
+                                          (429, "rate_limited"), (302, "upstream_error")])
+def test_direct_timeline_uses_one_connection_and_stops_on_refusal(run_x, monkeypatch, status, error):
+    profile = {"rest_id": "123", "core": {"screen_name": HANDLE}}
+    responses = []
+    for code, result in [(200, profile), (status, recorded_page())]:
+        response = BytesIO(json.dumps({"data": {"user": {"result": result}}}).encode())
+        response.status = code
+        response.headers = {"Location": "https://example.org/"} if code == 302 else {}
+        responses.append(response)
+    connect = Mock()
+    connect.return_value.getresponse.side_effect = responses
+    monkeypatch.setattr(http.client, "HTTPSConnection", connect)
+    monkeypatch.setattr(urllib.request, "getproxies", lambda: {})
+    code, doc, _ = run_x(["timeline", HANDLE], urllib_transport, {"AUTH_TOKEN": "test", "CT0": "test"})
+    connect.assert_called_once_with("x.com", timeout=TIMEOUT_S)
+    connect.return_value.close.assert_called_once_with()
+    assert connect.return_value.request.call_count == doc["meta"]["attempts"][0]["requests"] == 2
+    if error:
+        assert code == 1 and not doc["ok"] and doc["error"]["code"] == error
+    else:
+        assert code == 0 and [p["id"] for p in doc["items"][1:]] == [
+            e["tweet"]["rest_id"] for e in expected_tweets()]

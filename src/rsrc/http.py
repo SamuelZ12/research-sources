@@ -5,6 +5,7 @@ import http.client
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from urllib.parse import urlsplit
 
 TIMEOUT_S = 20
@@ -115,6 +116,32 @@ class Client:
         self._clock = clock
         self._sleep = sleep
         self._last = None
+
+    @contextmanager
+    def reuse_https(self, host):
+        if self._transport is not _urllib_response or (
+            "https" in urllib.request.getproxies() and not urllib.request.proxy_bypass(host)
+        ):
+            yield
+            return
+
+        connection = http.client.HTTPSConnection(host, timeout=TIMEOUT_S)
+
+        def send(method, url, headers, body):
+            target = urlsplit(url)
+            if target.scheme != "https" or target.netloc != host:
+                raise HttpError("Unexpected HTTPS request destination")
+            path = target.path + ("?" + target.query if target.query else "")
+            connection.request(method, path, body=body, headers=headers or {})
+            with connection.getresponse() as response:
+                return response.status, response.headers, response.read()
+
+        self._transport = send
+        try:
+            yield
+        finally:
+            self._transport = _urllib_response
+            connection.close()
 
     @property
     def spent(self) -> bool:

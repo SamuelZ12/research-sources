@@ -359,7 +359,9 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
                 session = browser.session_for(backend, client, ctx.environ, notes)
                 author, records, capped = browser.timeline(session, handle, limit)
             else:
-                author, records, capped = timeline.timeline(client, load_cookies(ctx.environ), handle, limit)
+                cookies = load_cookies(ctx.environ)
+                with client.reuse_https("x.com"):
+                    author, records, capped = timeline.timeline(client, cookies, handle, limit)
             account = account_item(author)
             account["source"] = backend
             posts = [to_item(record) for record in records]
