@@ -96,7 +96,7 @@ def test_direct_timeline_keeps_verified_posts_when_capped(run_x):
 
 
 @pytest.mark.parametrize("status,error", [(200, None), (401, "auth_failed"), (403, "auth_failed"),
-                                          (429, "rate_limited"), (302, "upstream_error")])
+                                          (429, "rate_limited"), (302, "blocked")])
 def test_direct_timeline_uses_one_connection_and_stops_on_refusal(run_x, monkeypatch, status, error):
     profile = {"rest_id": "123", "core": {"screen_name": HANDLE}}
     responses = []
@@ -109,12 +109,31 @@ def test_direct_timeline_uses_one_connection_and_stops_on_refusal(run_x, monkeyp
     connect.return_value.getresponse.side_effect = responses
     monkeypatch.setattr(http.client, "HTTPSConnection", connect)
     monkeypatch.setattr(urllib.request, "getproxies", lambda: {})
-    code, doc, _ = run_x(["timeline", HANDLE], urllib_transport, {"AUTH_TOKEN": "test", "CT0": "test"})
+    config = {"AUTH_TOKEN": "test", "CT0": "test", "RSRC_X_SEARCH": "x-graphql,fxtwitter"}
+    code, doc, _ = run_x(["timeline", HANDLE], urllib_transport, config)
     connect.assert_called_once_with("x.com", timeout=TIMEOUT_S)
     connect.return_value.close.assert_called_once_with()
     assert connect.return_value.request.call_count == doc["meta"]["attempts"][0]["requests"] == 2
+    assert len(doc["meta"]["attempts"]) == 1
     if error:
         assert code == 1 and not doc["ok"] and doc["error"]["code"] == error
     else:
         assert code == 0 and [p["id"] for p in doc["items"][1:]] == [
             e["tweet"]["rest_id"] for e in expected_tweets()]
+
+
+@pytest.mark.parametrize("status,body,error", [
+    (200, b" <html>challenge</html>", "blocked"),
+    (503, b"<html>challenge</html>", "blocked"),
+    (200, b'{"errors":[{"code":326}]}', "blocked"),
+    (200, b'{"errors":[{"code":88}]}', "rate_limited"),
+    (200, b'{"errors":[{"code":89}]}', "auth_failed"),
+])
+def test_timeline_warning_stops_before_fallback(run_x, status, body, error):
+    profile = {"rest_id": "123", "core": {"screen_name": HANDLE}}
+    responses = iter([(200, json.dumps({"data": {"user": {"result": profile}}}).encode()),
+                      (status, body)])
+    config = {"AUTH_TOKEN": "test", "CT0": "test", "RSRC_X_SEARCH": "x-graphql,fxtwitter"}
+    code, doc, _ = run_x(["timeline", HANDLE], lambda *_: next(responses), config)
+    assert code == 1 and doc["error"]["code"] == error
+    assert [(a["backend"], a["requests"]) for a in doc["meta"]["attempts"]] == [("x-graphql", 2)]

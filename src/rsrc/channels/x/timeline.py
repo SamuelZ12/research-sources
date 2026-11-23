@@ -40,6 +40,10 @@ def timeline(client, cookies, handle, limit):
         query = urlencode({k: json.dumps(v) for k, v in (
             ("variables", variables), ("features", op["features"]), ("fieldToggles", op["toggles"]))})
         status, raw = client.request("GET", f"{search.API}/{op['id']}/{name}?{query}", headers)
+        if 300 <= status < 400:
+            raise TimelineBlocked(f"X redirected {name} (HTTP {status}); stop here")
+        if raw.lstrip().startswith(b"<") and status not in (401, 403, 429):
+            raise TimelineBlocked(f"X returned a page instead of {name} data (HTTP {status}); stop here")
         search.check_status(status, b"")
         try:
             doc = json.loads(raw)
