@@ -431,7 +431,8 @@ def test_read_is_a_metadata_run_then_a_run_for_the_chosen_track(rsrc, environ):
 
     four = {key: environ[key] for key in FOUR}
     [(meta_argv, meta_timeout, meta_options), (caption_argv, caption_timeout, caption_options)] = fake.calls
-    assert meta_argv == FIXED + ["--no-playlist", "--dump-single-json", "--skip-download", WATCH + UPLOADED]
+    assert meta_argv == FIXED + ["--no-playlist", "--dump-single-json", "--skip-download",
+                                 "--extractor-args", "youtube:player_client=default,-tv_samsung", WATCH + UPLOADED]
     assert (meta_timeout, meta_options) == (30, {"env": four, "stdout_limit": 32 * 1024 * 1024})
     target = caption_argv[-2]
     assert caption_argv == FIXED + ["--no-playlist", "--write-subs", "--sub-lang", "en", "--sub-format", "vtt",
@@ -455,7 +456,7 @@ def test_read_of_a_dubbed_video_asks_only_for_its_own_speech_recognition_track(r
 
 
 @pytest.mark.parametrize("video, fake", [(UPLOADED, read_uploaded), (DUBBED, read_dubbed)])
-def test_read_never_names_a_player_client_a_cookie_a_proxy_or_a_translated_track(rsrc, video, fake):
+def test_read_never_forces_a_player_client_a_cookie_a_proxy_or_a_translated_track(rsrc, video, fake):
     fake = fake()
 
     rsrc(["read", video], fake)
@@ -464,8 +465,12 @@ def test_read_never_names_a_player_client_a_cookie_a_proxy_or_a_translated_track
     for argv in fake.argvs:
         target = argv[argv.index("-o") + 1] if "-o" in argv else None  # a random directory name
         joined = " ".join(arg for arg in argv[len(FIXED):] if arg != target)
-        for word in ("player_client", "extractor-args", "cookies", "proxy", "username", "netrc", "tlang",
-                     "--sub-langs"):
+        if "--dump-single-json" in argv:
+            assert argv.count("--extractor-args") == 1
+            assert argv[argv.index("--extractor-args") + 1] == "youtube:player_client=default,-tv_samsung"
+        else:
+            assert "--extractor-args" not in argv
+        for word in ("cookies", "proxy", "username", "netrc", "tlang", "--sub-langs"):
             assert word not in joined
         assert argv.count("--sub-lang") <= 1
 

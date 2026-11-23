@@ -31,6 +31,7 @@ POLYMARKET_PAGE = (Path(__file__).parent / "fixtures" / "polymarket_search_p1.js
 BLUESKY_PAGE = (Path(__file__).parent / "fixtures" / "bluesky_search.json").read_bytes()
 YOUTUBE_PROBE = ["yt-dlp", "--ignore-config", "--no-cookies-from-browser", "--retries", "0", "--extractor-retries", "0",
                  "--no-playlist", "--dump-single-json", "--skip-download",
+                 "--extractor-args", "youtube:player_client=default,-tv_samsung",
                  "https://www.youtube.com/watch?v=jNQXAC9IVRw"]
 # Hand-written: the probe video was not recorded. `_version` has the shape both recorded metadata runs printed.
 YOUTUBE_META = json.dumps({"id": "jNQXAC9IVRw", "title": "Me at the zoo", "duration": 19, "language": "en",

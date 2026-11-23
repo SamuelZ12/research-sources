@@ -2,7 +2,7 @@
 details and the transcript of its original audio, taken from its caption track).
 
 Every yt-dlp run goes through `ctx.runner` with fixed flags and a four-variable environment: no config
-file, no cookie, no login, no named player client, no retry, and no proxy flag or variable (yt-dlp
+file, no cookie, no login, no retry, and no proxy flag or variable (yt-dlp
 then asks the operating system for one). A rate limit or a block stops the command at once. Which
 caption track is the original audio's is decided in `youtube_original`.
 """
@@ -28,7 +28,6 @@ CHANNEL = "youtube"
 BACKEND = "yt-dlp"
 SOURCE = "youtube"
 WATCH = "https://www.youtube.com/watch?v="
-# No player client is named: a forced client made every video warn, and a warning ends a read.
 FIXED = ("--ignore-config", "--no-cookies-from-browser", "--retries", "0", "--extractor-retries", "0")
 # No proxy variable is passed on. With none named yt-dlp asks the operating system, so on macOS a
 # proxy set in System Settings would still be used.
@@ -362,7 +361,10 @@ def parse_video(value: str) -> str | None:
 
 def _metadata(ytdlp: _YtDlp, video_id: str) -> tuple[dict, str | None]:
     """One video's metadata, and what yt-dlp warned about while loading it (None: nothing)."""
-    result = ytdlp.run(["--no-playlist", "--dump-single-json", "--skip-download", WATCH + video_id], META_TIMEOUT,
+    # The Samsung TV client adds a player request and JS extraction for playback formats.
+    # Keep the other default clients and their manifests for the original-audio label.
+    result = ytdlp.run(["--no-playlist", "--dump-single-json", "--skip-download",
+                        "--extractor-args", "youtube:player_client=default,-tv_samsung", WATCH + video_id], META_TIMEOUT,
                        one_video=True, stdout_limit=META_LIMIT)
     try:
         info = json.loads(result.stdout)
