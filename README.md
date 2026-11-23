@@ -45,7 +45,7 @@ Requirements by channel:
 
 | Channel | Needs |
 |---|---|
-| `x` | Nothing for public reads. Search with a cookie pair or a signed-in Ego Lite browser while public search is unavailable |
+| `x` | Nothing for public reads. Search with Google Chrome (`rsrc x connect`), Ego Lite, or a cookie pair while public search is unavailable |
 | `hn` | Nothing |
 | `polymarket` | Nothing |
 | `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
@@ -76,7 +76,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 
 | Channel | Commands |
 |---|---|
-| X | `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
+| X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
 | Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
@@ -154,9 +154,20 @@ Every item has the same nine fields. Unavailable fields are `null`. YouTube sear
 
 ## X with your own session (optional)
 
-X post reads and replies use public sources. Search and timeline use the configured cookie pair (`x-graphql`) by default, or FxTwitter if neither cookie is set. A partial pair is a configuration error. To use the X account already signed in to Ego Lite, run `rsrc x search --backend x-browser "Claude Code" --limit 10`. Cookies stay in the browser. Select this backend alone, allow at least two requests for a search, and wait for one browser X command to finish before starting another.
+With Google Chrome installed, run these two commands. Between them, sign in to X yourself in the Chrome window the first command opens.
 
-Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose the backends `rsrc x search` tries, in order. The environment takes precedence.
+```sh
+rsrc x connect
+rsrc x search "Claude Code" --limit 5
+```
+
+Chrome keeps this login in a dedicated profile under `~/.local/share/rsrc/chrome-profile` (or `$XDG_DATA_HOME/rsrc/chrome-profile`). The separate profile lets Chrome expose a loopback debugging endpoint while your everyday profile stays closed to debugging. Search and timeline reuse that window or start the dedicated Chrome again. The result names the backend `x-chrome` and includes a note when Chrome starts. Searches such as `rsrc x search 'from:OpenAI' --limit 5` and timelines such as `rsrc x timeline OpenAI --limit 3` use the saved connection.
+
+If you already have a signed-in Chrome running with remote debugging, use `rsrc x connect --cdp http://127.0.0.1:9333` with its port. You manage that Chrome's lifetime. Connection settings contain only the backend and endpoint, in `x-chrome.json` beside the X env file. The page supplies the CSRF header and Chrome sends the session cookie. `rsrc check x` checks local reachability without opening X. For one page, search counts two requests and timeline counts three. Chrome can also fetch a favicon outside this count.
+
+X post reads and replies use public sources. Without a saved Chrome connection, search and timeline use the configured cookie pair (`x-graphql`) by default, or FxTwitter if neither cookie is set. A partial pair is a configuration error. To use the X account already signed in to Ego Lite, run `rsrc x search --backend x-browser "Claude Code" --limit 10`. Cookies stay in the browser. Select this backend alone, allow at least two requests for a search, and wait for one browser X command to finish before starting another.
+
+Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose the backends `rsrc x search` tries, in order. The environment takes precedence over a saved Chrome connection, which takes precedence over the env file.
 
 | Search order | When to use it |
 |---|---|
@@ -164,6 +175,7 @@ Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose th
 | `x-graphql,fxtwitter` | You want every search to start from your logged-in X account, with FxTwitter second. |
 | `fxtwitter,x-graphql` | You prefer public search and want to use your account only if FxTwitter has an upstream or network error. |
 | `x-graphql` | Search directly with the configured cookie pair. |
+| `x-chrome` | Use Google Chrome after `rsrc x connect`. |
 | `x-browser` | Use the X account signed in to Ego Lite, without exporting cookies. |
 
 Search tries the next backend only after `upstream_error` or `network_error`, within the same `--max-requests` budget. An empty result, a rate limit, or a cookie error ends the search. `meta.attempts` lists the backends that made requests in order. The result comes from the last backend that ran, unless it also failed with one of those two codes: then the first backend's error and posts are kept. `meta.notes` has the error of each other backend that ran. Pass `--backend fxtwitter` or `--backend x-graphql` to use only that backend for one search.
@@ -184,7 +196,7 @@ Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged
 - Cookie values never appear in output, error messages or files `rsrc` writes.
 - X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.
 
-Both signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low. On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
+All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low. On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
 
 ## What it does not do
 
@@ -212,6 +224,8 @@ uv run python tests/manual/chrome_cookie.py http://127.0.0.1:9333 /tmp/rsrc-cdp-
 ```
 
 The probe serves a local plain-text page, sets a temporary synthetic HttpOnly cookie, and verifies that the server receives it on a fetch. It checks every received protocol message for the value before writing the normalized exchange. After closing its tab, it asks Chrome for that specific target to verify closure. The probe requires no X or Reddit login.
+
+To exercise the full Chrome commands against recorded search and timeline answers, run `uv run python tests/manual/x_chrome.py`. It starts headed Chrome on a fresh temporary profile, checks both synthetic cookie values against every received protocol message and the CLI output, verifies that each command tab closes, and stops the test browser.
 
 A change is welcome when it keeps these true:
 

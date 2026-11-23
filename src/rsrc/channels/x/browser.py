@@ -3,7 +3,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from rsrc.channels.x import search
+from rsrc import chrome
+from rsrc.channels.x import connection, search
 from rsrc.channels.x.timeline import profile_record
 from rsrc.channels.x.auth import CookieError
 from rsrc.http import CapReached, HttpError
@@ -25,7 +26,12 @@ class BrowserError(HttpError):
 
 
 def program(path):
-    return path.read_text().replace("/* PROJECT_TWEET */", SCRIPT.with_name("project_tweet.js").read_text())
+    return path.read_text().replace("/* PAGE */", page_program(path))
+
+
+def page_program(path):
+    source = path.with_name(path.stem + "_page.js").read_text()
+    return source.replace("/* PROJECT_TWEET */", SCRIPT.with_name("project_tweet.js").read_text())
 
 
 def execute(script):
@@ -42,6 +48,8 @@ def execute(script):
 
 
 class Searcher(search.Searcher):
+    backend = "x-browser"
+    messages = MESSAGES
     page_size = search.PAGE_SIZE
 
     def __init__(self, client, environ):
@@ -79,7 +87,7 @@ class Searcher(search.Searcher):
         cost = 2 if self.first else 1
         if self.client.requests_made + cost > self.client.max_requests:
             if self.first:
-                raise CookieError("x-browser needs --max-requests 2 or higher for navigation and search")
+                raise CookieError(f"{self.backend} needs --max-requests 2 or higher for navigation and search")
             raise CapReached()
         variables = dict(rawQuery=query, product=product, querySource="typed_query", count=count)
         if cursor:
@@ -87,18 +95,12 @@ class Searcher(search.Searcher):
         config = dict(space=self.space, first=self.first, variables=variables, features=search.FEATURES,
                       application=search.BEARER, id=query_id)
         self.client.requests_made += cost
-        self.cleanup_needed = True
         try:
-            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(SCRIPT))
+            data = self.evaluate(SCRIPT, config)
         except CookieError:
-            self.cleanup_needed = False
             self.client.requests_made -= cost
             raise
         self.first = False
-        marked = [line[7:] for line in lines if line.startswith("RSRC_X ")]
-        if len(marked) != 1:
-            raise BrowserError("blocked", "Ego Lite did not return a search response. Check browser control.")
-        data = json.loads(marked[0])
         if data.get("dispatched") is False:
             self.client.requests_made -= 1
         if data.get("handedOff"):
@@ -107,42 +109,95 @@ class Searcher(search.Searcher):
         if code := data.get("error"):
             if code == "query_id_rejected":
                 raise search.SearchError(f"SearchTimeline ID {query_id} rejected", query_id_rejected=True)
-            raise BrowserError(code, MESSAGES[code])
+            raise BrowserError(code, self.messages[code])
         records = [search.to_record(tweet) for tweet in data["tweets"]]
         for record in records:
-            record["source"] = "x-browser"
+            record["source"] = self.backend
         return records, data["cursor"]
 
-
-def timeline(client, environ, handle, limit):
-    if client.max_requests < 3:
-        raise CapReached("Browser timeline needs navigation, lookup and a timeline page")
-    with Searcher(client, environ) as session:
-        config = dict(handle=handle, limit=limit, maxRequests=client.max_requests, space=session.space, application=search.BEARER,
-                      ops=json.loads(SCRIPT.with_name("timeline_ops.json").read_text()))
-        session.cleanup_needed = True
-        client.requests_made = client.max_requests
+    def evaluate(self, script, config):
+        self.cleanup_needed = True
         try:
-            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(SCRIPT.with_name("timeline.js")))
+            lines = execute("const INPUT = " + json.dumps(config) + ";\n" + program(script))
         except CookieError:
-            client.requests_made = 0
-            session.cleanup_needed = False
+            self.cleanup_needed = False
             raise
         marked = [line[7:] for line in lines if line.startswith("RSRC_X ")]
         if len(marked) != 1:
-            raise BrowserError("blocked", "Ego Lite did not return a timeline response.")
-        data = json.loads(marked[0])
+            raise BrowserError("blocked", "Ego Lite did not return a response. Check browser control.")
+        return json.loads(marked[0])
+
+
+class ChromeSearcher(Searcher):
+    backend = "x-chrome"
+    messages = MESSAGES | {
+        "auth_failed": "No usable X login in this Chrome profile. Open X in that profile and sign in.",
+        "blocked": "X returned a challenge or blocked the request in Google Chrome. Stop here.",
+        "timeout": "Google Chrome timed out. The request may have reached X.",
+    }
+
+    def __init__(self, client, environ, notes):
+        super().__init__(client, environ)
+        self.environ = environ
+        self.notes = notes
+        self.tab = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        if self.tab:
+            self.tab.__exit__(*args)
+
+    def evaluate(self, script, config):
+        if self.tab is None:
+            try:
+                endpoint, started = connection.resolve(self.environ)
+                if started:
+                    self.notes.append(connection.STARTED)
+                self.tab = chrome.Tab(endpoint).__enter__()
+            except chrome.ChromeError as e:
+                raise CookieError(str(e)) from None
+            except OSError:
+                raise CookieError("Could not start Chrome or save its connection settings.") from None
+            self.tab.navigate(connection.ORIGIN + "/robots.txt")
+        if script == SCRIPT:
+            config["path"] = "/i/api/graphql/" + config["id"] + "/SearchTimeline"
+        return self.tab.evaluate("(" + page_program(script) + ")(" + json.dumps(config) + ")")
+
+
+def session_for(backend, client, environ, notes):
+    if backend == "x-chrome":
+        return ChromeSearcher(client, environ, notes)
+    return Searcher(client, environ)
+
+
+def timeline(session, handle, limit):
+    client = session.client
+    if client.max_requests < 3:
+        if session.backend == "x-chrome":
+            raise CookieError("x-chrome needs --max-requests 3 or higher for navigation, lookup and timeline")
+        raise CapReached("Browser timeline needs navigation, lookup and a timeline page")
+    with session:
+        config = dict(handle=handle, limit=limit, maxRequests=client.max_requests, space=session.space, application=search.BEARER,
+                      ops=json.loads(SCRIPT.with_name("timeline_ops.json").read_text()))
+        client.requests_made = client.max_requests
+        try:
+            data = session.evaluate(SCRIPT.with_name("timeline.js"), config)
+        except CookieError:
+            client.requests_made = 0
+            raise
         client.requests_made = data["requests"]
         if data.get("handedOff"):
             session.cleanup_needed = False
             raise BrowserError("blocked", "Complete the X verification in the Ego Lite page handed to you.")
         if code := data.get("error"):
             raise BrowserError(code, "X returned an unrecognized account timeline" if code == "upstream_error"
-                               else MESSAGES[code])
+                               else session.messages[code])
         rows = []
         for entry in data["tweets"]:
             record = search.to_record(entry["tweet"])
-            record["source"] = "x-browser"
+            record["source"] = session.backend
             if entry.get("reposted_by"):
                 record["reposted_by"] = entry["reposted_by"]
             rows.append(record)

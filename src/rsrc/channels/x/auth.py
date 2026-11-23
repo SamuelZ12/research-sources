@@ -3,10 +3,14 @@
 Cookie values never appear in error messages.
 """
 
+import json
 import os
 import re
 import stat
 from pathlib import Path
+
+from rsrc import chrome
+
 
 KEYS = ("AUTH_TOKEN", "CT0")
 DEFAULT_PATH = Path("~/.config/rsrc/x.env")
@@ -44,7 +48,26 @@ def load_cookies(environ=os.environ, path=None) -> tuple[str, str]:
 
 
 FX_BACKEND = "fxtwitter"
-BACKENDS = (FX_BACKEND, "x-graphql", "x-browser")
+BACKENDS = (FX_BACKEND, "x-graphql", "x-browser", "x-chrome")
+
+
+def chrome_settings_path(environ):
+    return cookie_file(environ).with_name("x-chrome.json")
+
+
+def chrome_settings(environ):
+    try:
+        doc = json.loads(chrome_settings_path(environ).read_text())
+        if doc["backend"] == "x-chrome":
+            for key in ("managed_endpoint", "endpoint"):
+                if set(doc) == {"backend", key} and isinstance(doc[key], str):
+                    chrome.address(doc[key], "http")
+                    return doc[key], key == "managed_endpoint"
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, KeyError, TypeError, chrome.ChromeError):
+        pass
+    raise CookieError("Invalid Chrome connection settings. Run rsrc x connect again.")
 
 
 def load_search_order(environ) -> tuple[str, ...]:
@@ -55,21 +78,26 @@ def load_search_order(environ) -> tuple[str, ...]:
     silently turn a fallback off.
     """
     path = cookie_file(environ)
+    override = environ.get("RSRC_X_SEARCH", "").strip()
+    if override == "x-chrome" or (not override and chrome_settings(environ)):
+        return ("x-chrome",)
     settings = _read_env_file(path) if path.exists() else {}
     if environ.get("RSRC_X_FALLBACK", "").strip() or settings.get("RSRC_X_FALLBACK"):
         raise CookieError("RSRC_X_FALLBACK was replaced: remove it and set RSRC_X_SEARCH=fxtwitter,x-graphql "
                           f"(in {path} or the environment)")
-    value = environ.get("RSRC_X_SEARCH", "").strip() or settings.get("RSRC_X_SEARCH", "").strip()
+    value = override or settings.get("RSRC_X_SEARCH", "").strip()
     if not value:
         if any(environ.get(k, "").strip() or settings.get(k) for k in KEYS):
             load_cookies(environ, path)
             return ("x-graphql",)
         return (FX_BACKEND,)
     order = tuple(part.strip() for part in value.split(","))
+    if "x-chrome" in order and len(order) > 1:
+        raise CookieError("select x-chrome on its own to use Google Chrome")
     if "x-browser" in order and len(order) > 1:
         raise CookieError("select x-browser on its own to use your signed-in Ego Lite account")
     if any(backend not in BACKENDS for backend in order) or len(order) != len(set(order)):
-        raise CookieError("RSRC_X_SEARCH accepts x-browser alone, or fxtwitter and x-graphql in order, "
+        raise CookieError("RSRC_X_SEARCH accepts x-browser or x-chrome alone, or fxtwitter and x-graphql in order, "
                           "separated by commas with no duplicates or empty entries")
     return order
 

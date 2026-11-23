@@ -96,7 +96,9 @@ Timeline follows the search order below. Without an explicit backend, a single r
 
 ## X sentiment loop
 
-With no search order set, a configured cookie pair selects `x-graphql`; with neither cookie, search uses public `fxtwitter`. A partial pair is `config`. When public search fails and the user has X signed in to Ego Lite, use `rsrc x search --backend x-browser "Claude Code" --limit 10`. It searches inside that browser without exporting cookies, needs at least two requests and runs one browser X command at a time. If X hands a verification page to the user, stop and pass on the message. Set `RSRC_X_SEARCH=x-browser` to use it by default; select it alone. Otherwise `RSRC_X_SEARCH` can order FxTwitter and x-graphql. Only upstream and network errors permit fallback within the shared cap. Read `backend`, `meta.attempts` and `meta.notes` to see what answered or failed. Keep signed-in volume low. Per question, use one windowed Latest search and at most one Top pass (default 25 requests each).
+For Google Chrome, ask the user to run `rsrc x connect` and sign in to X in the dedicated window. Then use `rsrc x search QUERY`, including `from:HANDLE`, or `rsrc x timeline HANDLE`. Both use `x-chrome` by default and reopen the dedicated browser if needed. For an existing debugging Chrome, connect with `rsrc x connect --cdp http://127.0.0.1:PORT`. `rsrc check x` checks the local endpoint without trying an X login. Stop on authentication errors, verification pages, and rate limits.
+
+Without a Chrome connection or search order, a configured cookie pair selects `x-graphql`; with neither cookie, search uses public `fxtwitter`. A partial pair is `config`. When public search fails and the user has X signed in to Ego Lite, use `rsrc x search --backend x-browser "Claude Code" --limit 10`. It searches inside that browser without exporting cookies, needs at least two requests and runs one browser X command at a time. If X hands a verification page to the user, stop and pass on the message. Set `RSRC_X_SEARCH=x-browser` to use it by default; select it alone. Otherwise `RSRC_X_SEARCH` can order FxTwitter and x-graphql. Only upstream and network errors permit fallback within the shared cap. Read `backend`, `meta.attempts` and `meta.notes` to see what answered or failed. Keep signed-in volume low. Per question, use one windowed Latest search and at most one Top pass (default 25 requests each).
 
 1. **Search the whole period in windows.** Use `--limit N` for a total across windows. Each window defaults to that limit, or 20 without it. Set a smaller `--per-window` to sample more windows. On success with fewer than N posts, check `meta.notes` for the reason.
    ```
@@ -111,7 +113,7 @@ Done when every claim traces to a post URL from `items`, and each window searche
 
 Query operators pass through to X: `"exact phrase"`, `from:` / `to:` / `@handle`, `filter:replies` / `-filter:replies`, `min_faves:10` / `min_replies:5` / `min_retweets:5`, `lang:en`, `url:github.com`, `A OR B`, `-word`. Give dates only through `--since`/`--until` (YYYY-MM-DD, UTC; `--until` is exclusive, so `--until 2026-11-01` covers October 31); combining date flags with `since:`/`until:` in the query returns `usage`.
 
-X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads can cut long posts short and expose only likes; say so when quoting. When both public sources confirm a missing post, the read returns `not_found`. IDs dated more than a day in the future return it locally.
+X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrome` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads can cut long posts short and expose only likes; say so when quoting. When both public sources confirm a missing post, the read returns `not_found`. IDs dated more than a day in the future return it locally.
 
 ## Reddit
 
@@ -139,7 +141,7 @@ No command sweeps several sites at once. For "what are people saying about TOPIC
 |---|---|
 | `usage` | Fix the arguments from `error.message` and rerun once |
 | `config` | Stop that channel; ask the user to apply the exact fix the message prints (e.g. a `chmod`, `gh auth login`, a missing program or cookie). Do not apply it yourself. If the message says another browser X command is running, wait for it to finish and rerun. |
-| `auth_failed` | Stop that channel (scope below); for x-graphql, ask the user to refresh the cookie pair; for x-browser, ask them to check the signed-in X session in Ego Lite |
+| `auth_failed` | Stop that channel (scope below); for x-graphql, ask the user to refresh the cookie pair; for x-browser, ask them to check the signed-in X session in Ego Lite; for x-chrome, in the connected Chrome profile |
 | `rate_limited` | Stop that channel (scope below) for the rest of the session; never retry or route around it |
 | `blocked` | Access was refused or the source returned a block page. Treat it as unreadable. On X (`x read`, `check --live-x`) it covers that one post only; on Reddit it stops all Reddit access, and on YouTube all `rsrc youtube` (scope below) |
 | `url_mismatch` | The returned item or storefront did not match the request; discard it |

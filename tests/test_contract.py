@@ -61,6 +61,8 @@ def test_a_refusal_has_one_error_code_on_every_channel(capsys, channel, answer, 
 CAPPED_COMMANDS = {
     ("x", "search"): ["x", "search", "q", "--backend", "fxtwitter"],
     ("x", "search", "x-graphql"): ["x", "search", "q", "--backend", "x-graphql"],
+    ("x", "search", "x-chrome"): ["x", "search", "q", "--backend", "x-chrome"],
+    ("x", "timeline", "x-chrome"): ["x", "timeline", "jack", "--backend", "x-chrome"],
     ("x", "timeline"): ["x", "timeline", "jack", "--backend", "fxtwitter"],
     ("x", "timeline", "x-graphql"): ["x", "timeline", "jack", "--backend", "x-graphql"],
     ("bluesky", "search"): ["bluesky", "search", "q"],

@@ -16,9 +16,9 @@ from contextlib import nullcontext
 import time
 from datetime import date
 
-from rsrc import checks
+from rsrc import checks, chrome
 from rsrc import envelope as env
-from rsrc.channels.x import browser, fx, search, timeline
+from rsrc.channels.x import browser, connection, fx, search, timeline
 from rsrc.channels.x.auth import BACKENDS, FX_BACKEND, CookieError, load_cookies, load_search_order
 from rsrc.channels.x.record import to_int
 from rsrc.http import CapReached, Client, HttpError
@@ -40,7 +40,7 @@ def register(subparsers) -> None:
     parser = subparsers.add_parser("x", help="X posts: search, read, replies, timeline (no login by default)",
                                    description="X: search, read posts, replies, an account's timeline.")
     commands = parser.add_subparsers(dest="x_command", required=True, metavar="ACTION")
-    runners = {"search": run_search, "read": run_read, "replies": run_replies, "timeline": run_timeline}
+    runners = {"connect": run_connect, "search": run_search, "read": run_read, "replies": run_replies, "timeline": run_timeline}
     for name, sub in add_commands(commands).items():
         sub.set_defaults(run=runners[name], action=name)
 
@@ -64,8 +64,10 @@ def iso_date(value):
 def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     """Add the actions to a subparsers object; return {action name: its parser}."""
     parsers = {}
+    parsers["connect"] = p = commands.add_parser("connect", help="connect X search and timeline to Google Chrome")
+    p.add_argument("--cdp", metavar="ENDPOINT", help="connect to an existing loopback Chrome debugging endpoint")
     parsers["search"] = p = commands.add_parser(
-        "search", help="search X posts in RSRC_X_SEARCH order (default: configured cookie pair, else public search)")
+        "search", help="search X posts in RSRC_X_SEARCH order (default: connected Chrome, configured cookies, else public search)")
     p.add_argument("query", help='X search query, e.g. \'"Letta Code" -filter:replies min_faves:5\'')
     p.add_argument("--since", type=iso_date, help="start date YYYY-MM-DD (inclusive); enables date windows")
     p.add_argument("--until", type=iso_date,
@@ -76,7 +78,7 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
                    help="max unique posts per date window (defaults to --limit, otherwise 20)")
     p.add_argument("--backend", choices=BACKENDS, default=None,
                    help="use only this backend, ignoring RSRC_X_SEARCH. fxtwitter needs no login; "
-                        "x-graphql uses your configured cookies; x-browser uses the X account signed in to Ego Lite")
+                        "x-graphql uses configured cookies; x-browser uses Ego Lite; x-chrome uses Google Chrome")
     p.add_argument("--top", action="store_true", help="X's Top ranking instead of Latest")
     p.add_argument("--max-requests", type=positive_int, default=25,
                    help="hard cap on HTTP requests for this command (default 25)")
@@ -102,6 +104,24 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
 
 
 # --- runs ----------------------------------------------------------------------
+
+def run_connect(args, ctx):
+    try:
+        if args.cdp is None:
+            endpoint, _ = connection.managed_browser(ctx.environ, signin=True)
+            note = "Sign in to X in the dedicated Chrome window, then run rsrc x search."
+        else:
+            endpoint = args.cdp
+            chrome.discover(endpoint)
+            note = "Connected to Google Chrome. Search uses the X login in that profile."
+        connection.save(ctx.environ, endpoint, args.cdp is None)
+    except (chrome.ChromeError, CookieError) as e:
+        return env.envelope(CHANNEL, "connect", {}, "x-chrome", error=env.error("config", str(e)))
+    except OSError:
+        return env.envelope(CHANNEL, "connect", {}, "x-chrome",
+                            error=env.error("config", "Could not start Chrome or save its connection settings."))
+    return env.envelope(CHANNEL, "connect", {}, "x-chrome", [env.item(id="x-chrome", source="x-chrome", text=note)])
+
 
 def run_search(args, ctx) -> dict:
     input = {"query": args.query, "since": _iso(args.since), "until": _iso(args.until),
@@ -137,8 +157,9 @@ def run_search(args, ctx) -> dict:
 
 
 def browser_remedy(args):
+    hint = "For Google Chrome, run rsrc x connect. "
     if not shutil.which("ego-browser"):
-        return "ego-browser is unavailable. To install Ego Lite on macOS, run: open https://lite.ego.app"
+        return hint + "ego-browser is unavailable. To install Ego Lite on macOS, run: open https://lite.ego.app"
     command = ["rsrc", "x", "search", "--backend", "x-browser"]
     for flag, default in (("since", None), ("until", None), ("window_days", 7),
                           ("per_window", None), ("limit", None), ("max_requests", 25)):
@@ -150,8 +171,8 @@ def browser_remedy(args):
     if args.top:
         command.append("--top")
     if args.max_requests < 2:
-        return "To use your signed-in Ego Lite account and allow two requests, run: " + shlex.join([*command, "--", args.query])
-    return "To use the X account signed in to Ego Lite, run: " + shlex.join([*command, "--", args.query])
+        return hint + "To use your signed-in Ego Lite account and allow two requests, run: " + shlex.join([*command, "--", args.query])
+    return hint + "To use the X account signed in to Ego Lite, run: " + shlex.join([*command, "--", args.query])
 
 
 def _search(args, backend, ctx, max_requests) -> dict:
@@ -159,10 +180,11 @@ def _search(args, backend, ctx, max_requests) -> dict:
     client = Client(min_interval=1, transport=ctx.transport, max_requests=max_requests, sleep=ctx.sleep)
     items = []
     started = time.monotonic()
-    run = {"backend": backend, "items": items, "meta": {}, "error": None}
+    notes = []
+    run = {"backend": backend, "items": items, "meta": {"notes": notes}, "error": None}
     try:
         stats, capped = search_posts(args, backend, client, ctx.environ,
-                                       lambda record: items.append(to_item(record)))
+                                       lambda record: items.append(to_item(record)), notes)
     except (UsageError, CookieError, HttpError) as e:
         code = error_code(e)
         # Usage and cookie errors happen before any request: no backend call to report.
@@ -171,7 +193,6 @@ def _search(args, backend, ctx, max_requests) -> dict:
     outcome = "ok" if items else "no_results"
     if capped:
         run["meta"]["truncated"] = "request_cap"
-    notes = []
     if dropped := stats.get("dropped"):
         notes.append(f"{dropped} post(s) outside their date window dropped")
     if args.limit and len(items) < args.limit:
@@ -183,7 +204,7 @@ def _search(args, backend, ctx, max_requests) -> dict:
     return {**run, "outcome": outcome, "attempts": [_attempt(backend, outcome, client, started)]}
 
 
-def search_posts(args, backend, client, environ, sink) -> tuple[dict, bool]:
+def search_posts(args, backend, client, environ, sink, notes) -> tuple[dict, bool]:
     """Run a search from parsed `search` args on `backend`, passing each record to `sink(record)`.
 
     Returns collection statistics and whether the request cap stopped the search.
@@ -200,8 +221,8 @@ def search_posts(args, backend, client, environ, sink) -> tuple[dict, bool]:
     if backend == "x-graphql":
         cookies = load_cookies(environ)
         backend_session = nullcontext(search.Searcher(client, cookies, search.query_id_cache(environ)))
-    elif backend == "x-browser":
-        backend_session = browser.Searcher(client, environ)
+    elif backend in ("x-chrome", "x-browser"):
+        backend_session = browser.session_for(backend, client, environ, notes)
     else:
         backend_session = nullcontext(fx.Searcher(client))
     stats, capped = {}, False
@@ -306,7 +327,8 @@ def run_timeline(args, ctx) -> dict:
         remaining -= attempt["requests"]
         if result["ok"] or remaining == 0:
             break
-        if not args.backend and result["error"]["code"] == "config" and len(order) == 1 and not attempt["requests"]:
+        if (backend != "x-chrome" and not args.backend and result["error"]["code"] == "config"
+                and len(order) == 1 and not attempt["requests"]):
             notes.append(str(result["error"]["message"]))
             result = _timeline_attempt(FX_BACKEND, handle, args.limit, remaining, ctx, input)
             attempts.extend(result["meta"]["attempts"])
@@ -322,6 +344,7 @@ def run_timeline(args, ctx) -> dict:
 def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
     client = Client(transport=ctx.transport, sleep=ctx.sleep, max_requests=remaining,
                     min_interval=1 if backend == FX_BACKEND else 0)
+    notes = []
     posts, account, error, capped = [], None, None, False
     started = time.monotonic()
     try:
@@ -332,8 +355,9 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
                 if not account and isinstance(author, dict) and str(author.get("screen_name")).lower() == handle.lower():
                     account = account_item(author)
         else:
-            if backend == "x-browser":
-                author, records, capped = browser.timeline(client, ctx.environ, handle, limit)
+            if backend in ("x-chrome", "x-browser"):
+                session = browser.session_for(backend, client, ctx.environ, notes)
+                author, records, capped = browser.timeline(session, handle, limit)
             else:
                 author, records, capped = timeline.timeline(client, load_cookies(ctx.environ), handle, limit)
             account = account_item(author)
@@ -346,7 +370,7 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
     except (HttpError, CookieError) as e:
         error = env.error(e.code, str(e))
     outcome = error["code"] if error else "ok" if posts or account else "no_results"
-    meta = {"attempts": [_attempt(backend, outcome, client, started)]}
+    meta = {"attempts": [_attempt(backend, outcome, client, started)], "notes": notes}
     if capped:
         meta["truncated"] = "request_cap"
     if posts and not account and not error:

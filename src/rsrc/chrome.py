@@ -13,13 +13,15 @@ import time
 from contextlib import ExitStack, contextmanager
 from urllib.parse import urlsplit
 
+from rsrc.http import HttpError
+
 
 MAX_MESSAGE = 8 * 1024 * 1024
 UNREACHABLE = "Cannot reach Chrome. Start Chrome and check the debugging address."
 WRONG_BROWSER = "The endpoint did not report a Chrome debugging browser."
 
 
-class ChromeError(Exception):
+class ChromeError(HttpError):
     """A local debugging connection or command failed."""
 
 
@@ -186,7 +188,7 @@ class Tab:
             if not str(version.get("product", "")).startswith("Chrome/"):
                 raise ChromeError(WRONG_BROWSER)
             with finish_creation():
-                target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+                target = self.call("Target.createTarget", {"url": "about:blank", "background": True})["targetId"]
                 self.stack.callback(self.close_target, target)
             self.session = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
             return self

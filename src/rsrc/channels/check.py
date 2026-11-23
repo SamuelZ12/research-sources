@@ -4,7 +4,7 @@ import stat
 import time
 from types import SimpleNamespace
 
-from rsrc import checks, proc
+from rsrc import checks, chrome, proc
 from rsrc import envelope as env
 from rsrc.channels import appstore, ashby
 from rsrc.channels import gh as ghc
@@ -15,7 +15,7 @@ from rsrc.channels import producthunt
 from rsrc.channels import reddit as rc
 from rsrc.channels import x as xc
 from rsrc.channels import youtube as ytc
-from rsrc.channels.x import auth, fx, search
+from rsrc.channels.x import auth, connection, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
@@ -100,18 +100,40 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
     if raw["file_exists"]:
         mode = stat.S_IMODE(path.stat().st_mode)
         raw["file_mode"] = f"{mode:o}"
-        if mode & 0o077:
-            raise _Failed("config", f"{path} is accessible by other users; run: chmod 600 {path}", raw)
     try:
         order = auth.load_search_order(environ)
         raw["search_order"] = list(order)
     except auth.CookieError as e:
         raise _Failed(e.code, str(e), raw) from None
-    labels = {"fxtwitter": "fxtwitter (no login)", "x-graphql": "x-graphql with your X session",
+    raw["x_chrome"] = {"configured": auth.chrome_settings_path(environ).exists(), "reachable": None}
+    try:
+        config = auth.chrome_settings(environ)
+        if config:
+            endpoint, managed = config
+            raw["x_chrome"]["reachable"] = False
+            if managed:
+                if not connection.active(connection.profile_path(environ)):
+                    raise chrome.ChromeError(chrome.UNREACHABLE)
+            else:
+                chrome.discover(endpoint)
+            raw["x_chrome"]["reachable"] = True
+    except (chrome.ChromeError, auth.CookieError) as e:
+        if order[0] == "x-chrome":
+            raise _Failed("config", str(e), raw) from None
+    if order[0] == "x-chrome" and not raw["x_chrome"]["configured"]:
+        raise _Failed("config", "Chrome is not configured. Run rsrc x connect.", raw)
+    labels = {"x-chrome": "x-chrome with Google Chrome", "fxtwitter": "fxtwitter (no login)", "x-graphql": "x-graphql with your X session",
               "x-browser": "x-browser with the X account signed in to Ego Lite"}
     searching = f"search via {labels[order[0]]}"
     if len(order) > 1:
         searching += f", then {labels[order[1]]} on upstream_error or network_error"
+    if order == ("x-chrome",):
+        raw["x_graphql"] = "unchecked"
+        text = searching + "; Chrome endpoint reachable"
+        if live:
+            raw["live"] = _live_read(ctx, attempts, raw)
+            text += "; public post read succeeded; signed-in search unchecked"
+        return text, raw
     try:
         auth.load_cookies(environ)  # the values are discarded; only success matters
     except auth.CookieError as e:
@@ -124,6 +146,8 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
         x_graphql = (f"x-graphql: cookies {', '.join(auth.KEYS)} present ({where}); "
                      f"query-ID cache {raw['query_id_cache']['state']}")
     text = f"{searching}; {x_graphql}"
+    if not raw["x_chrome"]["configured"]:
+        text += "; Google Chrome is not configured. Run rsrc x connect."
     if live:
         raw["live"] = _live_read(ctx, attempts, raw)
         text += f"; fxtwitter read of post {LIVE_X_POST} ok"
