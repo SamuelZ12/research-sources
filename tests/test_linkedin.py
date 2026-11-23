@@ -28,7 +28,8 @@ def read(capsys, url, answer):
 
 def test_video_alias(capsys):
     code, out, calls = read(capsys, ALIAS, (200, VIDEO))
-    assert code == 0 and calls == [ALIAS.split("?")[0].replace("//ca.", "//www.")]
+    # The request names the post by ID, so an inexact /posts/ slug cannot cause a 404.
+    assert code == 0 and calls == ["https://www.linkedin.com/feed/update/urn:li:ugcPost:7442323735535202304/"]
     post, first, second = out["items"]
     assert post["author"] == "Aaru" and "7442325358646853632" in post["url"]
     assert post["id"] == "7442323735535202304" and post["text"].endswith("Squawk Box team.")
@@ -60,6 +61,7 @@ def test_reject_before_request(capsys, url):
 @pytest.mark.parametrize("answer,expected", [
     ((404, (FIX / "linkedin_missing.html").read_bytes()), "not_found"),
     ((307, {}, b""), "blocked"),
+    ((307, {"Location": "https://www.linkedin.com/signup/cold-join?session_redirect=x"}, b""), "not_found"),
     ((302, {"Location": "/authwall"}, b""), "auth_failed"),
     ((200, b"<title>Sign in | LinkedIn</title>"), "auth_failed"),
     ((200, b'<meta name="pageKey" content="checkpoint_challenge">'), "blocked"),

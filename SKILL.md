@@ -119,7 +119,7 @@ X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrom
 
 Use `rsrc linkedin read URL` for a public post permalink or feed update URL. It works without setup and makes one logged-out HTTPS request. LinkedIn’s terms restrict automated access. Item one contains the post text and available counts. Later items are public comments. Quote the page’s `published_at` when present. Check `meta.notes` for missing publication time and the number of comments returned out of the reported total. Video transcripts and durations, when supplied, are in `raw`.
 
-On `usage`, check the post address. On `not_found`, report that the address has no available public post. On `url_mismatch`, discard the answer and verify the address. On `blocked`, `rate_limited` or `auth_failed`, stop LinkedIn access for the session and wait. This includes `check linkedin` and bare `rsrc check`, which read a public post. On `network_error` or `upstream_error`, report the read failure. Never switch to a signed-in route.
+On `usage`, check the post address. On `not_found`, report that LinkedIn has no public post with that ID: it is missing or not public. On `url_mismatch`, discard the answer and verify the address. On `blocked`, `rate_limited` or `auth_failed`, stop LinkedIn access for the session and wait. This includes `check linkedin` and bare `rsrc check`, which read a public post. On `network_error` or `upstream_error`, report the read failure. Never switch to a signed-in route.
 
 ## Reddit
 

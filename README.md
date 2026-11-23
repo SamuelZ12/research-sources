@@ -201,7 +201,7 @@ All signed-in X backends act as your X account, including on timelines. Reddit u
 
 ## LinkedIn public posts
 
-`rsrc linkedin read URL` reads a public LinkedIn post in one HTTPS request. It accepts post permalinks and feed update URLs, requires no setup, sends no cookies and never opens a browser or follows a redirect. LinkedIn’s terms restrict automated access.
+`rsrc linkedin read URL` reads a public LinkedIn post in one HTTPS request. It accepts post permalinks and feed update URLs, requires no setup, sends no cookies and never opens a browser or follows a redirect. It requests the post by the ID in the address, so a permalink with an inexact title part still resolves. LinkedIn’s terms restrict automated access.
 
 The first item contains the post text, author, publication timestamp and available engagement counts. Comments from the public page follow it. When LinkedIn reports more comments than it supplies, `meta.notes` gives both counts. Videos can include a transcript and duration in `raw`. A refusal ends the read. `rsrc check linkedin` reads one public post.
 

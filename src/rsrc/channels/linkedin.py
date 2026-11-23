@@ -23,10 +23,10 @@ def target(value):
         u = urlsplit(value)
         path = unquote(u.path).rstrip("/")
         host_ok = re.fullmatch(r"(?:(?:www|[a-z]{2})\.)?linkedin\.com", u.netloc, re.I)
-        m = re.fullmatch(r"/posts/[\w-]*?(?:activity|ugcPost|share)-(\d{19})(?:-[\w-]+)?", path, re.ASCII)
-        m = m or re.fullmatch(r"/feed/update/urn:li:(?:activity|ugcPost|share):(\d{19})", path)
+        m = re.fullmatch(r"/posts/[\w-]*?(activity|ugcPost|share)-(\d{19})(?:-[\w-]+)?", path, re.ASCII)
+        m = m or re.fullmatch(r"/feed/update/urn:li:(activity|ugcPost|share):(\d{19})", path)
         if u.scheme == "https" and host_ok and m:
-            return m[1], "https://www.linkedin.com" + path + "/"
+            return m[2], "https://www.linkedin.com" + path + "/", m[1]
     except ValueError:
         pass
     raise Failure("usage", "This command reads posts. Supply a LinkedIn post or feed update URL.")
@@ -118,6 +118,10 @@ def parse(status, headers, body, identity):
     http.raise_refusal(status, b"", "LinkedIn", WAIT)
     location = headers.get("Location", "").lower()
     if 300 <= status < 400:
+        if "/signup/cold-join" in location:
+            # Measured: LinkedIn sends a logged-out reader here for an ID with no public post.
+            raise http.NotFound(f"LinkedIn has no public post with this ID: it redirected to sign-up (HTTP {status}). "
+                                "The post is missing or not public.")
         if any(part in location for part in ("/login", "/authwall", "/uas/")):
             raise http.AuthError(f"LinkedIn redirected to sign-in (HTTP {status}). {WAIT}")
         raise http.Blocked(f"LinkedIn redirected the post request (HTTP {status}). {WAIT}")
@@ -143,8 +147,8 @@ def parse(status, headers, body, identity):
 def post_items(page, identity):
     post = page.posts[0]
     try:
-        canonical_id, url = target(page.canonical)
-        record_id, _ = target(string(post.get("@id")))
+        canonical_id, url, _ = target(page.canonical)
+        record_id = target(string(post.get("@id")))[0]
     except Failure:
         raise http.HttpError("Post has no identifiable permalink.") from None
     if record_id != canonical_id:
@@ -187,7 +191,9 @@ def run(args, ctx):
     start = time.monotonic()
     items, notes, attempts, error = [], [], [], None
     try:
-        identity, url = target(args.url)
+        identity, _, kind = target(args.url)
+        # Read by ID: a /posts/ address answers 404 when its slug is inexact, while the ID still resolves.
+        url = f"https://www.linkedin.com/feed/update/urn:li:{kind}:{identity}/"
         status, headers, body = client.request_with_headers("GET", url, {"User-Agent": "research-sources"})
         items, notes = parse(status, headers, body, identity)
     except http.HttpError as exc:
