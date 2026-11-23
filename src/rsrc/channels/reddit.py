@@ -48,7 +48,7 @@ POST_ATTRS = ("id", "permalink", "post-title", "author", "created-timestamp", "s
               "subreddit-prefixed-name", "post-type", "domain", "content-href", "upvote-ratio",
               "item-state", "post-language")
 COMMENT_ATTRS = ("thingid", "parentid", "postid", "author", "created", "score", "depth", "permalink",
-                 "collapsed")
+                 "collapsed", "is-mod-distinguished")
 
 RATE_MARKERS = ("whoa there, pardner", "too many requests")
 NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
@@ -74,7 +74,7 @@ def register(subparsers) -> None:
     search.add_argument("--sort", choices=SEARCH_SORTS, default="relevance", help="default relevance")
     search.add_argument("--limit", type=int, default=25, help=f"results, 1-{MAX_LIMIT} (default 25)")
     search.add_argument("--with-comments", type=int, nargs="?", const=3, metavar="N",
-                        help="include the first three Best top-level comments on each of the first N threads (default 3, max 5)")
+                        help="include the first three unpinned Best top-level comments on each of the first N threads (default 3, max 5)")
     search.set_defaults(run=run_search, action="search")
 
     read = actions.add_parser("read", help="one thread: the post and its top comments")
@@ -188,6 +188,10 @@ def with_comments(ctx, input_, posts, meta, count):
         else:
             comments, problem = best_comments(row["page"], post["id"])
             items.extend(comments)
+            skipped = row["page"].get("skipped_pinned", 0)
+            if not problem and skipped:
+                noun = "comment" if skipped == 1 else "comments"
+                meta.setdefault("notes", []).append(f"{post['id']}: skipped {skipped} pinned {noun}")
             if not problem and len(comments) < 3:
                 reason = ("all comments accounted for" if row["page"].get("shortfall") == "complete"
                           else "completeness unconfirmed at the 15 s deadline")

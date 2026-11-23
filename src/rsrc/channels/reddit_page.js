@@ -68,6 +68,7 @@ function readThread(attrs) {
   const nodes = [...document.querySelectorAll("shreddit-comment")];
   const rendered = new Set();
   let pendingRoot = false;
+  let skippedPinned = 0;
   const comments = [];
   for (const node of nodes) {
     if (attrs.preview) {
@@ -78,6 +79,13 @@ function readThread(attrs) {
       }
       if (node.getAttribute("depth") !== "0") continue;
     }
+    // Replies are nested inside their parents. Only this comment's badge can pin it.
+    const pinned = [...node.querySelectorAll("shreddit-comment-badges[stickied]")]
+      .some(badge => badge.closest("shreddit-comment") === node);
+    if (attrs.preview && pinned && rendered.has(node.getAttribute("thingid"))) {
+      skippedPinned++;
+      continue;
+    }
     const body = own(node, "comment", "shreddit-comment");
     const text = body ? body.innerText.trim() : null;
     if (attrs.preview) {
@@ -86,7 +94,9 @@ function readThread(attrs) {
       if (hidden || tombstone.test(text || "")) continue;
       if (!text || !node.getAttribute("thingid")) { pendingRoot = true; continue; }
     }
-    comments.push({ attrs: pick(node, attrs.comment), text });
+    const comment = { attrs: pick(node, attrs.comment), text };
+    if (pinned) comment.pinned = true;
+    comments.push(comment);
   }
   if (!post) return { post: null, comments };
   const body = own(post, "text-body", "shreddit-post");
@@ -96,6 +106,7 @@ function readThread(attrs) {
   if (removal) record.removal_notice = removal.innerText.trim();
   const result = { post: record, comments };
   if (attrs.preview) {
+    result.skipped_pinned = skippedPinned;
     const count = record.attrs["comment-count"];
     // The published count includes nested replies. A missing body is not evidence
     // of removal, and an absent "load more" button is not proof of a complete tree.

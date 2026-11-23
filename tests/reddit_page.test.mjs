@@ -90,25 +90,35 @@ test("a slow navigation can time out without discarding another thread", async (
   assert.equal(result.rows[1].page.post.attrs.id, fixture.post.attrs.id);
 });
 
-function snapshot(expression, count, rows) {
-  const node = (attrs, text) => {
+function threadDocument(count, rows) {
+  const node = (attrs, text, badges = []) => {
     const el = {
       getAttribute: key => attrs[key] ?? null,
       hasAttribute: key => key in attrs,
-      querySelectorAll: slot => slot === '[slot="comment"]' && text ? [{ innerText: text, closest: () => el }] : [],
+      querySelectorAll(selector) {
+        if (selector === "shreddit-comment-badges[stickied]") {
+          return badges.filter(badge => "stickied" in badge).map(badge => ({
+            closest: () => badge.nested ? {} : el,
+          }));
+        }
+        return selector === '[slot="comment"]' && text ? [{ innerText: text, closest: () => el }] : [];
+      },
     };
     return el;
   };
-  const post = node({ ...fixture.post.attrs, "comment-count": String(count) });
-  const comments = rows.map(row => node(row.attrs, row.text));
+  const post = node({ id: rows[0]?.attrs.postid || fixture.post.attrs.id, "comment-count": String(count) });
+  const comments = rows.map(row => node(row.attrs, row.text, row.badges));
   const sort = node({ "button-aria-label": fixture.comment_sort });
-  const document = {
+  return {
     title: "", body: { innerText: "" },
     querySelector: selector => selector === "shreddit-post" ? post : selector.startsWith("shreddit-sort-dropdown") ? sort : null,
     querySelectorAll: selector => selector === "shreddit-comment" ? comments : [],
   };
+}
+
+function snapshot(expression, count, rows) {
   return runInNewContext(expression, {
-    document, location: { href: "https://www.reddit.com/comments/1y0zet7", pathname: "/comments/1y0zet7" },
+    document: threadDocument(count, rows), location: { href: "https://www.reddit.com/comments/1y0zet7", pathname: "/comments/1y0zet7" },
     performance: { getEntriesByType: () => [{ responseStatus: 200 }] },
   });
 }
@@ -163,6 +173,53 @@ test("a rendered root with an unpopulated body is not evidence of a complete tre
   const { page, calls } = await replayTree(3, [rows, fixture.comments]);
   assert.equal(calls, 2);
   assert.equal(page.comments.length, 3);
+});
+
+// Public attributes and text excerpts from the first four Best roots of r/ClaudeAI 1xzcsdg.
+const pinnedThread = JSON.parse(readFileSync(new URL("./fixtures/reddit_pinned_comments.json", import.meta.url)));
+
+test("a pin cannot release the preview while the third unpinned root is loading", async () => {
+  const rows = pinnedThread.comments;
+  const { page, calls } = await replayTree(90, [rows.slice(0, 3), rows]);
+  assert.equal(calls, 2);
+  assert.deepEqual(page.comments.map(c => c.text), rows.slice(1).map(c => c.text));
+  assert.equal(page.skipped_pinned, 1);
+});
+
+test("pins count toward completeness even when every root is pinned", async () => {
+  for (const count of [1, 3]) {
+    const { page, calls } = await replayTree(count, [pinnedThread.comments.slice(0, count)]);
+    assert.equal(calls, 1);
+    assert.equal(page.shortfall, "complete");
+    assert.equal(page.comments.length, count - 1);
+    assert.equal(page.skipped_pinned, 1);
+  }
+});
+
+test("a human pin is omitted, an unpinned moderator and parent of a pin are eligible", async () => {
+  const [mod, normal, op, last] = pinnedThread.comments;
+  const rows = [{ ...op, badges: [{ stickied: "" }] }, { ...mod, badges: [{ "distinguished-as": "MODERATOR" }] },
+                { ...normal, badges: [{ stickied: "", nested: true }] }, last];
+  const { page } = await replayTree(4, [rows]);
+  assert.deepEqual(page.comments.map(c => c.text), [mod.text, normal.text, last.text]);
+  assert.equal(page.skipped_pinned, 1);
+});
+
+test("thread read keeps the pinned record in place with its moderator attribute", async () => {
+  const rows = pinnedThread.comments;
+  const page = { async goto() {}, async waitForFunction() {}, evaluate: fn => fn(input.attrs) };
+  const input = { action: "read", attrs: { post: ["id"], comment: ["thingid", "is-mod-distinguished"] } };
+  let result;
+  await runInNewContext(`(async () => { ${source} })()`, {
+    INPUT: input, taskSpace: () => ({ page: () => page, finish: async () => {} }),
+    document: threadDocument(rows.length, rows), performance: { getEntriesByType: () => [] },
+    location: { pathname: "/comments/1xzcsdg" },
+    console: { log: line => { result = JSON.parse(line.slice("RSRC_REDDIT ".length)); } },
+  });
+  assert.deepEqual(result.comments.map(c => c.text), rows.map(c => c.text));
+  assert.equal(result.comments[0].pinned, true);
+  assert.equal(result.comments[0].attrs["is-mod-distinguished"], "");
+  assert.equal(result.comments[1].pinned, undefined);
 });
 
 const cleanup = readFileSync(new URL("../src/rsrc/channels/reddit_cleanup.js", import.meta.url), "utf8");

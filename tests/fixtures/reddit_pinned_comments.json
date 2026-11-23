@@ -1,0 +1,60 @@
+{
+  "post": {
+    "attrs": {
+      "id": "t3_1xzcsdg"
+    }
+  },
+  "comment_sort": "Sort by Best",
+  "comments": [
+    {
+      "attrs": {
+        "postid": "t3_1xzcsdg",
+        "thingid": "t1_19stlfmkzre3m",
+        "depth": "0",
+        "author": "ClaudeAI-mod-bot",
+        "permalink": "/r/ClaudeAI/comments/1xzcsdg/comment/19stlfmkzre3m/",
+        "is-mod-distinguished": ""
+      },
+      "text": "TL;DR of the discussion generated automatically after 400 comments.\n\nThe consensus in this thread is a resounding \"hell yeah.\" The community",
+      "badges": [
+        {
+          "distinguished-as": "MODERATOR",
+          "stickied": ""
+        }
+      ]
+    },
+    {
+      "attrs": {
+        "postid": "t3_1xzcsdg",
+        "thingid": "t1_19stk1uu60gth",
+        "depth": "0",
+        "author": "Blockpair",
+        "permalink": "/r/ClaudeAI/comments/1xzcsdg/comment/19stk1uu60gth/"
+      },
+      "text": "crazy age of software we live in where everyone can instantly build whatever software they need.",
+      "badges": []
+    },
+    {
+      "attrs": {
+        "postid": "t3_1xzcsdg",
+        "thingid": "t1_19sticwyz7y1s",
+        "depth": "0",
+        "author": "CoderLuii",
+        "permalink": "/r/ClaudeAI/comments/1xzcsdg/comment/19sticwyz7y1s/"
+      },
+      "text": "im luis btw. 10+ years in software and security, homelabbing for about 5, and my open source tools are at 580K+ docker pulls and 4,200+ star",
+      "badges": []
+    },
+    {
+      "attrs": {
+        "postid": "t3_1xzcsdg",
+        "thingid": "t1_19stkv5pcce91",
+        "depth": "0",
+        "author": "Duckducklaugh",
+        "permalink": "/r/ClaudeAI/comments/1xzcsdg/comment/19stkv5pcce91/"
+      },
+      "text": "\"I promised 11 more languages, it got a bit out of hand\" is the most claude code sentence i've read this week.",
+      "badges": []
+    }
+  ]
+}

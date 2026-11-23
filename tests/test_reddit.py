@@ -560,3 +560,20 @@ def test_short_groups_keep_their_comments_and_name_the_reason(rsrc, shortfall, r
     code, out = rsrc(["search", "q", "--limit", "1", "--with-comments"], fake)
     assert code == 0 and len(out["items"]) == 3
     assert out["meta"]["notes"] == [f"t3_1y0zet7: 2 of 3 readable top-level comments ({reason})"]
+
+
+@pytest.mark.parametrize("remaining", [0, 2, 3])
+def test_pin_omission_and_shortfall_notes_belong_to_the_thread(rsrc, remaining):
+    thread = json.loads((FIXTURES / "reddit_pinned_comments.json").read_text())
+    post_id = thread["post"]["attrs"]["id"]
+    post = {**SEARCH["posts"][0], "context": {"post": {"id": post_id}}, "href": "/comments/1xzcsdg/"}
+    thread.update(comments=thread["comments"][1:1 + remaining], skipped_pinned=1)
+    if remaining < 3:
+        thread["shortfall"] = "complete"
+    fake = FakeEgo(printed({**SEARCH, "posts": [post]}), batch_pages(thread))
+    code, out = rsrc(["search", "q", "--limit", "1", "--with-comments"], fake)
+    assert code == 0 and len(out["items"]) == remaining + 1
+    notes = [f"{post_id}: skipped 1 pinned comment"]
+    if remaining < 3:
+        notes.append(f"{post_id}: {remaining} of 3 readable top-level comments (all comments accounted for)")
+    assert out["meta"]["notes"] == notes
