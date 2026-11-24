@@ -126,13 +126,28 @@ def posting(job, board):
     return env.item(id=role, title=job["title"], url=url, author=actual, published_at=stamp, source="ashby", raw=job)
 
 
+def locations(job):
+    return [job.get("location")] + [loc.get("location") for loc in job.get("secondaryLocations") or []]
+
+
+def facts(job):
+    teams = dict.fromkeys((job.get("department"), job.get("team")))
+    values = (
+        ("Location", ", ".join(filter(None, locations(job)))),
+        ("Workplace", job.get("workplaceType")),
+        ("Employment", job.get("employmentType")),
+        ("Team", " / ".join(filter(None, teams))),
+        ("Compensation", (job.get("compensation") or {}).get("compensationTierSummary")),
+    )
+    return [f"{label}: {' '.join(value.split())}" for label, value in values if value and value.strip()]
+
+
 def matches(item, args):
     job = item["raw"]
     if any(word not in item["title"].casefold() for word in (args.title or "").casefold().split()):
         return False
     teams = [job.get("team"), job.get("department")]
-    locations = [job.get("location")] + [loc.get("location") for loc in job.get("secondaryLocations", [])]
-    for needle, values in ((args.team, teams), (args.location, locations)):
+    for needle, values in ((args.team, teams), (args.location, locations(job))):
         if needle and not any(needle.casefold() in (value or "").casefold() for value in values):
             return False
     return not args.since or bool(item["published_at"] and item["published_at"][:10] >= args.since.isoformat())
@@ -169,9 +184,10 @@ def run(args, ctx):
                 text = Description().render(job.get("descriptionHtml") or "") or job.get("descriptionPlain")
                 if not isinstance(text, str) or not text.strip():
                     raise HttpError("Ashby posting lacks a readable description")
-                item["text"] = text
+                item["text"] = "\n\n".join(filter(None, ("\n".join(facts(job)), text)))
                 items.append(item)
             elif not read and job["isListed"] and matches(item, args):
+                item["text"] = " | ".join(facts(job)) or None
                 item["raw"] = {k: v for k, v in job.items() if k not in ("descriptionHtml", "descriptionPlain")}
                 items.append(item)
         if read and not items:

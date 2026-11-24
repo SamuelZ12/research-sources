@@ -32,9 +32,12 @@ def test_listing_and_filters(run):
     assert code == 0 and len(out["items"]) == 2
     first, second = out["items"]
     assert first["raw"]["isRemote"] and "compensation" not in first["raw"]
-    assert first["published_at"].endswith("Z") and first["text"] is None
+    assert first["published_at"].endswith("Z")
+    assert first["text"] == "Location: Europe | Workplace: Remote | Employment: FullTime | Team: Product / Engineering"
     assert first["author"] == second["author"] == "quartz"
     assert second["raw"]["compensation"]["compensationTierSummary"] == "$100K – $120K"
+    assert second["text"] == ("Location: North America, Boston | Workplace: Remote | Employment: FullTime"
+                              " | Team: Product / Engineering | Compensation: $100K – $120K")
     assert run("search", "quartz", "--title", "DESIGN wid", "--location", "boston",
                "--team", "Product", "--since", "2020-01-01")[1]["items"] == [second]
     assert run("search", "quartz", "--since", "2099-01-01")[0] == 66
@@ -45,8 +48,29 @@ def test_listing_and_filters(run):
 def test_read(run, args):
     code, out = run("read", *args)
     assert code == 0
-    assert out["items"][0]["text"] == "The role\n• Build widgets.\n• Test & ship."
+    assert out["items"][0]["text"] == ("Location: Europe\nWorkplace: Remote\nEmployment: FullTime\n"
+                                       "Team: Product / Engineering\n\nThe role\n• Build widgets.\n• Test & ship.")
     assert "descriptionHtml" in out["items"][0]["raw"]
+
+
+def test_read_paid_role_with_secondary_locations_and_one_team(run):
+    board = json.loads(BOARD)
+    job = board["jobs"][1]
+    job.update(team=job["department"], workplaceType=None)
+    job["secondaryLocations"].append({"location": "New York"})
+    code, out = run("read", "role-1", "--board", "quartz", body=json.dumps(board).encode())
+    item, = out["items"]
+    assert code == 0
+    assert item["text"] == ("Location: North America, Boston, New York\nEmployment: FullTime\n"
+                            "Team: Product\nCompensation: $100K – $120K\n\nThe role\n• Build widgets.\n• Test & ship.")
+    assert item["raw"] == job
+
+
+def test_read_without_role_facts(run):
+    body = b'{"jobs":[{"title":"Widget Engineer","isListed":true,"descriptionPlain":"Build widgets.",' \
+           b'"jobUrl":"https://jobs.ashbyhq.com/quartz/role-0"}]}'
+    code, out = run("read", "role-0", "--board", "quartz", body=body)
+    assert code == 0 and out["items"][0]["text"] == "Build widgets."
 
 
 @pytest.mark.parametrize(("status", "body", "error"), [
