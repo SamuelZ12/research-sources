@@ -132,7 +132,7 @@ def _item(row, post_id, thread_path, unavailable, *, depth=None):
     else:
         attrs.update({
             "thingid": id_, "parentid": row["parent_id"], "postid": post_id,
-            "created": published_at, "depth": str(depth),
+            "created": published_at, "depth": str(depth) if depth >= 0 else None,
             "collapsed": None,
             "is-mod-distinguished": "" if row.get("distinguished") == "moderator" else None,
         })
@@ -160,6 +160,7 @@ def _comments(rows, post_id, path, unavailable):
     seen = set()
     comments = []
     collapsed = False
+    orphans = 0
     while pending:
         node, parent, depth = pending.pop()
         row = node.get("data") if isinstance(node, dict) else None
@@ -169,9 +170,16 @@ def _comments(rows, post_id, path, unavailable):
             collapsed = True
             continue
         id_ = row.get("id")
+        # The archive lists a reply at the top of the tree when it does not hold the parent comment.
+        orphan = (depth == 0 and row.get("parent_id") != parent and isinstance(row.get("parent_id"), str)
+                  and re.fullmatch(r"t1_[a-z0-9]+", row["parent_id"]) is not None)
         if (node.get("kind") != "t1" or not isinstance(id_, str) or not ID.fullmatch(id_)
-                or row.get("link_id") != post_id or row.get("parent_id") != parent or id_ in seen):
+                or row.get("link_id") != post_id or id_ in seen
+                or (row.get("parent_id") != parent and not orphan)):
             raise http.HttpError("Arctic Shift returned an invalid, duplicate or unrelated comment")
+        if orphan:
+            orphans += 1
+            depth = -1  # unknown: the parent is outside the archive
         seen.add(id_)
         comments.append(_item(row, post_id, path, unavailable, depth=depth))
         replies = row.get("replies")
@@ -180,8 +188,9 @@ def _comments(rows, post_id, path, unavailable):
         listing = replies.get("data") if isinstance(replies, dict) and replies.get("kind") == "Listing" else None
         if not isinstance(listing, dict) or not isinstance(listing.get("children"), list):
             raise http.HttpError("Arctic Shift returned malformed comment replies")
-        pending.extend((child, "t1_" + id_, depth + 1) for child in reversed(listing["children"]))
-    return comments, collapsed
+        pending.extend((child, "t1_" + id_, depth + 1 if depth >= 0 else -1)
+                       for child in reversed(listing["children"]))
+    return comments, collapsed, orphans
 
 
 def _score_order(entry):
@@ -194,7 +203,7 @@ def read(ctx, input_, post_id):
     """Up to two requests: the post by ID and one bounded comment tree."""
     started = time.monotonic()
     transport = http.single_hop_transport if ctx.transport is http.urllib_transport else ctx.transport
-    client = http.Client(min_interval=2, max_requests=2, transport=transport, sleep=ctx.sleep)
+    client = http.Client(min_interval=0, max_requests=2, transport=transport, sleep=ctx.sleep)
     items, notes = [], ["This is an Arctic Shift archive copy of Reddit."]
     unavailable = {"post": set(), "comment": set()}
     removed = deleted = 0
@@ -217,13 +226,17 @@ def read(ctx, input_, post_id):
         removed, deleted = int(placeholder == "[removed]"), int(placeholder == "[deleted]")
         if input_["comments"]:
             rows = _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT)
-            comments, collapsed = _comments(rows, post_item["id"], path, unavailable)
+            comments, collapsed, orphans = _comments(rows, post_item["id"], path, unavailable)
             count = post_item["engagement"]["comments"]
             if not comments and (collapsed or (count is not None and count > 0)):
                 raise http.HttpError("Arctic Shift returned no comment records despite evidence of comments")
             selected = sorted(comments, key=_score_order)[:input_["comments"]]
             notes.append("Comments are sorted by descending archived score within the fetched tree, "
                          "then oldest first for ties (unknown scores last).")
+            if orphans:
+                noun = "reply" if orphans == 1 else "replies"
+                notes.append(f"The archive holds {orphans} {noun} whose parent comment it lacks. "
+                             "Their depth, and that of replies under them, is null.")
             if collapsed:
                 notes.append(f"Arctic Shift collapsed parts of the tree in the bounded {TREE_LIMIT}-comment fetch.")
             if count != len(comments) or len(selected) != len(comments) or collapsed:

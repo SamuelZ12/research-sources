@@ -176,3 +176,27 @@ def test_check_confirms_archive_read_when_ego_is_absent(run):
 def test_check_live_requires_ego(run):
     code, out, urls = run(["check", "reddit", "--live-reddit"])
     assert code == 2 and not urls and out["error"]["code"] == "config"
+
+
+def test_reply_without_archived_parent_is_kept_with_unknown_depth(run):
+    tree = json.loads(TREE)
+    orphan = {"kind": "t1", "data": {"id": "jy9zzzz", "link_id": "t3_1641krf", "parent_id": "t1_jy0gone",
+              "created_utc": 1693270000, "score": 7, "author": "example_orphan", "body": "Example orphan reply.",
+              "replies": {"kind": "Listing", "data": {"children": [{"kind": "t1", "data": {
+                  "id": "jya0000", "link_id": "t3_1641krf", "parent_id": "t1_jy9zzzz", "created_utc": 1693270100,
+                  "score": 1, "author": "example_child", "body": "Example child.", "replies": ""}}]}}}}
+    tree["data"].append(orphan)
+    code, out, _ = run(["reddit", "read", POST_URL], (200, POST), response(tree))
+    assert code == 0 and out["ok"] and len(out["items"]) == 6
+    by_id = {item["id"]: item for item in out["items"]}
+    assert by_id["t1_jy9zzzz"]["raw"]["attrs"]["parentid"] == "t1_jy0gone"
+    assert by_id["t1_jy9zzzz"]["raw"]["attrs"]["depth"] is None and by_id["t1_jya0000"]["raw"]["attrs"]["depth"] is None
+    notes = " ".join(out["meta"]["notes"])
+    assert "1 reply whose parent comment it lacks" in notes and "raw.attrs.depth" in notes
+
+
+def test_top_level_comment_from_another_thread_is_still_refused(run):
+    tree = json.loads(TREE)
+    tree["data"][0]["data"]["parent_id"] = "t3_other"
+    code, out, _ = run(["reddit", "read", POST_URL], (200, POST), response(tree))
+    assert code == 1 and out["error"]["code"] == "upstream_error"
