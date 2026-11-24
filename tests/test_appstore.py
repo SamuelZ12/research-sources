@@ -28,11 +28,14 @@ def run(capsys, argv, *responses):
 
 
 def test_search(capsys):
-    code, out = run(capsys, ["search", "Signal"], recording("app"))
+    catalog = recording("app")
+    catalog["results"][0].update(description="Send private messages.", releaseNotes="Fixed a bug.")
+    code, out = run(capsys, ["search", "Signal"], catalog)
     a = out["items"][0]
     assert code == 0 and a["id"] == "874139669" and a["title"] == "Signal - Private Messenger"
     assert a["engagement"]["rating"] == recording("app")["results"][0]["averageUserRating"]
     assert a["author"] and a["engagement"]["ratings"] and a["raw"]["version"]
+    assert a["text"] is None
 
 
 @pytest.mark.parametrize("target", ["Signal - Private Messenger", "874139669", "https://apps.apple.com/us/app/id874139669"])
@@ -45,12 +48,45 @@ def test_read(capsys, target):
     assert first["text"] and first["engagement"]["rating"] == 5 and first["published_at"] >= second["published_at"]
 
 
+@pytest.mark.parametrize("facts,expected", [
+    ({"formattedPrice": "Free", "primaryGenreName": "Social Networking", "version": "8.38",
+      "releaseDate": "2014-07-29T17:00:00Z", "minimumOsVersion": "15.0", "releaseNotes": "Fixed a bug."},
+     "Free · Social Networking · Version 8.38 · Released 2014-07-29 · Requires OS 15.0\n\n"
+     "Send private messages.\n\nWhat's new in 8.38\nFixed a bug."),
+    ({"primaryGenreName": None, "version": None}, "Send private messages."),
+])
+def test_listing_text(capsys, facts, expected):
+    catalog = recording("app")
+    catalog["results"][0].update(description="Send private messages.", **facts)
+    code, out = run(capsys, ["read", "874139669", "--limit", "1"], catalog, recording("rss"))
+    assert code == 0 and out["items"][0]["text"] == expected
+
+
+@pytest.mark.parametrize("country,title,limit", [
+    ("fr", "iTunes Store : Avis d’utilisateurs", 1),
+    ("de", "iTunes Store: Rezensionen", 2),
+])
+def test_localized_reviews(capsys, country, title, limit):
+    catalog = json.loads(json.dumps(recording("app")).replace("/us/", f"/{country}/"))
+    rss = json.loads(json.dumps(recording("rss")).replace("/us/", f"/{country}/"))
+    feed = rss["feed"]
+    feed["title"]["label"] = title
+    ids = [entry["id"]["label"] for entry in feed["entry"][:limit]]
+    if limit == 1:
+        feed["entry"] = feed["entry"][0]
+    code, out = run(capsys, ["read", "874139669", "--country", country, "--limit", str(limit)], catalog, rss)
+    assert code == 0 and out["error"] is None
+    assert [item["id"] for item in out["items"]] == ["874139669", *ids]
+
+
 def test_ambiguous_name_returns_choices_without_reading(capsys):
     r = recording("app")
+    r["results"][0]["description"] = "Send private messages."
     r["results"] += [{**r["results"][0], "trackName": "Signal companion"}]
     r["resultCount"] = 2
     code, out = run(capsys, ["read", "Signal"], r)
     assert code == 2 and len(out["items"]) == 2
+    assert all(item["text"] is None for item in out["items"])
 
 
 @pytest.mark.parametrize("stage", ["catalog", "feed", "review", "shape"])
@@ -77,10 +113,37 @@ def wiki_count(total):
     return d
 
 
+def test_rss_page_after_last_has_no_entries(capsys):
+    first = recording("rss")
+    feed = first["feed"]
+    feed["entry"] = feed["entry"][0]
+    last = next(link["attributes"] for link in feed["link"] if link["attributes"]["rel"] == "last")
+    last["href"] = last["href"].replace("page=10", "page=1")
+    end = json.loads(json.dumps(first))
+    feed = end["feed"]
+    del feed["entry"]
+    feed["id"]["label"] = feed["id"]["label"].replace("page=1", "page=2")
+    for link in feed["link"]:
+        attrs = link["attributes"]
+        if attrs["rel"] == "self":
+            attrs["href"] = feed["id"]["label"]
+        else:
+            attrs["href"] = attrs["href"].replace("urlDesc=/customerreviews/page=1", "urlDesc=/customerreviews/page=2")
+    count = json.loads(json.dumps(wiki_count(1)).replace("324715238", "874139669"))
+    code, out = run(capsys, ["read", "874139669"], recording("app"), first, end, count)
+    assert code == 0 and out["error"] is None
+    assert [item["id"] for item in out["items"]] == ["874139669", "14813499075"]
+    assert "Apple reports 1 written reviews in US." in out["meta"]["notes"]
+
+
 def test_empty_rss_confirmed_by_count_or_filled_from_rows(capsys):
     a, f = recording("wiki"), recording("empty_feed")
+    a["results"][0]["description"] = "Browse the free encyclopedia."
     code, out = run(capsys, ["read", "324715238"], a, f, wiki_count(0))
-    assert code == 66 and not out["items"] and "no written reviews" in out["meta"]["notes"][-1]
+    assert code == 0 and out["error"] is None
+    item, = out["items"]
+    assert item["id"] == "324715238" and item["text"].endswith("\n\nBrowse the free encyclopedia.")
+    assert out["meta"]["notes"][-1] == "Wikipedia (324715238) has no written reviews in US."
     signal = recording("app")
     feed = json.loads(json.dumps(f).replace("324715238", "874139669"))
     count = json.loads(json.dumps(wiki_count(1)).replace("324715238", "874139669"))

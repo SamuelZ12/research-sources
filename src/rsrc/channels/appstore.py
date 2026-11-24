@@ -69,6 +69,21 @@ def utc(value):
     return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def listing_text(row):
+    version = row.get("version")
+    released = (row.get("releaseDate") or "").split("T", 1)[0]
+    minimum_os = row.get("minimumOsVersion")
+    facts = " · ".join(filter(None, (
+        row.get("formattedPrice"), row.get("primaryGenreName"), version and f"Version {version}",
+        released and f"Released {released}", minimum_os and f"Requires OS {minimum_os}",
+    )))
+    parts = [facts, row.get("description")]
+    if notes := row.get("releaseNotes"):
+        heading = f"What's new in {version}" if version else "What's new"
+        parts.append(f"{heading}\n{notes}")
+    return "\n\n".join(filter(None, parts)) or None
+
+
 def catalog(client, country, *, term=None, app_id=None, limit=25):
     params = {"entity": "software", "country": country}
     if app_id:
@@ -81,9 +96,10 @@ def catalog(client, country, *, term=None, app_id=None, limit=25):
     rows = data["results"]
     if not isinstance(rows, list) or type(data["resultCount"]) is not int or data["resultCount"] != len(rows):
         raise ValueError
-    apps = []
+    apps, listings = [], {}
     for row in rows:
         ident = str(number(row["trackId"]))
+        listings[ident] = row
         url = urlsplit(row["trackViewUrl"])
         match = APP_PATH.fullmatch(url.path)
         if (url.scheme != "https" or url.netloc != "apps.apple.com" or not match
@@ -98,7 +114,7 @@ def catalog(client, country, *, term=None, app_id=None, limit=25):
                              source="appstore", engagement={"rating": row.get("averageUserRating"),
                                                             "ratings": row.get("userRatingCount")},
                              raw={**raw, "country": country, "kind": "app"}))
-    return apps
+    return apps, listings
 
 
 def review(app, ident, title, author, date, body, stars, votes, total_votes, version):
@@ -117,14 +133,19 @@ def rss(client, app, page, sort):
     feed = get(client, url, headers=HEADERS)["feed"]
     if feed["id"]["label"] != url:
         raise Mismatch("Apple RSS feed identifies a different app, country, page or sort")
-    if feed["title"]["label"] != "iTunes Store: Customer Reviews":
-        raise ValueError
     links = {link["attributes"]["rel"]: link["attributes"]["href"] for link in feed["link"]}
     if links.get("self") != url:
         raise Mismatch("Review feed self link differs from the requested URL")
     if "entry" not in feed and (links["first"] or links["last"] or links["next"]):
-        raise ValueError
+        last = re.fullmatch(
+            rf"{re.escape(ROOT)}/{country}/rss/customerreviews/page=([1-9][0-9]*)/id={ident}/sortby=most{sort}/xml",
+            links["last"].split("?", 1)[0],
+        )
+        if not last or int(last[1]) >= page:
+            raise ValueError
     rows = feed.get("entry", [])
+    if isinstance(rows, dict):
+        rows = [rows]
     if not isinstance(rows, list):
         raise ValueError
     items = []
@@ -200,7 +221,6 @@ def read_reviews(client, app, args, items, meta):
         if total is not None and offset >= total:
             break
     if not seen:
-        items.clear()
         meta["notes"].append(f'{app["title"]} ({app["id"]}) has no written reviews in {country.upper()}.')
 
 
@@ -232,10 +252,10 @@ def run(args, ctx):
     client = Client(max_requests=cap, min_interval=0.2, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
-        apps = catalog(client, country, term=q, app_id=ident, limit=50 if read else args.limit)
+        apps, rows = catalog(client, country, term=q, app_id=ident, limit=50 if read else args.limit)
         if ident and not apps:
             reference = "gb" if country == "us" else "us"
-            other = catalog(client, reference, app_id=ident)
+            other, _ = catalog(client, reference, app_id=ident)
             if other:
                 raise NotFound(f'{other[0]["title"]} ({ident}) is sold in {reference.upper()} but unavailable in {country.upper()}')
             raise NotFound(f"App {ident} not found in {country.upper()} or {reference.upper()}; worldwide availability unknown")
@@ -251,6 +271,7 @@ def run(args, ctx):
                 apps = close
             if len(apps) != 1:
                 raise Mismatch("Lookup returned multiple apps for one ID")
+            apps[0]["text"] = listing_text(rows[apps[0]["id"]])
             items.append(apps[0])
             read_reviews(client, apps[0], args, items, meta)
     except CapReached:
