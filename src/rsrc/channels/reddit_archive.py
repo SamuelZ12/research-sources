@@ -26,11 +26,12 @@ def _rows(client, path, **params):
         seconds = headers.get("X-RateLimit-Reset") or headers.get("Retry-After")
         wait = f" (reset in {seconds} s)" if isinstance(seconds, str) and seconds.isdecimal() else ""
         raise http.RateLimited(f"Arctic Shift rate limit (HTTP 429){wait}. Stopped without retrying.")
+    http.raise_refusal(status, body, "Arctic Shift")
     if status != 200:
         raise http.HttpError(f"Arctic Shift returned HTTP {status} for {path}")
     try:
         data = json.loads(body)
-    except (ValueError, UnicodeError):
+    except (ValueError, UnicodeError, RecursionError):  # a long reply chain can exceed the decoder's depth
         raise http.HttpError(f"Arctic Shift returned invalid JSON for {path}") from None
     if not isinstance(data, dict) or data.get("error") or not isinstance(data.get("data"), list):
         raise http.HttpError(f"Arctic Shift returned an unexpected response for {path}")
@@ -43,6 +44,11 @@ def _int(value):
 
 def _string(value):
     return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _body(value):
+    """Markdown as archived: indentation on the first line is content."""
+    return value.strip("\n").rstrip() if isinstance(value, str) and value.strip() else None
 
 
 def _iso(epoch):
@@ -82,7 +88,7 @@ def _snapshot_note(post):
 
 
 def _placeholder(row, text):
-    marker = text.lower() if text else None
+    marker = text.strip().lower() if text else None
     meta = _metadata(row)
     later = meta.get("was_deleted_later") is True
     reason = _string(row.get("removed_by_category")) or _string(row.get("removal_reason"))
@@ -102,7 +108,7 @@ def _item(row, post_id, thread_path, unavailable, *, depth=None):
     kind = "post" if is_post else "comment"
     id_ = ("t3_" if is_post else "t1_") + row["id"]
     path = thread_path if is_post else thread_path + "_/" + row["id"] + "/"
-    text = _string(row.get("selftext" if is_post else "body"))
+    text = _body(row.get("selftext" if is_post else "body"))
     placeholder = _placeholder(row, text)
     title = _string(row.get("title")) if is_post and not placeholder else None
     if not (title or text or placeholder):
@@ -144,7 +150,7 @@ def _item(row, post_id, thread_path, unavailable, *, depth=None):
         missing.add("title")
     if is_post and text is None and placeholder is None:
         missing.add("text")
-    unavailable[kind].update(missing)
+    unavailable[id_] = kind, missing
     raw = {"kind": kind, "attrs": attrs, "text": placeholder or text}
     if not is_post and row.get("stickied") is True:
         raw["pinned"] = True
@@ -205,7 +211,7 @@ def read(ctx, input_, post_id):
     transport = http.single_hop_transport if ctx.transport is http.urllib_transport else ctx.transport
     client = http.Client(min_interval=0, max_requests=2, transport=transport, sleep=ctx.sleep)
     items, notes = [], ["This is an Arctic Shift archive copy of Reddit."]
-    unavailable = {"post": set(), "comment": set()}
+    unavailable = {}  # item ID -> (kind, null fields), reported only for items that are returned
     removed = deleted = 0
     failure = None
     try:
@@ -239,24 +245,26 @@ def read(ctx, input_, post_id):
                              "Their depth, and that of replies under them, is null.")
             if collapsed:
                 notes.append(f"Arctic Shift collapsed parts of the tree in the bounded {TREE_LIMIT}-comment fetch.")
-            if count != len(comments) or len(selected) != len(comments) or collapsed:
-                reported = f"{count} comments reported by the post snapshot" if count is not None else "an unknown snapshot count"
-                noun = "comment" if len(selected) == 1 else "comments"
-                notes.append(f"Returned {len(selected)} {noun}. The fetched tree supplied {len(comments)} "
-                             f"comment records against {reported}.")
+            reported = f"{count} comments reported by the post snapshot" if count is not None else "an unknown snapshot count"
+            noun = "comment" if len(selected) == 1 else "comments"
+            notes.append(f"Returned {len(selected)} {noun}. The fetched tree supplied {len(comments)} "
+                         f"comment records against {reported}.")
             items.extend(item for item, _ in selected)
             removed += sum(marker == "[removed]" for _, marker in selected)
             deleted += sum(marker == "[deleted]" for _, marker in selected)
         else:
             notes.append("Comments were not requested.")
     except http.HttpError as exc:
-        code = exc.code if exc.code in ("not_found", "rate_limited") else "upstream_error"
-        failure = env.error(code, str(exc))
+        failure = env.error(exc.code, str(exc))
 
     if removed or deleted:
         notes.append(f"Arctic Shift marked {deleted} returned items as deleted and {removed} as removed. "
                      "Their contents are shown as placeholders.")
-    for kind, fields in unavailable.items():
+    nulls = {"post": set(), "comment": set()}
+    for item in items:
+        kind, missing = unavailable[item["id"]]
+        nulls[kind].update(missing)
+    for kind, fields in nulls.items():
         if fields:
             notes.append(f"One or more {kind} records have null values for {', '.join(sorted(fields))}.")
     if len(items) > 1:

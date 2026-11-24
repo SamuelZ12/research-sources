@@ -136,7 +136,10 @@ def test_unsupported_archive_inputs_fail_without_network(run, args):
 @pytest.mark.parametrize(("upstream", "error"), [
     ((200, b'{"data":[]}'), "not_found"),
     ((429, {"Retry-After": "30"}, b""), "rate_limited"),
-    ((200, b"<html>security check</html>"), "upstream_error"),
+    ((200, b"<html>security check</html>"), "blocked"),
+    ((403, b"{}"), "blocked"),
+    ((401, b"{}"), "auth_failed"),
+    ((200, b"[" * 100000), "upstream_error"),
     ((302, {"Location": "https://reddit.com/"}, b""), "upstream_error"),
     ((200, b'{"data":[],"error":"Query timed out"}'), "upstream_error"),
     ((200, b'{"data":[{"id":"wrong","title":"Wrong post"}]}'), "upstream_error"),
@@ -200,3 +203,26 @@ def test_top_level_comment_from_another_thread_is_still_refused(run):
     tree["data"][0]["data"]["parent_id"] = "t3_other"
     code, out, _ = run(["reddit", "read", POST_URL], (200, POST), response(tree))
     assert code == 1 and out["error"]["code"] == "upstream_error"
+
+
+def test_network_failure_keeps_its_own_code(run, monkeypatch):
+    from rsrc import http
+
+    def down(client, *args, **kwargs):
+        raise http.NetworkError("could not reach arctic-shift.photon-reddit.com")
+    monkeypatch.setattr(http.Client, "request_with_headers", down)
+    code, out, _ = run(["reddit", "read", POST_URL])
+    assert code == 1 and out["error"]["code"] == "network_error"
+
+
+def test_notes_cover_only_returned_items_and_text_keeps_indentation(run):
+    tree = json.loads(TREE)
+    tree["data"][0]["data"]["body"] = "    indented code\nplain line\n"
+    tree["data"][0]["data"]["score"] = 99
+    code, out, _ = run(["reddit", "read", POST_URL, "--comments", "1"], (200, POST), response(tree))
+    assert code == 0 and len(out["items"]) == 2
+    assert out["items"][1]["text"] == "    indented code\nplain line"
+    notes = out["meta"]["notes"]
+    assert "Returned 1 comment. The fetched tree supplied 3 comment records against 21" in " ".join(notes)
+    # The unreturned removed comment has no author; the returned one does.
+    assert not any("comment records have null values for author" in note for note in notes)
