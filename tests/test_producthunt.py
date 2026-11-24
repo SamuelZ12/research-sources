@@ -13,7 +13,7 @@ def recording(name):
     return json.loads((FIX / f"{name}.json").read_text())
 
 
-def command(capsys, args, *responses):
+def command(capsys, args, *responses, **by_tool):
     calls = []
 
     def transport(method, url, headers, body):
@@ -23,7 +23,7 @@ def command(capsys, args, *responses):
         assert request["method"] == headers["Mcp-Method"] == "tools/call"
         assert headers["Mcp-Name"] == request["params"]["name"]
         assert headers["MCP-Protocol-Version"] == request["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"]
-        result = responses[len(calls) - 1]
+        result = by_tool[headers["Mcp-Name"]] if by_tool else responses[len(calls) - 1]
         if isinstance(result, tuple):
             return result
         result["id"] = request["id"]
@@ -45,12 +45,12 @@ def test_search(capsys):
 
 @pytest.mark.parametrize("value", ["linear", "https://www.producthunt.com/products/linear?ref=test"])
 def test_profile(capsys, value):
-    code, out, calls = command(capsys, ["read", value], recording("profile"), recording("search"))
+    code, out, calls = command(capsys, ["read", value], recording("search"), recording("profile"))
     item, = out["items"]
     assert code == 0 and item["published_at"] == "2026-05-29T07:01:00Z"
     assert item["engagement"]["rating"] == 4.93
     assert set(item["raw"]["profile"]["review_highlights"][0]) == {"rating", "excerpt"}
-    assert calls[0]["arguments"] == {"product_name": "linear"}
+    assert calls[1]["arguments"] == {"product_name": "linear"}
 
 
 @pytest.mark.parametrize("path", ["posts/linear-mobile-2", "products/linear/launches/linear-mobile-2",
@@ -61,6 +61,33 @@ def test_exact_launch(capsys, path):
     item, = out["items"]
     assert code == 0 and item["engagement"]["points"] == 592
     assert item["published_at"] == "2024-09-20T07:01:00Z"
+
+
+@pytest.mark.parametrize("path,slug,tagline,points,launched_at", [
+    ("products/linear", "linear", "The product development system for teams and agents.", 767, "2026-05-29T07:01:00Z"),
+    ("posts/linear-mobile-2", "linear-mobile-2", "The portable companion to the Linear system", 592, "2024-09-20T07:01:00Z"),
+])
+def test_read_when_profile_is_missing(capsys, path, slug, tagline, points, launched_at):
+    url = "https://www.producthunt.com/" + path
+    code, out, _ = command(capsys, ["read", url], search_products=recording("search"),
+                           get_product_profile=recording("missing"))
+    assert code == 0 and out["error"] is None
+    item, = out["items"]
+    assert item["id"] == slug and item["url"] == url and item["text"] == tagline
+    assert item["published_at"] == launched_at
+    points_key = "points" if path.startswith("posts/") else "top_launch_points"
+    assert item["engagement"] == {"rating": 4.93, "reviews": 474, points_key: points}
+    row = item["raw"]["product"] if path.startswith("posts/") else item["raw"]
+    assert row["makers"][0]["name"] == "Lasse Boisen Andersen" and row["launches"][0]["slug"] == "linear-3"
+    assert out["meta"]["notes"] == ["Product Hunt profile unavailable. Description and review highlights are missing."]
+    assert out["meta"]["attempts"][0]["requests"] == 2
+
+
+@pytest.mark.parametrize("path,error", [("products/unknown", "not_found"), ("posts/unknown", "upstream_error")])
+def test_read_needs_exact_search_match_when_profile_is_missing(capsys, path, error):
+    code, out, _ = command(capsys, ["read", "https://www.producthunt.com/" + path],
+                           search_products=recording("search"), get_product_profile=recording("missing"))
+    assert code == 1 and out["items"] == [] and out["error"]["code"] == error
 
 
 def test_board(capsys):
@@ -83,13 +110,14 @@ def test_board(capsys):
 ])
 def test_failures_and_empty(capsys, args, reply, exitcode, error):
     reply = recording(reply) if isinstance(reply, str) else reply
-    code, out, calls = command(capsys, args, reply)
-    assert code == exitcode and not out["items"] and len(calls) == 1
+    responses = [recording("empty"), reply] if args[0] == "read" else [reply]
+    code, out, calls = command(capsys, args, *responses)
+    assert code == exitcode and not out["items"] and len(calls) == len(responses)
     assert (out["error"] or {}).get("code") == error
 
 
 def test_bounded_requests(capsys):
-    code, out, _ = command(capsys, ["read", "linear", "--max-requests", "1"], recording("profile"))
+    code, out, _ = command(capsys, ["read", "linear", "--max-requests", "1"], recording("search"))
     assert code == 1 and out["meta"]["truncated"] == "request_cap"
 
 
@@ -130,7 +158,7 @@ def test_launch_with_wrong_parent(capsys):
 def test_malformed_review_is_an_error(capsys):
     reply = recording("profile")
     reply["result"]["structuredContent"]["data"]["review_highlights"] = [{"body": "changed schema"}]
-    code, out, _ = command(capsys, ["read", "linear"], reply)
+    code, out, _ = command(capsys, ["read", "linear"], recording("search"), reply)
     assert code == 1 and out["error"]["code"] == "upstream_error"
 
 

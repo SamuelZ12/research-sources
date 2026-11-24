@@ -187,16 +187,28 @@ def launch_item(launch, raw, engagement):
 
 
 def read(client, product, launch, notes):
+    query = re.sub(r"-[0-9]+$", "", launch).replace("-", " ") if launch else product
+    found = search_rows(client, query, 10)
     if launch:
-        query = re.sub(r"-[0-9]+$", "", launch).replace("-", " ")
-        found = search_rows(client, query, 10)
         matches = [(row, post) for row in found if product in (None, row["slug"])
                    for post in row["launches"] if post["slug"] == launch]
         if len(matches) != 1:
             raise HttpError("could not verify the exact launch in Product Hunt's bounded search results")
         row, post = matches[0]
         product = row["slug"]
-    profile = tool(client, "get_product_profile", product_name=product)
+    else:
+        row = next((r for r in found if r["slug"] == product), None)
+    try:
+        profile = tool(client, "get_product_profile", product_name=product)
+    except Failure as exc:
+        if exc.code != "not_found" or row is None:
+            raise
+        notes.append("Product Hunt profile unavailable. Description and review highlights are missing.")
+        engagement = counts(row, "rating")
+        if launch:
+            return launch_item(post, {"launch": post, "product": row}, engagement)
+        engagement["top_launch_points"] = row["top_launch_points"]
+        return product_item(row, row, row["latest_launch_at"], engagement)
     detail = profile["product"]
     if identity(detail, "products")[0] != product:
         raise Failure("url_mismatch", "Product Hunt returned a different product slug")
@@ -211,8 +223,6 @@ def read(client, product, launch, notes):
     notes.append("Review highlights are selected product excerpts. Launch discussion is unavailable.")
     if launch:
         return launch_item(post, {"launch": post, "profile": profile}, engagement)
-    found = search_rows(client, product, 10)
-    row = next((r for r in found if r["slug"] == product), None)
     if row is None:
         notes.append("No exact search record for launch dates and points.")
     else:
