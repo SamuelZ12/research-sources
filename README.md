@@ -4,7 +4,7 @@
 
 **Status:** early, with one maintainer. Developed and tested on macOS only. FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification now lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional). `rsrc x read`, `rsrc x replies` and `rsrc x timeline` still work without a login.
 
-- **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store, Ashby and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in.
+- **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store, Ashby and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in. Without Ego Lite, thread reads come from the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive.
 - **One output shape.** Eleven sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
 - **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
 - **Stops on rate limits.** A rate-limited backend stops. A repository-scoped GitHub read can restart with your login after exhausting the shared public allowance.
@@ -54,7 +54,7 @@ Requirements by channel:
 | `producthunt` | Nothing. The official MCP server exposes launches and selected review excerpts. Launch discussions are unavailable |
 | `ashby` | Nothing. Reads one public employer board per request |
 | `appstore` | Nothing. Apple’s public storefront review feed can lag by a day or two |
-| `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH` |
+| `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH`, for search, share links and live thread reads. Without it, `reddit read` uses the Arctic Shift archive and needs nothing |
 
 On a Mac with Homebrew: `brew install yt-dlp deno gh`.
 
@@ -77,7 +77,7 @@ Then ask a question the skill covers, such as "what are people on X and Hacker N
 | Channel | Commands |
 |---|---|
 | X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
-| Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
+| Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID [--backend ego-browser\|arctic-shift]` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
@@ -201,7 +201,10 @@ Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged
 - Cookie values never appear in output, error messages or files `rsrc` writes.
 - X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.
 
-All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low. On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
+All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low.
+
+`rsrc reddit read` uses Ego Lite when `ego-browser` is on your `PATH`, and the Arctic Shift archive otherwise or with `--backend arctic-shift`. An archive read sends two requests to `arctic-shift.photon-reddit.com` and none to Reddit. It returns the post, then up to 200 archived comments ranked by archived score. Scores and comment counts are the archive's snapshot; `meta.notes` gives the capture time and how many comments the archive supplied. Content the archive marks deleted or removed is shown as a placeholder. Search and `/s/` share links need Ego Lite. The archive sets its rate limits by load and makes no uptime promise.
+ On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
 
 ## LinkedIn public posts
 
@@ -215,7 +218,7 @@ The first item contains the post text, author, publication timestamp and availab
 - **No merging or ranking across sources.** Each list is that site's own results in that site's order.
 - **No caching of results.** Every command asks the source again.
 - **No web search.** It covers what web search misses; pair it with one.
-- **No guarantees about the sources.** FxTwitter, X's web search, Reddit's pages and YouTube through `yt-dlp` are not official APIs and can change or block without notice. `rsrc` is built to fail with an error code when one does, rather than look empty. You are responsible for following each site's terms.
+- **No guarantees about the sources.** FxTwitter, X's web search, Reddit's pages, the Arctic Shift archive and YouTube through `yt-dlp` are not official APIs and can change or block without notice. `rsrc` is built to fail with an error code when one does, rather than look empty. You are responsible for following each site's terms.
 
 ## Contributing
 
