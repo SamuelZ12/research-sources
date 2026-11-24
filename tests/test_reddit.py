@@ -57,6 +57,7 @@ class FakeEgo:
 @pytest.fixture
 def rsrc(monkeypatch, capsys):
     monkeypatch.setattr(cli, "CHANNELS", [reddit])
+    monkeypatch.setattr(reddit, "which", lambda name: name)
 
     def run(argv, fake, redirect=None):
         ctx = cli.Context(environ={}, runner=fake, redirect=redirect, sleep=lambda s: None)
@@ -205,6 +206,7 @@ def test_read_returns_post_then_comments(rsrc):
     assert post["engagement"] == {"score": 557, "comments": 159}
     assert post["text"].startswith("thought claude was just another LLM")
     assert post["raw"]["attrs"]["subreddit-prefixed-name"] == "r/claude"
+    assert [item["raw"]["kind"] for item in out["items"]] == ["post"] + ["comment"] * len(comments)
 
     assert len(comments) == 12
     first, reply = comments[:2]

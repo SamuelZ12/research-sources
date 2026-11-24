@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "1641krf",
+      "subreddit": "ModSupport",
+      "created_utc": 1693264961,
+      "retrieved_on": 1693264982,
+      "_meta": {
+        "retrieved_2nd_on": 1754346903
+      },
+      "score": 35,
+      "num_comments": 21,
+      "is_self": true,
+      "domain": "self.ModSupport",
+      "removed_by_category": null,
+      "author": "example_poster",
+      "title": "Example post title",
+      "selftext": "Example post text."
+    }
+  ]
+}

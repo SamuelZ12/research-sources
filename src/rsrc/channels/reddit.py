@@ -17,10 +17,12 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from shutil import which
 from urllib.parse import urlencode, urljoin, urlsplit, quote
 
 from rsrc import checks, proc
 from rsrc import envelope as env
+from rsrc.channels import reddit_archive
 from rsrc.http import Client, NetworkError
 
 CHANNEL = "reddit"
@@ -63,8 +65,8 @@ _SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{2,21}$")
 
 
 def register(subparsers) -> None:
-    parser = subparsers.add_parser("reddit", help="Reddit search and threads, via a background Ego tab",
-                                   description="Loads real reddit.com pages in Ego Lite (must be running).")
+    parser = subparsers.add_parser("reddit", help="Reddit search and threads",
+                                   description="Uses Ego Lite for search and live reads, or Arctic Shift for archived reads.")
     actions = parser.add_subparsers(dest="action", metavar="ACTION", required=True)
 
     search = actions.add_parser("search", help="search posts")
@@ -81,6 +83,8 @@ def register(subparsers) -> None:
     read.add_argument("post", help="post URL, share link, redd.it link, t3_ID or ID")
     read.add_argument("--sort", choices=READ_SORTS, default="top", help="comment order (default top)")
     read.add_argument("--comments", type=int, default=50, help=f"comments, 0-{MAX_COMMENTS} (default 50)")
+    read.add_argument("--backend", choices=(BACKEND, reddit_archive.BACKEND),
+                      help="default: use Ego Lite when installed, otherwise read the Arctic Shift archive")
     read.set_defaults(run=run_read, action="read")
 
 
@@ -259,6 +263,17 @@ def run_read(args, ctx) -> dict:
         return env.usage(CHANNEL, "read", f"--comments must be between 0 and {MAX_COMMENTS}, got {args.comments}")
     meta = {"attempts": []}
     share = _SHARE_URL.match(args.post.strip())
+    backend = args.backend or (BACKEND if which("ego-browser") else reddit_archive.BACKEND)
+    if backend == reddit_archive.BACKEND:
+        if share:
+            return env.usage(CHANNEL, "read", "Arctic Shift read needs a /comments/ URL or post ID; "
+                             "share links are only supported by the Ego Lite backend")
+        if args.sort != "top":
+            return env.usage(CHANNEL, "read", "Arctic Shift supports only --sort top (archived score)")
+        post_id, problem = parse_post(args.post)
+        if problem:
+            return env.usage(CHANNEL, "read", problem)
+        return reddit_archive.read(ctx, input_, post_id)
     if share:
         post_id, failure, attempt = share_post(ctx, BASE + share.group(1))
         meta["attempts"].append(attempt)
@@ -287,7 +302,10 @@ def run_read(args, ctx) -> dict:
                             error=env.error("url_mismatch", f"asked for t3_{post_id}, page shows {post['id']}"))
     if page["post"].get("removal_notice"):
         meta["notes"] = [page["post"]["removal_notice"]]
-    comments = [comment_item(c) for c in page.get("comments") or []][:args.comments]
+    post["raw"]["kind"] = "post"
+    comments = [comment_item(c) for c in (page.get("comments") or [])[:args.comments]]
+    for comment in comments:
+        comment["raw"]["kind"] = "comment"
     return env.envelope(CHANNEL, "read", input_, BACKEND, [post, *comments], meta=meta)
 
 

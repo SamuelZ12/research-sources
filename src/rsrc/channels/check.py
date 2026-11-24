@@ -13,6 +13,7 @@ from rsrc.channels import hn as hnc
 from rsrc.channels import polymarket as pmc
 from rsrc.channels import producthunt
 from rsrc.channels import reddit as rc
+from rsrc.channels import reddit_archive
 from rsrc.channels import x as xc
 from rsrc.channels import youtube as ytc
 from rsrc.channels.x import auth, connection, fx, search
@@ -23,6 +24,7 @@ NAMES = ("x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "product
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
+ARCHIVE_REDDIT_POST = "1641krf"
 HN_PROBE = "search?tags=front_page&hitsPerPage=1"
 POLYMARKET_QUERY = "bitcoin"
 YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to YouTube: 19 s, public since 2005
@@ -33,7 +35,8 @@ def register(subparsers) -> None:
                                    description="By default check all ten channels. Probe HN, Polymarket, Bluesky search, "
                                                "Product Hunt search, the App Store catalog and an Ashby board, read YouTube metadata "
                                                "with yt-dlp, and check GitHub access. X setup and Ego Lite "
-                                               "are checked locally unless their live flag is set.")
+                                               "are checked locally unless their live flag is set. Without Ego Lite, "
+                                               "Reddit check verifies one archived thread.")
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
     parser.add_argument("--live-x", action="store_true",
@@ -303,14 +306,23 @@ REDDIT_PROBE_TIMEOUT = 20  # listing task spaces is local; a hung Ego should not
 
 
 def probe_reddit(ctx, live: bool, attempts: list) -> tuple[str, dict]:
-    """ego-browser answers and reaches the running app. Unless `live`, no page is opened and
-    nothing hits Reddit; with it, one search page is loaded and one result read from it."""
+    """Check local Ego Lite, or verify an archived thread when Ego Lite is missing.
+    An explicit live check requires Ego Lite and reads one search result."""
     started = time.monotonic()
     try:
         result = (ctx.runner or proc.run)(["ego-browser", "nodejs", "-e", REDDIT_PROBE], REDDIT_PROBE_TIMEOUT)
     except proc.Missing:
         attempts.append(env.attempt(rc.BACKEND, "config"))
-        raise _Failed("config", "ego-browser not found; install Ego Lite and keep it running") from None
+        if live:
+            raise _Failed("config", "Reddit search requires Ego Lite; ego-browser was not found") from None
+        read = reddit_archive.read(ctx, {"post": ARCHIVE_REDDIT_POST, "sort": "top", "comments": 1},
+                                   ARCHIVE_REDDIT_POST)
+        attempts.extend(read["meta"]["attempts"])
+        raw = {"ego_browser": "missing", "thread_read": read["backend"] if read["ok"] else None}
+        search_requirement = "Reddit search requires Ego Lite"
+        if read["error"]:
+            raise _Failed(read["error"]["code"], f"{read['error']['message']}. {search_requirement}. ", raw)
+        return f"Thread reads work through the Arctic Shift archive. {search_requirement}.", raw
     except proc.Timeout:
         attempts.append(env.attempt(rc.BACKEND, "timeout", ms=env.elapsed_ms(started)))
         raise _Failed("timeout", f"ego-browser did not answer within {REDDIT_PROBE_TIMEOUT} s; "

@@ -377,7 +377,6 @@ def test_gh_malformed_rate_limit_json_is_upstream_error(rsrc, environ):
 # reddit
 
 @pytest.mark.parametrize("response, code_", [
-    (proc.Missing("ego-browser"), "config"),
     (proc.Timeout("slow"), "timeout"),
     (proc.Result(1, "", "Error: connect ECONNREFUSED\n"), "upstream_error"),
     (ok("no marker\n"), "upstream_error"),
@@ -527,10 +526,10 @@ def test_polymarket_probe_without_a_response_is_network_error(rsrc, environ):
 def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(cookie_file(tmp_path, mode=0o644)), "XDG_CACHE_HOME": str(tmp_path / "cache")}
     code, out = rsrc([], environ=environ, runner=FakeGh(proc.Timeout("slow"), proc.Missing("ego-browser")),
-                     transport=FakeTransport(*((503, b""),) * 7))
+                     transport=FakeTransport(*((503, b""),) * 8))
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "config" and out["error"]["message"].startswith("x: ")
-    assert out["meta"]["sources"] == {"x": "config", "gh": "timeout", "reddit": "config",
+    assert out["meta"]["sources"] == {"x": "config", "gh": "timeout", "reddit": "upstream_error",
                                       "hn": "upstream_error", "polymarket": "upstream_error", "youtube": "config",
                                       "bluesky": "upstream_error", "producthunt": "upstream_error",
                                       "appstore": "upstream_error", "ashby": "upstream_error", "linkedin": "upstream_error"}
@@ -539,9 +538,9 @@ def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
 
 def test_every_checked_channel_failing_with_runtime_error_exits_1(rsrc, environ):
     runner = FakeGh(proc.Timeout("slow"), proc.Missing("ego-browser"))
-    code, out = rsrc(["gh", "reddit"], environ=environ, runner=runner)
+    code, out = rsrc(["gh", "reddit"], environ=environ, runner=runner, transport=FakeTransport((503, b"")))
     assert code == 1 and out["error"]["code"] == "timeout"
-    assert out["meta"]["sources"] == {"gh": "timeout", "reddit": "config"}
+    assert out["meta"]["sources"] == {"gh": "timeout", "reddit": "upstream_error"}
 
 
 # youtube

@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "kind": "t1",
+      "data": {
+        "id": "jy5va23",
+        "link_id": "t3_1641krf",
+        "parent_id": "t3_1641krf",
+        "created_utc": 1693267500,
+        "retrieved_on": 1693267521,
+        "score": 2,
+        "stickied": false,
+        "author": "example_parent",
+        "body": "Example parent comment.",
+        "replies": {
+          "kind": "Listing",
+          "data": {
+            "children": [
+              {
+                "kind": "t1",
+                "data": {
+                  "id": "jy5yacd",
+                  "link_id": "t3_1641krf",
+                  "parent_id": "t1_jy5va23",
+                  "created_utc": 1693268774,
+                  "retrieved_on": 1693268792,
+                  "score": 1,
+                  "stickied": false,
+                  "author": "example_reply",
+                  "body": "Example reply.",
+                  "replies": ""
+                }
+              }
+            ]
+          }
+        },
+        "_meta": {
+          "retrieved_2nd_on": 1705837425
+        }
+      }
+    },
+    {
+      "kind": "t1",
+      "data": {
+        "id": "jy7o5p5",
+        "link_id": "t3_1641krf",
+        "parent_id": "t3_1641krf",
+        "created_utc": 1693305859,
+        "retrieved_on": 1693305879,
+        "score": 1,
+        "stickied": false,
+        "author": "example_removed",
+        "body": "[removed]",
+        "replies": ""
+      }
+    }
+  ]
+}
