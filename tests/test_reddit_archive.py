@@ -195,7 +195,7 @@ def test_reply_without_archived_parent_is_kept_with_unknown_depth(run):
     assert by_id["t1_jy9zzzz"]["raw"]["attrs"]["parentid"] == "t1_jy0gone"
     assert by_id["t1_jy9zzzz"]["raw"]["attrs"]["depth"] is None and by_id["t1_jya0000"]["raw"]["attrs"]["depth"] is None
     notes = " ".join(out["meta"]["notes"])
-    assert "1 reply whose parent comment it lacks" in notes and "raw.attrs.depth" in notes
+    assert "1 reply whose parent comment is not in it" in notes and "raw.attrs.depth" in notes
 
 
 def test_top_level_comment_from_another_thread_is_still_refused(run):
@@ -226,3 +226,14 @@ def test_notes_cover_only_returned_items_and_text_keeps_indentation(run):
     assert "Returned 1 comment. The fetched tree supplied 3 comment records against 21" in " ".join(notes)
     # The unreturned removed comment has no author; the returned one does.
     assert not any("comment records have null values for author" in note for note in notes)
+
+
+def test_empty_more_marker_and_reddit_tombstone(run):
+    tree = json.loads(TREE)
+    tree["data"][0]["data"]["body"] = "[ Removed by Reddit ]"
+    tree["data"].append({"kind": "more", "data": {"children": [], "parent_id": "t3_1641krf"}})
+    code, out, _ = run(["reddit", "read", POST_URL], (200, POST), response(tree))
+    assert code == 0 and len(out["items"]) == 4
+    tombstone = next(item for item in out["items"] if item["id"] == "t1_jy5va23")
+    assert tombstone["text"] == "[removed]" and tombstone["author"] is None
+    assert "collapsed parts of the tree" in " ".join(out["meta"]["notes"])

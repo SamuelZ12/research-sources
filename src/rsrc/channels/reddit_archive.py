@@ -98,6 +98,8 @@ def _placeholder(row, text):
         return "[deleted]"
     if marker in ("[deleted]", "[removed]"):
         return marker
+    if marker == "[ removed by reddit ]":
+        return "[removed]"
     if reason or later:
         return "[removed]"
     return None
@@ -172,11 +174,11 @@ def _comments(rows, post_id, path, unavailable):
         row = node.get("data") if isinstance(node, dict) else None
         if not isinstance(row, dict):
             raise http.HttpError("Arctic Shift returned a malformed tree node")
-        if node.get("kind") == "more" and isinstance(row.get("children"), list) and row["children"]:
-            collapsed = True
+        if node.get("kind") == "more" and isinstance(row.get("children"), list):
+            collapsed = True  # with or without listed IDs, the marker means replies were left out
             continue
         id_ = row.get("id")
-        # The archive lists a reply at the top of the tree when it does not hold the parent comment.
+        # The archive lists a reply at the top of the tree when the parent comment is not in it.
         orphan = (depth == 0 and row.get("parent_id") != parent and isinstance(row.get("parent_id"), str)
                   and re.fullmatch(r"t1_[a-z0-9]+", row["parent_id"]) is not None)
         if (node.get("kind") != "t1" or not isinstance(id_, str) or not ID.fullmatch(id_)
@@ -185,7 +187,7 @@ def _comments(rows, post_id, path, unavailable):
             raise http.HttpError("Arctic Shift returned an invalid, duplicate or unrelated comment")
         if orphan:
             orphans += 1
-            depth = -1  # unknown: the parent is outside the archive
+            depth = -1  # unknown: the parent is outside the fetched tree
         seen.add(id_)
         comments.append(_item(row, post_id, path, unavailable, depth=depth))
         replies = row.get("replies")
@@ -241,7 +243,7 @@ def read(ctx, input_, post_id):
                          "then oldest first for ties (unknown scores last).")
             if orphans:
                 noun = "reply" if orphans == 1 else "replies"
-                notes.append(f"The archive holds {orphans} {noun} whose parent comment it lacks. "
+                notes.append(f"The fetched tree has {orphans} {noun} whose parent comment is not in it. "
                              "Their depth, and that of replies under them, is null.")
             if collapsed:
                 notes.append(f"Arctic Shift collapsed parts of the tree in the bounded {TREE_LIMIT}-comment fetch.")
