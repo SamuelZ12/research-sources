@@ -22,7 +22,7 @@ def run(capsys):
         assert len(calls) == (0 if code == 2 else 1)
         if calls:
             assert calls[0] == ("GET", f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true",
-                                {"User-Agent": "research-sources"}, None)
+                                {"User-Agent": "research-sources", "Accept-Encoding": "gzip"}, None)
         return code, out
     return invoke
 
@@ -97,3 +97,23 @@ def test_bad_input_and_company_name(run):
     assert run("search", "https://example.org/quartz")[0] == 2
     code, out = run("search", "Quartz Labs", status=404, board="Quartz%20Labs")
     assert code == 1 and "careers page" in out["error"]["message"]
+
+
+def test_compressed_board(capsys, monkeypatch):
+    import gzip
+
+    from rsrc.channels import ashby
+
+    def read(body, limit=None):
+        if limit:
+            monkeypatch.setattr(ashby, "BOARD_BYTES", limit)
+        code = cli.main(["ashby", "search", "quartz"], cli.Context(
+            transport=lambda *request: (200, {"Content-Encoding": "gzip"}, body)))
+        return code, json.loads(capsys.readouterr().out)
+
+    packed = gzip.compress(BOARD)
+    code, out = read(packed)
+    assert code == 0 and len(out["items"]) == 2
+    for body, limit in ((packed[:-20], None), (b"not gzip", None), (packed, len(BOARD) - 1)):
+        code, out = read(body, limit)
+        assert code == 1 and out["error"]["code"] == "upstream_error" and "compressed" in out["error"]["message"]

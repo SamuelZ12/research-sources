@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import zlib
 from datetime import date, datetime, timezone
 from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urlsplit
@@ -11,7 +12,10 @@ from rsrc.http import Client, HttpError, raise_refusal, single_hop_transport, ur
 BACKEND = "ashby-posting-api"
 API = "https://api.ashbyhq.com/posting-api/job-board/"
 # Ashby refuses the default Python client name with HTTP 403 (seen 2026-11-22), so the tool names itself.
-HEADERS = {"User-Agent": "research-sources"}
+# A large board is megabytes of JSON; compressed it is a tenth of that on the wire (3.3 MB against 0.33 MB,
+# 4.95 s against 0.71 s for one board on 2026-11-25).
+HEADERS = {"User-Agent": "research-sources", "Accept-Encoding": "gzip"}
+BOARD_BYTES = 64 * 1024 * 1024
 BOARD = re.compile(r"[\w .-]+")
 ROLE = re.compile(r"[a-zA-Z0-9_-]+")
 GUIDANCE = "Use the board name from the jobs.ashbyhq.com link on the company's careers page."
@@ -80,7 +84,16 @@ class Description(HTMLParser):
 def fetch(board, ctx):
     transport = single_hop_transport if ctx.transport is urllib_transport else ctx.transport
     client = Client(min_interval=1, max_requests=1, transport=transport)
-    status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
+    status, headers, data = client.request_with_headers(
+        "GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
+    if (headers.get("Content-Encoding") or "").strip().lower() == "gzip":
+        unpack = zlib.decompressobj(zlib.MAX_WBITS | 16)
+        try:
+            data = unpack.decompress(data, BOARD_BYTES)
+        except zlib.error:
+            raise HttpError("Ashby returned an unreadable compressed response") from None
+        if unpack.unconsumed_tail or not unpack.eof:
+            raise HttpError("Ashby returned an oversized or truncated compressed response")
     if status == 404:
         raise Failure("not_found", f"Ashby board {board!r} was not found. {GUIDANCE}")
     raise_refusal(status, data, f"Ashby board {board!r}", GUIDANCE)
