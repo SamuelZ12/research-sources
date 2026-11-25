@@ -216,12 +216,19 @@ def _channel_names(missing, ctx, attempts, notes):
     client = rsrc_http.Client(min_interval=0, transport=ctx.transport)
     started = time.monotonic()
     error = None
-    recovered = 0
+    recovered = embedding_off = 0
     try:
         for item in missing:
             url = "https://www.youtube.com/oembed?" + urlencode({"url": item["url"], "format": "json"})
             status, body = client.request("GET", url)
             if status in (400, 404):
+                continue
+            if status == 401 and body.strip() == b"Unauthorized":
+                # oEmbed's answer for one video whose owner turned embedding off (seen 2026-11-25),
+                # while it named the next video. Every lookup answering this way is a refusal.
+                embedding_off += 1
+                if 1 < len(missing) == embedding_off:
+                    rsrc_http.raise_refusal(status, body, "YouTube oEmbed")
                 continue
             rsrc_http.raise_refusal(status, body, "YouTube oEmbed")
             if status != 200:

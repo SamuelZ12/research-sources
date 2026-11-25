@@ -1443,12 +1443,12 @@ def test_the_temporary_directory_is_gone_after_a_failure_too(rsrc, environ, fake
     assert not directory.exists()
 
 
-@pytest.mark.parametrize("second", ["found", "missing", "wrong_video", "rate_limit", "forbidden"])
+@pytest.mark.parametrize("second", ["found", "missing", "wrong_video", "embedding_off", "rate_limit", "forbidden"])
 def test_search_recovers_only_confirmed_channel_names(rsrc, second):
     first, last = json.loads((FIXTURES / "youtube_search_lockup.json").read_text())
     responses = [(200, first["oembed"]), {
         "found": (200, last["oembed"]), "missing": (404, {}), "wrong_video": (200, first["oembed"]),
-        "rate_limit": (429, {}), "forbidden": (403, {}),
+        "embedding_off": (401, b"Unauthorized"), "rate_limit": (429, {}), "forbidden": (403, {}),
     }[second]]
 
     def transport(method, url, headers, body):
@@ -1457,7 +1457,7 @@ def test_search_recovers_only_confirmed_channel_names(rsrc, second):
         assert method == "GET" and urlsplit(url).netloc == "www.youtube.com"
         assert parse_qs(urlsplit(url).query)["url"] == [WATCH + row["search"]["id"]]
         status, data = responses.pop(0)
-        return status, json.dumps(data).encode()
+        return status, data if isinstance(data, bytes) else json.dumps(data).encode()
 
     code, out = rsrc(["search", "Claude Code"], FakeRunner(ok(lines(first["search"], last["search"]))),
                      transport=transport)
@@ -1465,6 +1465,15 @@ def test_search_recovers_only_confirmed_channel_names(rsrc, second):
     assert out["meta"]["attempts"][-1]["requests"] == 2
     assert any("unavailable" in n for n in out["meta"]["notes"]) == (second != "found")
     assert code == (1 if second in ("rate_limit", "forbidden") else 0)
+
+
+def test_search_stops_when_every_channel_lookup_is_unauthorized(rsrc):
+    first, last = json.loads((FIXTURES / "youtube_search_lockup.json").read_text())
+    code, out = rsrc(["search", "Claude Code"], FakeRunner(ok(lines(first["search"], last["search"]))),
+                     transport=lambda *request: (401, b"Unauthorized"))
+    assert code == 1 and out["error"]["code"] == "auth_failed"
+    assert [i["author"] for i in out["items"]] == [None, None]
+    assert out["meta"]["attempts"][-1]["requests"] == 2
 
 
 def test_unknown_media_codec_keeps_captions_but_never_masks_a_second_warning(rsrc):
