@@ -29,6 +29,8 @@ Use [last30days](https://github.com/mvanhorn/last30days-skill) when you want a f
 
 `rsrc` does less. It gives an agent that already has web search each site's own results in one shape, and it reports a failure as a failure.
 
+On 2026-11-25 the three tools ran a set of 34 lookups in two sessions about 16 hours apart. Signed in, `rsrc` passed all 204 runs. On the X and Reddit lookups that another tool also passed, `rsrc` answered 2 to 16 times faster. Agent-Reach was faster on GitHub issue search. In 12 of 12 runs, Agent-Reach reported success for a LinkedIn link that led to a not-found page or a sign-up page. The task list follows the `rsrc` command list, which favors `rsrc`. See the [full table and its limits](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups), which include the four lookups that a new `rsrc` install fails without a login.
+
 ## Install
 
 You need Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
