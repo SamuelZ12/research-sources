@@ -23,6 +23,12 @@ Both outputs were recorded on 2026-11-25. The first command read an X post witho
 - **An agent skill ships with it.** [`SKILL.md`](skills/research-sources/SKILL.md) tells an agent which command answers which question and what to do on each error code.
 - **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. See the [method and limits](docs/comparisons.md).
 
+## How it compares
+
+Use [last30days](https://github.com/mvanhorn/last30days-skill) when you want a finished brief. It searches many sites, scores the results and writes the report. Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach) when you need its longer site list, which includes Chinese platforms such as Bilibili and Xiaohongshu.
+
+`rsrc` does less. It gives an agent that already has web search each site's own results in one shape, and it reports a failure as a failure.
+
 ## Install
 
 You need Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
