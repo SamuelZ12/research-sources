@@ -104,16 +104,18 @@ def test_compressed_board(capsys, monkeypatch):
 
     from rsrc.channels import ashby
 
-    def read(body, limit=None):
+    def read(body, limit=None, status=200, headers=True):
         if limit:
             monkeypatch.setattr(ashby, "BOARD_BYTES", limit)
-        code = cli.main(["ashby", "search", "quartz"], cli.Context(
-            transport=lambda *request: (200, {"Content-Encoding": "gzip"}, body)))
+        answer = (status, {"content-encoding": "gzip"}, body) if headers else (status, body)
+        code = cli.main(["ashby", "search", "quartz"], cli.Context(transport=lambda *request: answer))
         return code, json.loads(capsys.readouterr().out)
 
     packed = gzip.compress(BOARD)
-    code, out = read(packed)
-    assert code == 0 and len(out["items"]) == 2
-    for body, limit in ((packed[:-20], None), (b"not gzip", None), (packed, len(BOARD) - 1)):
+    for headers in (True, False):
+        code, out = read(packed, headers=headers)
+        assert code == 0 and len(out["items"]) == 2
+    for body, limit in ((packed[:-20], None), (packed[:2] + b"not gzip", None), (packed, len(BOARD) - 1)):
         code, out = read(body, limit)
         assert code == 1 and out["error"]["code"] == "upstream_error" and "compressed" in out["error"]["message"]
+    assert read(packed[:-20], status=429)[1]["error"]["code"] == "rate_limited"

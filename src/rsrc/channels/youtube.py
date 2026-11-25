@@ -225,7 +225,8 @@ def _channel_names(missing, ctx, attempts, notes):
                 continue
             if status == 401 and body.strip() == b"Unauthorized":
                 # oEmbed's answer for one video whose owner turned embedding off (seen 2026-11-25),
-                # while it named the next video. Every lookup answering this way is a refusal.
+                # while it named the next video. Two or more lookups all answering this way are a
+                # refusal; a lone lookup cannot tell the two apart and is noted as unavailable.
                 embedding_off += 1
                 if 1 < len(missing) == embedding_off:
                     rsrc_http.raise_refusal(status, body, "YouTube oEmbed")

@@ -84,16 +84,17 @@ class Description(HTMLParser):
 def fetch(board, ctx):
     transport = single_hop_transport if ctx.transport is urllib_transport else ctx.transport
     client = Client(min_interval=1, max_requests=1, transport=transport)
-    status, headers, data = client.request_with_headers(
-        "GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
-    if (headers.get("Content-Encoding") or "").strip().lower() == "gzip":
+    status, data = client.request("GET", API + quote(board, safe="") + "?includeCompensation=true", HEADERS)
+    if data[:2] == b"\x1f\x8b":  # gzip, as requested: neither JSON nor HTML starts with these bytes
         unpack = zlib.decompressobj(zlib.MAX_WBITS | 16)
         try:
-            data = unpack.decompress(data, BOARD_BYTES)
+            body = unpack.decompress(data, BOARD_BYTES)
+            if unpack.unconsumed_tail or not unpack.eof:
+                raise zlib.error
+            data = body
         except zlib.error:
-            raise HttpError("Ashby returned an unreadable compressed response") from None
-        if unpack.unconsumed_tail or not unpack.eof:
-            raise HttpError("Ashby returned an oversized or truncated compressed response")
+            if status == 200:  # any other status is classified below without its body
+                raise HttpError("Ashby returned an unreadable or oversized compressed response") from None
     if status == 404:
         raise Failure("not_found", f"Ashby board {board!r} was not found. {GUIDANCE}")
     raise_refusal(status, data, f"Ashby board {board!r}", GUIDANCE)
