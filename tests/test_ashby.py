@@ -22,7 +22,7 @@ def run(capsys):
         assert len(calls) == (0 if code == 2 else 1)
         if calls:
             assert calls[0] == ("GET", f"https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true",
-                                {"User-Agent": "research-sources", "Accept-Encoding": "gzip"}, None)
+                                {"User-Agent": "research-sources"}, None)
         return code, out
     return invoke
 
@@ -102,20 +102,46 @@ def test_bad_input_and_company_name(run):
 def test_compressed_board(capsys, monkeypatch):
     import gzip
 
-    from rsrc.channels import ashby
+    from email.message import Message
+    from io import BytesIO
+    from rsrc import http
 
     def read(body, limit=None, status=200, headers=True):
         if limit:
-            monkeypatch.setattr(ashby, "BOARD_BYTES", limit)
-        answer = (status, {"content-encoding": "gzip"}, body) if headers else (status, body)
-        code = cli.main(["ashby", "search", "quartz"], cli.Context(transport=lambda *request: answer))
+            monkeypatch.setattr(http, "MAX_DECODED_BYTES", limit)
+        response = BytesIO(body)
+        response.status = status
+        response.headers = Message()
+        if headers:
+            response.headers["Content-Encoding"] = "gzip"
+
+        def send(request, timeout):
+            assert request.get_header("Accept-encoding") == "gzip"
+            return response
+
+        monkeypatch.setattr(http._no_redirects, "open", send)
+        code = cli.main(["ashby", "search", "quartz"])
         return code, json.loads(capsys.readouterr().out)
 
     packed = gzip.compress(BOARD)
     for headers in (True, False):
         code, out = read(packed, headers=headers)
         assert code == 0 and len(out["items"]) == 2
-    for body, limit in ((packed[:-20], None), (packed[:2] + b"not gzip", None), (packed, len(BOARD) - 1)):
+    assert read(packed, len(BOARD))[0] == 0
+    for body, limit in ((b"", None), (packed[:-1], None), (packed + b"junk", None),
+                        (b"not gzip", None), (packed, len(BOARD) - 1)):
         code, out = read(body, limit)
         assert code == 1 and out["error"]["code"] == "upstream_error" and "compressed" in out["error"]["message"]
-    assert read(packed[:-20], status=429)[1]["error"]["code"] == "rate_limited"
+    for status, error in ((401, "auth_failed"), (403, "blocked"), (404, "not_found"), (429, "rate_limited")):
+        code, out = read(packed[:-1], status=status)
+        assert code == 1 and out["error"]["code"] == error and not out["items"]
+
+
+@pytest.mark.parametrize("headers", [None, {"content-encoding": "x-gzip"}])
+def test_injected_compressed_board(capsys, headers):
+    import gzip
+
+    packed = gzip.compress(BOARD)
+    reply = (200, packed) if headers is None else (200, headers, packed)
+    code = cli.main(["ashby", "search", "quartz"], cli.Context(transport=lambda *args: reply))
+    assert code == 0 and len(json.loads(capsys.readouterr().out)["items"]) == 2

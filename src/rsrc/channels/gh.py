@@ -1,14 +1,13 @@
-import gzip
 import http.client
 import json
 import re
 import time
 import urllib.request
-import zlib
 from datetime import UTC, datetime
 from urllib.parse import urlencode, urljoin, urlsplit
 
-from rsrc.http import CapReached, Client, HttpError, NetworkError, raise_refusal, single_hop_transport, urllib_transport
+from rsrc.http import (CapReached, Client, HttpError, NetworkError, raise_refusal, read_response,
+                       single_hop_response, urllib_transport)
 from rsrc import proc
 from rsrc import envelope as env
 
@@ -120,14 +119,14 @@ class _Gh:
     def transport(self, method, url, headers, body):
         target = urlsplit(url)
         if target.netloc != "api.github.com":
-            return single_hop_transport(method, url, headers, body)
+            return single_hop_response(method, url, headers, body)
         if self.connection is None:
             if "https" in urllib.request.getproxies() and not urllib.request.proxy_bypass(target.hostname):
-                return single_hop_transport(method, url, headers, body)
+                return single_hop_response(method, url, headers, body)
             self.connection = http.client.HTTPSConnection(target.hostname, timeout=TIMEOUT)
         self.connection.request(method, target.path + ("?" + target.query if target.query else ""), headers=headers)
         with self.connection.getresponse() as response:
-            return response.status, response.headers, response.read()
+            return read_response(response)
 
     def public(self, path, parse, *, raw=False, missing_ok=False):
         self.backend = "github-rest"
@@ -159,13 +158,6 @@ class _Gh:
             if status == 404 and missing_ok:
                 outcome = "no_results"
                 return None
-            if fields.get("content-encoding", "").lower() == "gzip":
-                try:
-                    body = gzip.decompress(body)
-                except (OSError, EOFError, zlib.error):
-                    if status == 200:
-                        raise _Failed("upstream_error", "GitHub returned a malformed gzip response") from None
-                    body = b""
             if status != 200:
                 raise _rest_error(status, fields, body, path)
             if fields.get("content-type", "").split(";")[0].strip().lower() == "text/html":
@@ -180,6 +172,9 @@ class _Gh:
         except NetworkError:
             outcome = "network_error"
             raise _Failed(outcome, "Could not read GitHub API response") from None
+        except HttpError as failure:
+            outcome = failure.code
+            raise _Failed(outcome, str(failure)) from None
         except _Failed as failure:
             outcome = failure.code
             raise

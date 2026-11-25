@@ -272,7 +272,8 @@ def test_read_reports_unresolvable_post_and_continues(run_x):
     assert [i["id"] for i in env["items"]] == ["2114300044249890906"]
 
 
-def test_dropped_connection_becomes_a_failure_and_read_continues(run_x):
+@pytest.mark.parametrize("malformed_gzip", [False, True])
+def test_unreadable_response_becomes_a_failure_and_read_continues(run_x, malformed_gzip):
     import http.client
 
     calls = []
@@ -280,6 +281,8 @@ def test_dropped_connection_becomes_a_failure_and_read_continues(run_x):
     def transport(method, url, headers, body):
         calls.append(url)
         if len(calls) <= 4:
+            if malformed_gzip:
+                return 200, {"Content-Encoding": "gzip"}, b"invalid"
             raise http.client.IncompleteRead(b"partial")
         return 200, json.dumps(load("x_fx_status_reply.json")).encode()
 

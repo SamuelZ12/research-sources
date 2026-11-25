@@ -1,14 +1,19 @@
 """The single path for network calls: request spacing, a hard request cap,
 and error messages that never contain request headers (cookies)."""
 
+import gzip
 import http.client
+import io
 import time
 import urllib.error
 import urllib.request
+import zlib
 from contextlib import contextmanager
+from copy import copy
 from urllib.parse import urlsplit
 
 TIMEOUT_S = 20
+MAX_DECODED_BYTES = 64 * 1024 * 1024
 
 
 class HttpError(Exception):
@@ -16,6 +21,10 @@ class HttpError(Exception):
     set their own, so no caller works it out from the message text."""
 
     code = "upstream_error"
+
+
+class DecodeError(HttpError):
+    """The response body could not be decoded within the size limit."""
 
 
 class NetworkError(HttpError):
@@ -68,7 +77,7 @@ _no_redirects = urllib.request.build_opener(_NoRedirect)
 
 
 def urllib_transport(method, url, headers, body):
-    status, _, data = _urllib_response(method, url, headers, body)
+    status, _, data = _decoded(method, *_urllib_response(method, url, headers, body))
     return status, data
 
 
@@ -78,19 +87,74 @@ def _urllib_response(method, url, headers, body):
     return _open(opener, method, url, headers, body)
 
 
+def _wire_headers(headers):
+    if any(key.lower() == "accept-encoding" for key in headers or {}):
+        return headers
+    return {**(headers or {}), "Accept-Encoding": "gzip"}
+
+
+def _decoded_headers(headers):
+    # These fields describe the encoded representation.
+    headers = copy(headers)
+    for key in tuple(headers):
+        if key.lower() in ("content-encoding", "content-length"):
+            del headers[key]
+    return headers
+
+
+def read_response(response):
+    """Read wire bytes, retaining an error status even when the transfer ends early."""
+    status, headers = response.status, response.headers
+    try:
+        data = response.read()
+    except http.client.IncompleteRead:
+        if status >= 300:
+            return status, _decoded_headers(headers), b""
+        if headers.get("Content-Encoding", "").strip().lower() in ("gzip", "x-gzip"):
+            raise DecodeError("Truncated compressed response") from None
+        raise
+    return status, headers, data
+
+
+def _decoded(method, status, headers, data, *, sniff_gzip=False):
+    if method == "HEAD" or status in (204, 205, 304):
+        return status, headers, data
+    encodings = [v.strip().lower() for k, v in headers.items() if k.lower() == "content-encoding"]
+    if encodings not in (["gzip"], ["x-gzip"]):
+        if encodings or not sniff_gzip or not data.startswith(b"\x1f\x8b"):
+            return status, headers, data
+    try:
+        if not data:
+            raise EOFError
+        with gzip.GzipFile(fileobj=io.BytesIO(data)) as stream:
+            data = stream.read(MAX_DECODED_BYTES + 1)
+        if len(data) > MAX_DECODED_BYTES:
+            raise gzip.BadGzipFile
+    except (gzip.BadGzipFile, EOFError, zlib.error):
+        if status >= 300:
+            data = b""  # Keep the channel's status and rate-limit classification.
+        else:
+            raise DecodeError("Unreadable or oversized compressed response") from None
+    return status, _decoded_headers(headers), data
+
+
 def _open(opener, method, url, headers, body):
-    request = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+    request = urllib.request.Request(url, data=body, headers=_wire_headers(headers), method=method)
     try:
         response = opener.open(request, timeout=TIMEOUT_S)
     except urllib.error.HTTPError as exc:
         response = exc
     with response:
-        return response.status, response.headers, response.read()
+        return read_response(response)
+
+
+def single_hop_response(method, url, headers, body):
+    """Return the response headers and body, including for an unfollowed redirect."""
+    return _open(_no_redirects, method, url, headers, body)
 
 
 def single_hop_transport(method, url, headers, body):
-    """Return the response headers and body, including for an unfollowed redirect."""
-    return _open(_no_redirects, method, url, headers, body)
+    return _decoded(method, *single_hop_response(method, url, headers, body))
 
 
 def redirect_transport(method, url, headers, body):
@@ -108,11 +172,14 @@ class Client:
     """`min_interval` has no default: seconds between this client's requests, chosen per source."""
 
     def __init__(self, *, min_interval, max_requests=None, transport=urllib_transport,
-                 clock=time.monotonic, sleep=time.sleep):
+                 clock=time.monotonic, sleep=time.sleep, sniff_gzip=False):
+        self._sniff_gzip = sniff_gzip
         self.max_requests = max_requests
         self.min_interval = min_interval
         self.requests_made = 0
         self._transport = _urllib_response if transport is urllib_transport else transport
+        if transport is single_hop_transport:
+            self._transport = single_hop_response
         self._clock = clock
         self._sleep = sleep
         self._last = None
@@ -132,9 +199,9 @@ class Client:
             if target.scheme != "https" or target.netloc != host:
                 raise HttpError("Unexpected HTTPS request destination")
             path = target.path + ("?" + target.query if target.query else "")
-            connection.request(method, path, body=body, headers=headers or {})
+            connection.request(method, path, body=body, headers=_wire_headers(headers))
             with connection.getresponse() as response:
-                return response.status, response.headers, response.read()
+                return read_response(response)
 
         self._transport = send
         try:
@@ -174,8 +241,8 @@ class Client:
             response = self._transport(method, url, headers, body)
             if len(response) == 2:
                 status, data = response
-                return status, {}, data
-            return response
+                response = status, {}, data
+            return _decoded(method, *response, sniff_gzip=self._sniff_gzip)
         except (OSError, http.client.HTTPException) as e:
             reason = str(getattr(e, "reason", None) or e)
             for key, value in (headers or {}).items():

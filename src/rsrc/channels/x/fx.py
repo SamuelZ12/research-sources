@@ -12,7 +12,7 @@ from urllib.parse import quote, urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
 from rsrc.channels.x.search import check_status
-from rsrc.http import HttpError, NetworkError, NotFound
+from rsrc.http import DecodeError, HttpError, NetworkError, NotFound
 
 FX_API = "https://api.fxtwitter.com/2"
 SYNDICATION = "https://cdn.syndication.twimg.com/tweet-result?id={id}&token=a"
@@ -233,6 +233,8 @@ def get_json(client, url, *, read_tombstone=False) -> tuple[dict | None, Failure
     """(data, None) on HTTP 200 with a JSON object, else (None, Failure). Raises RateLimited on 429."""
     try:
         status, body = client.request("GET", url, HEADERS)
+    except DecodeError as e:
+        return None, Failure(str(e))
     except NetworkError as e:
         return None, Failure(str(e), network=True)
     if status == 429:

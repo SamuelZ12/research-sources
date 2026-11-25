@@ -182,3 +182,59 @@ def test_single_hop_transport_exposes_redirect_headers_without_following():
     finally:
         server.shutdown()
         server.server_close()
+
+
+@pytest.mark.parametrize("reuse", [False, True])
+@pytest.mark.parametrize("override", [False, True])
+def test_gzip_negotiation_and_decoded_headers(monkeypatch, reuse, override):
+    import gzip
+    from contextlib import nullcontext
+    from email.message import Message
+    from io import BytesIO
+    from unittest.mock import Mock
+
+    from rsrc import http
+
+    response = BytesIO(gzip.compress(b"first") + gzip.compress(b"second"))
+    response.status = 200
+    response.headers = Message()
+    response.headers["content-encoding"] = "GZip"
+    response.headers["Content-Length"] = str(len(response.getvalue()))
+    response.headers["ETag"] = "test"
+    client = Client(min_interval=0)
+    if reuse:
+        conn = Mock()
+        conn.getresponse.return_value = response
+        monkeypatch.setattr(http.http.client, "HTTPSConnection", lambda *a, **kw: conn)
+        monkeypatch.setattr(http.urllib.request, "getproxies", lambda: {})
+    else:
+        opener = Mock()
+        opener.open.return_value = response
+        monkeypatch.setattr(http, "_follow_redirects", opener)
+    headers = {"accept-ENCODING": "gzip, identity"} if override else {}
+    with client.reuse_https("example.org") if reuse else nullcontext():
+        status, fields, data = client.request_with_headers("GET", "https://example.org/", headers)
+    sent = conn.request.call_args.kwargs["headers"] if reuse else opener.open.call_args.args[0].headers
+    assert [v for k, v in sent.items() if k.lower() == "accept-encoding"] == [
+        "gzip, identity" if override else "gzip"]
+    assert (status, dict(fields), data) == (200, {"ETag": "test"}, b"firstsecond")
+
+
+def test_preserve_gzip_files_and_stacked_content_encodings():
+    import gzip
+    from email.message import Message
+
+    data = gzip.compress(b"file")
+    stacked = Message()
+    stacked["Content-Encoding"] = "gzip"
+    stacked["Content-Encoding"] = "gzip"
+    for headers, payload in (({"Content-Type": "application/gzip"}, data), (stacked, gzip.compress(data))):
+        reply = (200, headers, payload)
+        client, _, _ = make_client([reply])
+        assert client.request_with_headers("GET", "https://example.org") == reply
+
+
+def test_unreadable_refusal_keeps_rate_headers():
+    headers = {"Content-Encoding": "gzip", "Content-Length": "7", "Retry-After": "60"}
+    client, _, _ = make_client([(429, headers, b"invalid")])
+    assert client.request_with_headers("GET", "https://example.org") == (429, {"Retry-After": "60"}, b"")
