@@ -1,34 +1,27 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a command-line tool that lets an AI agent read the places web search reaches poorly: X, Reddit, Hacker News, YouTube transcripts, Polymarket odds, GitHub, Bluesky, Product Hunt launches, Apple App Store reviews and Ashby job boards. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit or a block page. It is read-only and needs no API keys.
-
-**Status:** early, with one maintainer. Developed and tested on macOS only. FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification now lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search [with your own X session](#x-with-your-own-session-optional). `rsrc x read`, `rsrc x replies` and `rsrc x timeline` still work without a login.
-
-- **No API keys.** Hacker News, Polymarket, YouTube, Bluesky, Product Hunt, the App Store, Ashby and public GitHub work without a login. GitHub can also use your `gh` login. X has public and signed-in routes. Reddit uses [Ego Lite](https://lite.ego.app/) and acts as your Reddit account when that browser is signed in. Without Ego Lite, thread reads come from the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive.
-- **One output shape.** Eleven sources, one JSON envelope, 10 error codes, 4 exit codes. An empty search exits `66`, not `0`.
-- **Block pages are not results.** A login wall, a CAPTCHA page or a different post than the one asked for is rejected, and the envelope says why.
-- **Stops on rate limits.** A rate-limited backend stops. A repository-scoped GitHub read can restart with your login after exhausting the shared public allowance.
-- **No Python dependencies.** Standard library only. The tests run offline.
-- **Ships with an agent skill.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
-- **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. [Method and limits](docs/comparisons.md).
+`rsrc` is a read-only command-line tool that lets an AI agent read eleven sources that web search covers poorly: X, Reddit, Hacker News, YouTube transcripts, GitHub, LinkedIn posts, Bluesky, Product Hunt, App Store reviews, Polymarket odds, and Ashby job boards. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit, or a block page. It needs no API keys.
 
 ```console
-$ rsrc hn search "Claude Code" --since 2026-10-15 --until 2026-11-15 | jq -c '.items[:3][] | [.engagement.points, .title]'
-[1616,"Claude Code sends your email address to websites"]
-[1014,"Backdoor in Claude Code for VS Code extension on the Cursor Marketplace"]
-[905,"Goldman Sachs is pulling Claude Code from its bankers and traders"]
+$ rsrc x read https://x.com/karpathy/status/1886192184808149383 | jq -c '.items[0] | [.author, .engagement.likes, .text[:56]]'
+["karpathy",38005,"There's a new kind of coding I call \"vibe coding\", where"]
 
-$ rsrc hn read not-a-url | jq -c .error
-{"code":"usage","message":"expected a news.ycombinator.com item URL or a numeric ID, got 'not-a-url'"}
-$ rsrc hn read not-a-url > /dev/null; echo $?
-2
+$ rsrc hn search "zqxvkpwj" > /dev/null; echo $?
+66
 ```
 
-The first output is replayed from the answer recorded on 2026-11-15 ([`tests/fixtures/hn_search.json`](tests/fixtures/hn_search.json)).
+Both outputs were recorded on 2026-11-25. The first command read an X post without a login. The second searched Hacker News for a word with no matches. An empty search exits `66`, not `0`.
 
-[Install](#install) · [Give it to your agent](#give-it-to-your-agent) · [Commands](#commands) · [The envelope](#the-envelope) · [X with your own session](#x-with-your-own-session-optional) · [What it does not do](#what-it-does-not-do) · [Contributing](#contributing)
+`rsrc` is early software with one maintainer, tested on macOS only. The license is [MIT](LICENSE).
 
----
+## Why use it
+
+- **No API keys.** Nine sources and X post reads need no login. X search needs your own X session for now. Reddit search needs [Ego Lite](https://lite.ego.app/), a Chromium browser for agents.
+- **Failures are not results.** `rsrc` rejects a login wall, a CAPTCHA page, or a different post than the one you asked for, and the output says why. On a rate limit, the command stops instead of retrying.
+- **One output shape.** Eleven sources share one JSON envelope with 10 error codes and 4 exit codes.
+- **No Python dependencies.** `rsrc` uses the standard library only. The tests run offline.
+- **An agent skill ships with it.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
+- **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. See the [method and limits](docs/comparisons.md).
 
 ## Install
 
@@ -39,104 +32,75 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-That `check` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0. A bare check probes the default channels: a public LinkedIn post, Linear’s Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+The check sends one request to Hacker News and one to Polymarket. Read `meta.sources` in its output for each outcome.
 
-Requirements by channel:
+Seven sources need nothing more. Four need extra setup for some commands:
 
-| Channel | Needs |
+| Source | Extra setup |
 |---|---|
-| `x` | Nothing for public reads. Search with Ego Lite, a cookie pair, or Google Chrome (`rsrc x connect`, experimental) while public search is unavailable |
-| `hn` | Nothing |
-| `polymarket` | Nothing |
-| `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
-| `gh` | Nothing for public repositories. A logged-in [GitHub CLI](https://cli.github.com/) gives access to private repositories and higher limits |
-| `bluesky` | Nothing. Bluesky may disable anonymous search |
-| `producthunt` | Nothing. The official MCP server exposes launches and selected review excerpts. Launch discussions are unavailable |
-| `ashby` | Nothing. Reads one public employer board per request |
-| `appstore` | Nothing. Apple’s public storefront review feed can lag by a day or two |
-| `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH`, for search, share links and live thread reads. Without it, `reddit read` uses the Arctic Shift archive and needs nothing |
+| YouTube | `yt-dlp` with its `yt-dlp-ejs` scripts. `youtube read` also needs `deno` 2.3.0 or newer |
+| GitHub | A logged-in [GitHub CLI](https://cli.github.com/), only for private repositories and higher rate limits |
+| Reddit | Ego Lite, for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
+| X | Your own X session, only for `x search`. FxTwitter, the public service `rsrc` searches X through, has had search down since 2026-11-19 |
 
-On a Mac with Homebrew: `brew install yt-dlp deno gh`.
-
-Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) and `ffmpeg`. The skill uses them to read the videos and GIFs attached to X posts, and `youtube read` tries `vidscribe` on a short video that has no captions at all.
+On a Mac with Homebrew, `brew install yt-dlp deno gh` covers YouTube and GitHub. Homebrew's `yt-dlp` includes the scripts.
 
 ## Give it to your agent
 
-`rsrc` is built to be run by an agent. [`SKILL.md`](SKILL.md) is the agent's manual: it maps questions to commands, explains each field of the output, and says when to stop. Put it where your agent loads skills. For Claude Code:
+`rsrc` is built for an agent to run. [`SKILL.md`](SKILL.md) is the agent's manual. It maps questions to commands, explains each output field, and says when to stop. Install it with the [skills CLI](https://skills.sh/), which asks you which agents get the skill:
 
 ```sh
-mkdir -p ~/.claude/skills/research-sources
-curl -fsSL https://raw.githubusercontent.com/SamuelZ12/research-sources/main/SKILL.md \
-  -o ~/.claude/skills/research-sources/SKILL.md
+npx skills add SamuelZ12/research-sources
 ```
 
-Then ask a question the skill covers, such as "what are people on X and Hacker News saying about Claude Code this month?"
+Without Node.js, copy `SKILL.md` into the folder your agent loads skills from. Then ask a question the skill covers, such as "Summarize this X post and its replies" or "What is Hacker News saying about Claude Code this month?"
 
 ## Commands
 
-| Channel | Commands |
+| Source | Commands |
 |---|---|
-| X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
-| Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID [--backend ego-browser\|arctic-shift]` (a share link costs one plain HTTP request to reddit.com outside the browser, without cookies) |
-| Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
-| YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
-| Polymarket | `rsrc polymarket search QUERY` |
-| GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues QUERY` |
-| Bluesky | `rsrc bluesky search QUERY` or `rsrc bluesky search --url URL`, `rsrc bluesky read POST`, `rsrc bluesky replies POST`, `rsrc bluesky timeline HANDLE_OR_URL` |
-| Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
-| App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
-| Ashby | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` |
-| LinkedIn | `rsrc linkedin read URL` (public post and comments) |
-| All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
+| X | `x search`, `x read`, `x replies`, `x timeline` |
+| Reddit | `reddit search`, `reddit read` |
+| Hacker News | `hn search`, `hn read` |
+| YouTube | `youtube search`, `youtube read` (details and transcript) |
+| GitHub | `gh repo`, `gh search`, `gh issues` |
+| LinkedIn | `linkedin read` (public post and comments) |
+| Bluesky | `bluesky search`, `bluesky read`, `bluesky replies`, `bluesky timeline` |
+| Product Hunt | `producthunt search`, `producthunt read`, `producthunt leaderboard` |
+| App Store | `appstore search`, `appstore read` (listing and reviews) |
+| Polymarket | `polymarket search` |
+| Ashby | `ashby search`, `ashby read` |
+| All | `check` |
 
-`rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](SKILL.md) has the details that matter when reading results: what each channel returns, how it orders results, and what it leaves out.
+Each command starts with `rsrc`, as in `rsrc gh repo OWNER/REPO`. Add `--help` to a command to list its flags. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
 
-`rsrc x read` accepts a numeric post ID or a status or article URL on x.com or twitter.com. Article URLs use `x.com/HANDLE/article/POST_ID`. When FxTwitter supplies an article, either URL returns the article title and body. For an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
-
-Bluesky search returns one page, newest first (`--top` for ranked results). Filter by author, domain, exact URL or UTC dates. Anonymous search uses `api.bsky.app`; Bluesky has disabled it before. Post reads, replies up to three levels deep and timelines use a separate public host.
-
-Product Hunt search and leaderboards return up to 25 results. The leaderboard defaults to today in Pacific time and accepts a day, ISO week, month or year. A product profile includes makers, links and selected review excerpts without authors or dates. A launch URL selects its own tagline, date and points. Points include votes and other engagement. The server does not expose launch discussions.
-
-See [Product Hunt’s terms of use](https://www.producthunt.com/legal).
-
-For example, `rsrc ashby search linear --team Engineering` lists matching roles. Pass an item’s URL to `rsrc ashby read` for its full description. Each command reads the board once. The [Ashby posting API](https://developers.ashbyhq.com/docs/public-job-posting-api) exposes current postings and their last publication dates. It supplies no closed-role history or applicant counts. For bulk ingestion, Ashby documents [partner feeds with employer opt-in](https://developers.ashbyhq.com/docs/dedicated-partner-job-feeds).
-
-App Store reads return the listing followed by written reviews, newest first by default (30). A URL selects its storefront unless you override it. An ambiguous name returns candidate apps and `usage`; rerun with an ID. Ratings are in `engagement.rating`. Apple's fallback feed omits the reviewed version. Neither feed promises stability or complete coverage. Use the reviews as dated examples; their frequency and timing cannot establish prevalence or support real-time monitoring.
-
-On github.com, `gh repo` and `gh issues --repo` try public REST first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Pass `--backend gh` to use your login directly for private reads, permissions or signed search rankings.
-
-A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
-
-YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. When results arrive without channel names, search looks each one up through YouTube's public oEmbed endpoint and reports recovered and unavailable names in `meta.notes`. A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read. Reddit returns `not_found` for a missing thread and `blocked` for a private or banned community or a login wall. A removed post may still return its record and a removal notice in `meta.notes`. Add `--with-comments` after a search query for up to three readable top-level comments in Reddit’s Best order on each of the first three threads. Pinned comments are skipped there and reported in `meta.notes`; `reddit read` keeps them with `raw.pinned: true`. Pass `--with-comments 5` for five threads, the maximum. The selected threads load concurrently in one Ego task space, one extra page load each. For short groups, `meta.notes` distinguishes a complete thread from a 15-second wait that expired.
-
-## The envelope
+## Output
 
 Every command prints exactly one JSON object on stdout, on success and on failure. There is no other output format.
 
 ```jsonc
 {
   "ok": true,
-  "channel": "hn",
-  "action": "search",
-  "input": {"query": "Claude Code", "since": "2026-10-15", "until": "2026-11-15", "sort": "relevance", "limit": 30},
-  "backend": "algolia",
+  "channel": "x",
+  "action": "read",
+  "input": {"posts": ["https://x.com/karpathy/status/1886192184808149383"]},
+  "backend": "fxtwitter",
   "items": [
     {
-      "id": "50385272",
-      "url": "https://news.ycombinator.com/item?id=50385272",
-      "title": "Claude Code sends your email address to websites",
-      "author": "motoroco",
-      "published_at": "2026-11-05T22:17:15Z",
-      "text": null,
-      "source": "hackernews",
-      "engagement": {"points": 1616, "comments": 535},
+      "id": "1886192184808149383",
+      "url": "https://x.com/karpathy/status/1886192184808149383",
+      "title": null,
+      "author": "karpathy",
+      "published_at": "2025-02-02T23:17:15Z",
+      "text": "There's a new kind of coding I call \"vibe coding\", where…",
+      "source": "fxtwitter",
+      "engagement": {"likes": 38005, "reposts": 3837, "replies": 1501, "quotes": 2702, "views": 8305723},
       "raw": { /* the backend's own record */ }
     }
-    // 29 more
   ],
   "meta": {
-    "attempts": [ /* one per backend call: backend, outcome, requests, ms */ ],
-    "sources": {},             // `check` only: one outcome per channel
+    "attempts": [{"backend": "fxtwitter", "outcome": "ok", "requests": 1, "ms": 193}],
+    "sources": {},             // `check` only: one outcome per source
     "rejected": [],            // items dropped as a block page or the wrong post
     "failed": [],              // inputs of a multi-input command that could not be read
     "truncated": null,         // "request_cap" when a request limit stopped the command early
@@ -146,111 +110,34 @@ Every command prints exactly one JSON object on stdout, on success and on failur
 }
 ```
 
-Every item has the same nine fields. Unavailable fields are `null`. YouTube search marks approximate dates in `meta.notes`. On exit 66, `error` is null and the attempt can say `no_results`.
+Every item has the same nine fields. Unavailable fields are `null`.
 
 | Exit | Meaning | `error.code` |
 |---|---|---|
-| `0` | At least one item | none |
-| `66` | Ran fine, zero items | none |
+| `0` | No error, at least one item | none |
+| `66` | No error, zero items | none |
 | `2` | Bad arguments or setup | `usage`, `config` |
-| `1` | Runtime failure; items read so far stay in `items` | `auth_failed`, `rate_limited`, `blocked`, `url_mismatch`, `not_found`, `upstream_error`, `network_error`, `timeout` |
+| `1` | Runtime failure. Items read so far stay in `items` | `auth_failed`, `rate_limited`, `blocked`, `url_mismatch`, `not_found`, `upstream_error`, `network_error`, `timeout` |
 
-## X with your own session (optional)
+## Signed-in sources
 
-The Google Chrome route is experimental. It has been checked with an existing X session placed in the dedicated profile. In one test of a first sign-in typed into that window, X answered "We've temporarily limited your login." If X refuses the sign-in, stop and use Ego Lite or a cookie pair instead.
+X and Reddit commands can act as your own account. Keep their volume low.
 
-With Google Chrome installed, run these two commands. Between them, sign in to X yourself in the Chrome window the first command opens.
-
-```sh
-rsrc x connect
-rsrc x search "Claude Code" --limit 5
-```
-
-Chrome keeps this login in a dedicated profile under `~/.local/share/rsrc/chrome-profile` (or `$XDG_DATA_HOME/rsrc/chrome-profile`). The separate profile lets Chrome expose a loopback debugging endpoint while your everyday profile stays closed to debugging. Search and timeline reuse that window or start the dedicated Chrome again. The result names the backend `x-chrome` and includes a note when Chrome starts. Searches such as `rsrc x search 'from:OpenAI' --limit 5` and timelines such as `rsrc x timeline OpenAI --limit 3` use the saved connection.
-
-If you already have a signed-in Chrome running with remote debugging, use `rsrc x connect --cdp http://127.0.0.1:9333` with its port. You manage that Chrome's lifetime. Connection settings contain only the backend and endpoint, in `x-chrome.json` beside the X env file. The page supplies the CSRF header and Chrome sends the session cookie. `rsrc check x` checks local reachability without opening X. For one page, search counts two requests and timeline counts three. Chrome can also fetch a favicon outside this count.
-
-X post reads and replies use public sources. Without a saved Chrome connection, search and timeline use the configured cookie pair (`x-graphql`) by default, or FxTwitter if neither cookie is set. A partial pair is a configuration error. To use the X account already signed in to Ego Lite, run `rsrc x search --backend x-browser "Claude Code" --limit 10`. Cookies stay in the browser. Select this backend alone, allow at least two requests for a search, and wait for one browser X command to finish before starting another.
-
-Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose the backends `rsrc x search` tries, in order. The environment takes precedence over a saved Chrome connection, which takes precedence over the env file.
-
-| Search order | When to use it |
-|---|---|
-| `fxtwitter` | You want to search without logging in. FxTwitter's search is currently unavailable, so today this order fails with `upstream_error`. |
-| `x-graphql,fxtwitter` | You want every search to start from your logged-in X account, with FxTwitter second. |
-| `fxtwitter,x-graphql` | You prefer public search and want to use your account only if FxTwitter has an upstream or network error. |
-| `x-graphql` | Search directly with the configured cookie pair. |
-| `x-chrome` | Use Google Chrome after `rsrc x connect`. |
-| `x-browser` | Use the X account signed in to Ego Lite, without exporting cookies. |
-
-Search tries the next backend only after `upstream_error` or `network_error`, within the same `--max-requests` budget. An empty result, a rate limit, or a cookie error ends the search. `meta.attempts` lists the backends that made requests in order. The result comes from the last backend that ran, unless it also failed with one of those two codes: then the first backend's error and posts are kept. `meta.notes` has the error of each other backend that ran. Pass `--backend fxtwitter` or `--backend x-graphql` to use only that backend for one search.
-
-`RSRC_X_FALLBACK=x-graphql`, the earlier fallback setting, now stops the command with `config`: replace that line with `RSRC_X_SEARCH=fxtwitter,x-graphql`.
-
-For `x-graphql`, create the cookie file with mode 600 if it does not exist:
-
-```sh
-mkdir -p ~/.config/rsrc
-install -m 600 /dev/null ~/.config/rsrc/x.env
-```
-
-Open the file in an editor. Add the `auth_token` and `ct0` cookies from a logged-in x.com browser session as two lines, `AUTH_TOKEN=…` and `CT0=…`. Typing the values into a shell command would leave them in your shell history.
-
-- The `AUTH_TOKEN` and `CT0` environment variables win over the file. `RSRC_X_ENV` names another file.
-- The file must be mode 600 or stricter, or the command stops with `config`.
-- Cookie values never appear in output, error messages or files `rsrc` writes.
-- X rotates the ID of its search query. `rsrc` caches the one that works in `~/.cache/rsrc/x-query-ids.json` (or under `$XDG_CACHE_HOME`). When every ID it knows is rejected, the error message says how to copy the current one from your browser.
-
-All signed-in X backends act as your X account, including on timelines. Reddit uses your Reddit account when Ego Lite is signed in. Keep account volume low.
-
-`rsrc reddit read` uses Ego Lite when `ego-browser` is on your `PATH`, and the Arctic Shift archive otherwise or with `--backend arctic-shift`. An archive read sends two requests to `arctic-shift.photon-reddit.com` and none to Reddit. It returns the post, then up to 200 archived comments ranked by archived score. Scores and comment counts are the archive's snapshot; `meta.notes` gives the capture time and how many comments the archive supplied. Content the archive marks deleted or removed is shown as a placeholder. Search and `/s/` share links need Ego Lite. The archive sets its rate limits by load and makes no uptime promise.
- On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
-
-## LinkedIn public posts
-
-`rsrc linkedin read URL` reads a public LinkedIn post in one HTTPS request. It accepts post permalinks and feed update URLs, requires no setup, sends no cookies and never opens a browser or follows a redirect. It requests the post by the ID in the address, so a permalink with an inexact title part still resolves. LinkedIn’s terms restrict automated access.
-
-The first item contains the post text, author, publication timestamp and available engagement counts. Comments from the public page follow it. When LinkedIn reports more comments than it supplies, `meta.notes` gives both counts. Videos can include a transcript and duration in `raw`. A refusal ends the read. `rsrc check linkedin` reads one public post.
+- **X search.** Use the X account signed in to Ego Lite, a cookie pair in `~/.config/rsrc/x.env`, or Google Chrome through `rsrc x connect`. The Chrome route is experimental. `x timeline` can use the same session. [X with your own session](docs/x-session.md) has the setup for each route.
+- **Reddit.** `rsrc` loads Reddit pages in Ego Lite. When Ego Lite is signed in to Reddit, the commands act as that account.
 
 ## What it does not do
 
-- **No writes.** It never posts, likes, follows or trades.
+- **No writes.** `rsrc` never posts, likes, follows or trades.
 - **No merging or ranking across sources.** Each list is that site's own results in that site's order.
 - **No caching of results.** Every command asks the source again.
-- **No web search.** It covers what web search misses; pair it with one.
-- **No guarantees about the sources.** FxTwitter, X's web search, Reddit's pages, the Arctic Shift archive and YouTube through `yt-dlp` are not official APIs and can change or block without notice. `rsrc` is built to fail with an error code when one does, rather than look empty. You are responsible for following each site's terms.
+- **No web search.** `rsrc` covers what web search misses. Pair it with one.
+- **No guarantees about the sources.** FxTwitter, X's web search, Reddit's pages, the Arctic Shift archive and YouTube through `yt-dlp` are not official APIs. They can change or block without notice. When one does, `rsrc` fails with an error code instead of an empty result. You are responsible for following each site's terms.
 
 ## Contributing
 
-```sh
-git clone https://github.com/SamuelZ12/research-sources
-cd research-sources
-uv sync
-uv run pytest -q
-```
-
-The tests also run the browser page scripts under Node.js, so install Node first.
-
-To reproduce the Chrome transport's cookie-isolation test, start a dedicated test Chrome with remote debugging enabled. From this checkout, replace the address with its loopback debugging address and run:
-
-```sh
-uv run python tests/manual/chrome_cookie.py http://127.0.0.1:9333 /tmp/rsrc-cdp-exchange.json
-```
-
-The probe serves a local plain-text page, sets a temporary synthetic HttpOnly cookie, and verifies that the server receives it on a fetch. It checks every received protocol message for the value before writing the normalized exchange. After closing its tab, it asks Chrome for that specific target to verify closure. The probe requires no X or Reddit login.
-
-To exercise the full Chrome commands against recorded search and timeline answers, run `uv run python tests/manual/x_chrome.py`. It starts headed Chrome on a fresh temporary profile, checks both synthetic cookie values against every received protocol message and the CLI output, verifies that each command tab closes, and stops the test browser.
-
-A change is welcome when it keeps these true:
-
-- **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
-- **Runtime dependencies stay empty.** Programs such as `gh` and `yt-dlp` are run as subprocesses, never imported.
-- **Stop requests on a rate-limited backend.** A GitHub repo read or repo-scoped issue search may restart once with the CLI login after a public limit. A signed limit ends the command.
-- **No secrets anywhere.** No cookie, token or account ID in source, fixtures, test output or commit messages. Run `gitleaks dir . --redact --no-banner` before you commit.
-- **A failure never becomes an `ok` result.** No `except` that swallows an error, and a page `rsrc` does not recognize fails instead of reading as empty.
-- **Fixtures hold public data only.** Before saving a recording, remove anything that identifies you: `yt-dlp`'s stream and caption addresses carry your IP address.
-- **No skipped tests and no suppressions** (`# noqa`, `# type: ignore`, `pytest.mark.skip`).
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the setup, the rules a change must keep, and the manual Chrome tests.
 
 ## License
 
-[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger); its notice is in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).
+[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger). Its notice is in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).
