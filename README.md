@@ -20,7 +20,7 @@ Both outputs were recorded on 2026-11-25. The first command read an X post witho
 - **Failures are not results.** `rsrc` rejects a login wall, a CAPTCHA page, or a different post than the one you asked for, and the output says why. On a rate limit, the command stops instead of retrying.
 - **One output shape.** Eleven sources share one JSON envelope with 10 error codes and 4 exit codes.
 - **No Python dependencies.** `rsrc` uses the standard library only. The tests run offline.
-- **An agent skill ships with it.** [`SKILL.md`](SKILL.md) tells an agent which command answers which question and what to do on each error code.
+- **An agent skill ships with it.** [`SKILL.md`](skills/research-sources/SKILL.md) tells an agent which command answers which question and what to do on each error code.
 - **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. See the [method and limits](docs/comparisons.md).
 
 ## Install
@@ -47,13 +47,13 @@ On a Mac with Homebrew, `brew install yt-dlp deno gh` covers YouTube and GitHub.
 
 ## Give it to your agent
 
-`rsrc` is built for an agent to run. [`SKILL.md`](SKILL.md) is the agent's manual. It maps questions to commands, explains each output field, and says when to stop. Install it with the [skills CLI](https://skills.sh/), which asks you which agents get the skill:
+`rsrc` is built for an agent to run. The [`research-sources` skill](skills/research-sources/SKILL.md) is the agent's manual. It maps questions to commands, explains each output field, and says when to stop. Install it with the [skills CLI](https://skills.sh/), which asks you which agents get the skill:
 
 ```sh
 npx skills add SamuelZ12/research-sources
 ```
 
-Without Node.js, copy `SKILL.md` into the folder your agent loads skills from. Then ask a question the skill covers, such as "Summarize this X post and its replies" or "What is Hacker News saying about Claude Code this month?"
+Without Node.js, copy the `skills/research-sources` folder into the folder your agent loads skills from. Then ask a question the skill covers, such as "Summarize this X post and its replies" or "What is Hacker News saying about Claude Code this month?"
 
 ## Commands
 

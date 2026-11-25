@@ -1,0 +1,19 @@
+# Hacker News
+
+`hn` asks the Algolia Hacker News API directly: one request, about a second, no login.
+
+## Search
+
+`hn search` returns stories only, in Algolia's order. Use `--sort date` for newest first. `--until` is exclusive. Without `--since` it searches all time.
+
+Search does not drop low-scoring stories. It returns Algolia's first `--limit` matches (default 30, at most 100) whatever their points, and does not say when more matched. Weigh a story by its `engagement` (points, comments), and use `hn read` for the comments on the threads that matter.
+
+An item's `url` is the Hacker News discussion. The linked article is `raw.url` on a search item and `raw.item.url` on a read item. An Ask HN or Tell HN text post has no linked article.
+
+## Read
+
+`hn read` returns the requested item first, then comments depth-first in posting order, with `raw.depth` and `raw.item.parent_id`.
+
+- Posting order is not a ranking, and Hacker News publishes no comment scores. Weigh a comment by what it says, whatever its position.
+- Comments without text (deleted) are left out.
+- `meta.notes` says `N of M comments returned` when `--comments` cut the thread short.

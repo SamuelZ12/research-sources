@@ -1,6 +1,6 @@
 # Source reference
 
-This page has the full command syntax, what each source needs, and what each source returns and omits. `rsrc <channel> <action> --help` lists every flag. [`SKILL.md`](../SKILL.md) gives an agent the same facts.
+This page has the full command syntax, what each source needs, and what each source returns and omits. `rsrc <channel> <action> --help` lists every flag. The [`research-sources` skill](../skills/research-sources/SKILL.md) gives an agent the same facts.
 
 ## Commands
 
