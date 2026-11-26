@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "id": "2039011345199403174",
+    "url": "https://x.com/gilad/status/2039011345199403174",
+    "author": {
+      "screen_name": "gilad"
+    },
+    "created_timestamp": 1774973162,
+    "text": "We're winding down Yupp today. It was a hard decision, but I'm proud of what we built: 1.3M+ users, an amazing community, and a team I'd work with again in a heartbeat. Grateful to everyone who was part of it. \nThank you thank you thank you.\nMore here: https://blog.yupp.ai/winddown",
+    "likes": 22,
+    "reposts": 1,
+    "replies": 1,
+    "quotes": 0,
+    "views": 1272,
+    "lang": "en",
+    "replying_to": null,
+    "media": null
+  },
+  "thread": [
+    {
+      "type": "status",
+      "id": "2039011345199403174",
+      "url": "https://x.com/gilad/status/2039011345199403174",
+      "author": {
+        "screen_name": "gilad"
+      },
+      "created_timestamp": 1774973162,
+      "text": "We're winding down Yupp today. It was a hard decision, but I'm proud of what we built: 1.3M+ users, an amazing community, and a team I'd work with again in a heartbeat. Grateful to everyone who was part of it. \nThank you thank you thank you.\nMore here: https://blog.yupp.ai/winddown",
+      "likes": 22,
+      "reposts": 1,
+      "replies": 1,
+      "quotes": 0,
+      "views": 1272,
+      "lang": "en",
+      "replying_to": null,
+      "media": null
+    }
+  ],
+  "author": {
+    "screen_name": "gilad"
+  }
+}

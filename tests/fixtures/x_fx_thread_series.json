@@ -1,0 +1,207 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "id": "1917421753820930420",
+    "url": "https://x.com/spermracing/status/1917421753820930420",
+    "author": {
+      "screen_name": "spermracing"
+    },
+    "created_timestamp": 1745983944,
+    "text": "How the sperm race (4/6):\n\nTo assure the sperm swim towards the finish line, purified sperm is pipetted into the racetrack along with media, creating Rheotaxis.\n\nThe racetrack is a microfluidic chip, imaged under an inverted trinocular microscope, where the sperm movements are tracked the entire time using computer vision to determine the winner.",
+    "likes": 25,
+    "reposts": 2,
+    "replies": 1,
+    "quotes": 1,
+    "views": 16730,
+    "lang": "en",
+    "replying_to": {
+      "status": "1917421750918472134"
+    },
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/GpwI6FLaYAA1gSO.jpg?name=orig",
+          "duration": null
+        }
+      ]
+    }
+  },
+  "thread": [
+    {
+      "type": "status",
+      "id": "1917421746086633833",
+      "url": "https://x.com/spermracing/status/1917421746086633833",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983942,
+      "text": "How Sperm Racing Works (1/6):",
+      "likes": 456,
+      "reposts": 39,
+      "replies": 31,
+      "quotes": 63,
+      "views": 170024,
+      "lang": "en",
+      "replying_to": null,
+      "media": {
+        "all": [
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/amplify_video/1917408419742638080/vid/avc1/1920x1080/DL-wbTTyrRPR0zcr.mp4?tag=16",
+            "duration": 48.1
+          }
+        ]
+      }
+    },
+    {
+      "type": "status",
+      "id": "1917421748179591468",
+      "url": "https://x.com/spermracing/status/1917421748179591468",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983943,
+      "text": "Collection & Prep (2/6):\n\nFirst, athletes provide their samples on race day, before the race begins, at the venue under strict medical protocols.\n\nThen, a multi-step preparation and cleaning process begins, where the samples are purified using a density gradient to remove dead cells, debris, and non-motile sperm, and then diluted 10x to approximately 200 sperm cells.",
+      "likes": 35,
+      "reposts": 1,
+      "replies": 1,
+      "quotes": 0,
+      "views": 18560,
+      "lang": "en",
+      "replying_to": {
+        "status": "1917421746086633833"
+      },
+      "media": {
+        "all": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/GpwG36GbMAAlP4D.jpg?name=orig",
+            "duration": null
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/GpwG4lRaYAEKdE5.jpg?name=orig",
+            "duration": null
+          }
+        ]
+      }
+    },
+    {
+      "type": "status",
+      "id": "1917421750918472134",
+      "url": "https://x.com/spermracing/status/1917421750918472134",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983944,
+      "text": "Racetrack (3/6):\n\nThe racetrack is created via a mold with tiny channel patterns on a silicon wafer using soft lithography, similar to how computer chips are made. A photomask (like a blueprint) helps shape the design when UV light hits a light-sensitive coating on the wafer.\n\nLiquid PDMS (mixed with a curing agent) is then poured on the mold, baked, and peeled off to form the chip. To seal the channels, PDMS is bonded to a glass slide using oxygen plasma, which makes the surfaces stick together permanently. This lets us create precise channels as small as 10 microns and reuse the mold to make more chips.",
+      "likes": 29,
+      "reposts": 2,
+      "replies": 2,
+      "quotes": 2,
+      "views": 19879,
+      "lang": "en",
+      "replying_to": {
+        "status": "1917421748179591468"
+      },
+      "media": {
+        "all": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/GpwHyKJbcAA-2Zt.jpg?name=orig",
+            "duration": null
+          }
+        ]
+      }
+    },
+    {
+      "type": "status",
+      "id": "1917421753820930420",
+      "url": "https://x.com/spermracing/status/1917421753820930420",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983944,
+      "text": "How the sperm race (4/6):\n\nTo assure the sperm swim towards the finish line, purified sperm is pipetted into the racetrack along with media, creating Rheotaxis.\n\nThe racetrack is a microfluidic chip, imaged under an inverted trinocular microscope, where the sperm movements are tracked the entire time using computer vision to determine the winner.",
+      "likes": 25,
+      "reposts": 2,
+      "replies": 1,
+      "quotes": 1,
+      "views": 16730,
+      "lang": "en",
+      "replying_to": {
+        "status": "1917421750918472134"
+      },
+      "media": {
+        "all": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/GpwI6FLaYAA1gSO.jpg?name=orig",
+            "duration": null
+          }
+        ]
+      }
+    },
+    {
+      "type": "status",
+      "id": "1917421756056494529",
+      "url": "https://x.com/spermracing/status/1917421756056494529",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983945,
+      "text": "Computer Vision (5/6):\n\nTo enhance the spectator experience, we project the leading sperm’s position frame by frame onto a more visually engaging 3D-rendered track.\n\nThis ensures 100% accuracy while making the Sperm Race entertaining to watch since raw microscope footage is, unsurprisingly, pretty boring.",
+      "likes": 77,
+      "reposts": 2,
+      "replies": 4,
+      "quotes": 2,
+      "views": 40622,
+      "lang": "en",
+      "replying_to": {
+        "status": "1917421753820930420"
+      },
+      "media": {
+        "all": [
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/amplify_video/1917421146989027329/vid/avc1/720x1280/Oy3pNjmBSowbYyx6.mp4?tag=16",
+            "duration": 32.299
+          }
+        ]
+      }
+    },
+    {
+      "type": "status",
+      "id": "1917421758036242715",
+      "url": "https://x.com/spermracing/status/1917421758036242715",
+      "author": {
+        "screen_name": "spermracing"
+      },
+      "created_timestamp": 1745983945,
+      "text": "(6/6)\n\nWe recognize that building something truly new often invites skepticism. We’re working hard to make the technology better, faster, and more entertaining with the goal of one day seeing it in the Olympics.",
+      "likes": 63,
+      "reposts": 2,
+      "replies": 4,
+      "quotes": 4,
+      "views": 31258,
+      "lang": "en",
+      "replying_to": {
+        "status": "1917421756056494529"
+      },
+      "media": {
+        "all": [
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/amplify_video/1917419471213621248/vid/avc1/1284x720/yaPM59s8SbrVXIT1.mp4?tag=16",
+            "duration": 25.658
+          }
+        ]
+      }
+    }
+  ],
+  "author": {
+    "screen_name": "spermracing"
+  }
+}

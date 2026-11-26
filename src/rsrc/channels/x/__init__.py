@@ -1,4 +1,4 @@
-"""`rsrc x`: search, read posts, read replies and read an account's timeline on X, wrapped in the
+"""`rsrc x`: search and read posts, threads, replies and timelines on X, wrapped in the
 envelope.
 
 `fx` (FxTwitter, no login) and `search` (X's web GraphQL, session cookies) do the fetching; this
@@ -37,10 +37,11 @@ class UsageError(Exception):
 
 
 def register(subparsers) -> None:
-    parser = subparsers.add_parser("x", help="X posts: search, read, replies, timeline (no login by default)",
-                                   description="X: search, read posts, replies, an account's timeline.")
+    parser = subparsers.add_parser("x", help="X posts: search, read, thread, replies, timeline (no login by default)",
+                                   description="X: search and read posts, threads, replies and timelines.")
     commands = parser.add_subparsers(dest="x_command", required=True, metavar="ACTION")
-    runners = {"connect": run_connect, "search": run_search, "read": run_read, "replies": run_replies, "timeline": run_timeline}
+    runners = {"connect": run_connect, "search": run_search, "read": run_read, "thread": run_thread,
+               "replies": run_replies, "timeline": run_timeline}
     for name, sub in add_commands(commands).items():
         sub.set_defaults(run=runners[name], action=name)
 
@@ -86,6 +87,9 @@ def add_commands(commands) -> dict[str, argparse.ArgumentParser]:
     parsers["read"] = p = commands.add_parser("read", help="read posts and articles (no login)")
     p.add_argument("posts", nargs="+", metavar="URL_OR_ID",
                    help="x.com/twitter.com status or article URL, or numeric post ID")
+
+    parsers["thread"] = p = commands.add_parser("thread", help="read an author's self-thread (no login)")
+    p.add_argument("post", metavar="URL_OR_ID", help="x.com/twitter.com status URL or numeric post ID")
 
     parsers["replies"] = p = commands.add_parser("replies", help="replies to a post (no login)")
     p.add_argument("post", metavar="URL_OR_ID", help="x.com/twitter.com status URL or numeric ID")
@@ -279,6 +283,29 @@ def run_read(args, ctx) -> dict:
     if not items and failures and meta.get("truncated") is None:
         error = env.error(*failures[0])
     return env.envelope(CHANNEL, "read", input, FX_BACKEND, items, meta=meta, error=error)
+
+
+def run_thread(args, ctx) -> dict:
+    input = {"post": args.post}
+    post_id = fx.parse_id(args.post, status_only=True)
+    if not post_id:
+        return env.envelope(CHANNEL, "thread", input, FX_BACKEND,
+                            error=env.error("usage", f"not a post URL or ID: {args.post}"))
+    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
+    started = time.monotonic()
+    try:
+        records = fx.thread(client, post_id)
+    except HttpError as e:
+        return env.envelope(CHANNEL, "thread", input, FX_BACKEND, error=env.error(e.code, str(e)),
+                            meta={"attempts": [_attempt(FX_BACKEND, e.code, client, started)]})
+    count = len(records)
+    notes = ["1 post returned" if count == 1 else f"{count} posts returned"]
+    if (total := fx.numbered_thread_total(records)) and total > count:
+        notes.append(f"FxTwitter may have cut the thread short. The numbering indicates {total} posts.")
+    elif count == 1:
+        notes.append("FxTwitter shows no self-thread for this post")
+    return env.envelope(CHANNEL, "thread", input, FX_BACKEND, map(to_item, records),
+                        meta={"notes": notes, "attempts": [_attempt(FX_BACKEND, "ok", client, started)]})
 
 
 def run_replies(args, ctx) -> dict:

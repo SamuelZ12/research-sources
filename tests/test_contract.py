@@ -59,6 +59,19 @@ def test_a_refusal_has_one_error_code_on_every_channel(capsys, channel, answer, 
         "rsrc.http.raise_refusal before reading it")
 
 
+def test_x_thread_stops_on_a_rate_limit(run_x):
+    calls = []
+
+    def transport(method, url, headers, body):
+        calls.append(url)
+        return 429, JSON, b"{}"
+
+    code, out, _ = run_x(["thread", "1917421753820930420"], transport)
+    assert code == 1 and not out["ok"] and out["error"]["code"] == "rate_limited"
+    assert calls == ["https://api.fxtwitter.com/2/thread/1917421753820930420"]
+    assert out["meta"]["attempts"][0]["requests"] == 1
+
+
 CAPPED_COMMANDS = {
     ("x", "search"): ["x", "search", "q", "--backend", "fxtwitter"],
     ("x", "search", "x-graphql"): ["x", "search", "q", "--backend", "x-graphql"],

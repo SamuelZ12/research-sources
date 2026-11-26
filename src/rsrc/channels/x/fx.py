@@ -1,4 +1,4 @@
-"""Search, read posts, read replies and read an account's timeline without login: FxTwitter API
+"""Search and read posts, threads, replies and timelines without login: FxTwitter API
 v2; `read` falls back to X's syndication endpoint.
 
 API: https://github.com/FxEmbed/FxEmbed/blob/main/docs/specs/fxtwitter-openapi.json
@@ -21,11 +21,16 @@ FX_TRIES = 3  # FxTwitter intermittently 404s valid posts
 SEARCH_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/search
 FEEDS = {"Latest": "latest", "Top": "top"}
 POST_URL_RE = re.compile(
-    r"(?<![\w-])(?:x|twitter)\.com/(?:[^/?#]+/status(?:es)?|i/web/status|(?![iI]/)[^/?#]+/article)/(\d{2,20})(?=[/?#]|$)",
+    r"(?<![\w-])(?i:(?:x|twitter)\.com)/(?:[^/?#]+/status(?:es)?|i/web/status|(?P<article>(?![iI]/)[^/?#]+/article))"
+    r"/(?P<id>\d{2,20})(?=[/?#]|$)",
     re.ASCII,
 )
+STATUS_URL_PREFIX_RE = re.compile(r"(?:https?://)?(?:[a-z0-9-]+\.)*", re.ASCII | re.IGNORECASE)
 ARTICLE_LINK_RE = re.compile(r"(?:x|twitter)\.com/[iI]/article/\d{2,20}(?:[/?#]|$)")
 BARE_ID_RE = re.compile(r"^\d{2,20}$", re.ASCII)
+THREAD_COUNTER = re.compile(r"(?:^|\s)\(([1-9][0-9]{0,3})/([1-9][0-9]{0,3})\):?$")
+TOMBSTONE_LABELS = {"deleted": "post deleted", "suspended": "author suspended", "private": "protected account"}
+FUTURE_POST = "The post ID encodes a creation date in the future according to the system UTC clock"
 TIMELINE_PAGE_MAX = 100  # FxTwitter's `count` limit for /2/profile/{handle}/statuses
 TIMELINE_MAX = 200  # posts per `x timeline`: about 10 requests
 ACCOUNT_RE = re.compile(r"^(?:(?:https?://)?(?:www\.|mobile\.)?(?:x|twitter)\.com/)?@?([A-Za-z0-9_]{1,15})"
@@ -43,11 +48,30 @@ ARTICLE_BLOCK_PREFIX = {
 }
 
 
-def parse_id(arg: str) -> str | None:
+def parse_id(arg: str, *, status_only: bool = False) -> str | None:
     match = POST_URL_RE.search(arg)
     if match:
-        return match.group(1)
+        if status_only and (match.group("article") or not STATUS_URL_PREFIX_RE.fullmatch(arg, 0, match.start())):
+            return None
+        return match.group("id")
     return arg if BARE_ID_RE.match(arg) else None
+
+
+def is_future_post(post_id: str) -> bool:
+    # Snowflake IDs place the millisecond timestamp above 22 worker/sequence bits.
+    timestamp_ms = (int(post_id) >> 22) + 1288834974657
+    return timestamp_ms > datetime.now(timezone.utc).timestamp() * 1000 + 86_400_000
+
+
+def is_tombstone(status) -> bool:
+    return isinstance(status, dict) and status.get("type") == "tombstone"
+
+
+def tombstone_reason(status, post_id: str) -> str | None:
+    if status.get("id") in (None, post_id) and status.get("provider") == "twitter":
+        reason = status.get("reason")
+        return reason if isinstance(reason, str) and reason else None
+    return None
 
 
 def parse_handle(arg: str) -> str | None:
@@ -85,11 +109,8 @@ def read(client, arg, *, syndication_client=None) -> dict:
         if ARTICLE_LINK_RE.search(arg):
             message = "This URL contains an article ID. Use `rsrc x read` to read the post that links to the article."
         return {"id": arg, "error": message, "code": "usage"}
-    # Snowflake IDs place the millisecond timestamp above 22 worker/sequence bits.
-    timestamp_ms = (int(post_id) >> 22) + 1288834974657
-    if timestamp_ms > datetime.now(timezone.utc).timestamp() * 1000 + 86_400_000:
-        return {"id": post_id, "code": "not_found",
-                "error": "The post ID encodes a creation date in the future according to the system UTC clock"}
+    if is_future_post(post_id):
+        return {"id": post_id, "code": "not_found", "error": FUTURE_POST}
     url = f"{FX_API}/status/{post_id}"
     data, fx_failure = fx_json(client, url, "status", stop_on_missing=True)
     tombstone = None
@@ -100,8 +121,7 @@ def read(client, arg, *, syndication_client=None) -> dict:
         elif status.get("type") != "tombstone":
             return status_record(status)
         else:
-            if status.get("id") in (None, post_id) and status.get("provider") == "twitter":
-                tombstone = status.get("reason")
+            tombstone = tombstone_reason(status, post_id)
             fx_failure = Failure("post unavailable", status=404 if tombstone else None)
     data, failure = get_json(syndication_client or client, SYNDICATION.format(id=post_id))
     if data and data.get("id_str"):
@@ -109,10 +129,77 @@ def read(client, arg, *, syndication_client=None) -> dict:
     reason = failure.reason if failure else "no post"
     message = f"fxtwitter: {fx_failure.reason}; syndication: {reason}"
     if fx_failure.status == 404 and (data == {} or (failure and failure.status == 404)):
-        detail = {"deleted": "post deleted", "suspended": "author suspended", "private": "protected account"}
-        return {"id": post_id, "code": "not_found", "error": detail.get(tombstone, message)}
+        return {"id": post_id, "code": "not_found", "error": TOMBSTONE_LABELS.get(tombstone, message)}
     code = "network_error" if fx_failure.network or (failure and failure.network) else "upstream_error"
     return {"id": post_id, "error": message, "code": code}
+
+
+def thread(client, post_id: str) -> list[dict]:
+    if is_future_post(post_id):
+        raise NotFound(FUTURE_POST)
+    data, failure = fx_json(client, f"{FX_API}/thread/{post_id}", "thread", stop_on_missing=True)
+    context = f"fxtwitter thread {post_id}"
+    if failure:
+        if failure.status == 404:
+            raise HttpError(f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing")
+        raise failure.error(context)
+    status = data.get("status")
+    if is_tombstone(status):
+        if reason := tombstone_reason(status, post_id):
+            raise NotFound(f"{post_id}: {TOMBSTONE_LABELS.get(reason, 'post unavailable')}")
+        raise HttpError(f"{context}: unrecognized tombstone")
+    if data.get("code", 200) != 200:
+        raise HttpError(f"{context}: unsuccessful thread response")
+    return validate_thread(data["thread"], post_id)
+
+
+def validate_thread(statuses: object, post_id: str) -> list[dict]:
+    """Map an ordered FxTwitter status list to records or raise if it fails to form a self-thread."""
+    if not isinstance(statuses, list):
+        raise HttpError("FxTwitter returned an unrecognized thread")
+    records = {}
+    for status in statuses:
+        status_id = status.get("id") if isinstance(status, dict) else None
+        if not isinstance(status_id, str) or not BARE_ID_RE.fullmatch(status_id) or is_tombstone(status):
+            raise HttpError("FxTwitter returned a thread entry without a valid post ID")
+        if status_id in records:
+            raise HttpError(f"FxTwitter repeated post {status_id} in the thread")
+        try:
+            record = status_record(status)
+        except (AttributeError, TypeError, ValueError, OverflowError, OSError) as e:
+            raise HttpError(f"FxTwitter returned an unreadable post {status_id} in the thread") from e
+        author, parent = record["author"], record["reply_to_id"]
+        if not isinstance(author, str) or not author.strip():
+            raise HttpError(f"FxTwitter post {status_id} has no thread author")
+        if parent is not None and not isinstance(parent, str):
+            raise HttpError(f"FxTwitter post {status_id} has an invalid reply target")
+        if records and parent not in records:
+            raise HttpError(f"FxTwitter post {status_id} does not reply to an earlier post in the thread")
+        records[status_id] = record
+    if post_id not in records:
+        raise HttpError(f"FxTwitter's thread does not contain the requested post {post_id}")
+    first = next(iter(records.values()))
+    if first["reply_to_id"] in records:
+        raise HttpError(f"FxTwitter's first post {first['id']} replies within the thread")
+    author = records[post_id]["author"].casefold()
+    for record in records.values():
+        if record["author"].casefold() != author:
+            raise HttpError(f"FxTwitter post {record['id']} has a different author from the requested post")
+    return list(records.values())
+
+
+def numbered_thread_total(records: list[dict]) -> int | None:
+    previous, total = None, None
+    for record in records:
+        text = record["text"]
+        counter = THREAD_COUNTER.search(text.partition("\n")[0].rstrip()) if isinstance(text, str) else None
+        if not counter:
+            return None
+        part, claimed_total = map(int, counter.groups())
+        if part > claimed_total or (previous is not None and (part != previous + 1 or claimed_total != total)):
+            return None
+        previous, total = part, claimed_total
+    return total
 
 
 def replies(client, post_id, rank="likes", limit=100):
@@ -221,7 +308,7 @@ def fx_json(client, url, key, *, stop_on_missing=False) -> tuple[dict | None, Fa
     """FxTwitter GET with up to FX_TRIES attempts until the response has `key`."""
     for _ in client.tries(range(FX_TRIES)):
         data, failure = get_json(client, url, read_tombstone=stop_on_missing)
-        if data and data.get(key) is not None:
+        if data and (data.get(key) is not None or (stop_on_missing and is_tombstone(data.get("status")))):
             return data, None
         failure = failure or Failure(f"response has no {key}")
         if stop_on_missing and failure.status == 404:
@@ -246,7 +333,7 @@ def get_json(client, url, *, read_tombstone=False) -> tuple[dict | None, Failure
             except ValueError:
                 data = None
             item = data.get("status") if isinstance(data, dict) else None
-            if isinstance(item, dict) and item.get("type") == "tombstone":
+            if is_tombstone(item):
                 return data, None
         return None, Failure(f"HTTP {status}", status=status)
     try:
