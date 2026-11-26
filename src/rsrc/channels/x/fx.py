@@ -134,14 +134,14 @@ def read(client, arg, *, syndication_client=None) -> dict:
     return {"id": post_id, "error": message, "code": code}
 
 
-def thread(client, post_id: str) -> list[dict]:
+def thread(client, post_id: str, *, syndication_client=None) -> list[dict]:
     if is_future_post(post_id):
         raise NotFound(FUTURE_POST)
     data, failure = fx_json(client, f"{FX_API}/thread/{post_id}", "thread", stop_on_missing=True)
     context = f"fxtwitter thread {post_id}"
     if failure:
         if failure.status == 404:
-            raise HttpError(f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing")
+            raise _thread_404(client, post_id, context, syndication_client)
         raise failure.error(context)
     status = data.get("status")
     if is_tombstone(status):
@@ -151,6 +151,17 @@ def thread(client, post_id: str) -> list[dict]:
     if data.get("code", 200) != 200:
         raise HttpError(f"{context}: unsuccessful thread response")
     return validate_thread(data["thread"], post_id)
+
+
+def _thread_404(client, post_id: str, context: str, syndication_client) -> HttpError:
+    """The error for a thread 404. It carries no post state, so `read` says whether the post exists."""
+    post = read(client, post_id, syndication_client=syndication_client)
+    if "error" not in post:
+        return HttpError(f"{context}: HTTP 404, but the post exists. Read it alone with `rsrc x read {post_id}`")
+    if post["code"] == "not_found":
+        return NotFound(f"{post_id}: {post['error']}")
+    unconfirmed = f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing ({post['error']})"
+    return NetworkError(unconfirmed) if post["code"] == "network_error" else HttpError(unconfirmed)
 
 
 def validate_thread(statuses: object, post_id: str) -> list[dict]:

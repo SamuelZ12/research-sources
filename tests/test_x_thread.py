@@ -86,21 +86,56 @@ def test_invalid_thread_cannot_pass_as_a_result(run_x, defect, detail):
     assert web.urls == [ENDPOINT]
 
 
-@pytest.mark.parametrize("tombstone, expected", [
-    (None, "upstream_error"),
-    ({"type": "tombstone", "provider": "twitter", "reason": "deleted"}, "not_found"),
-])
-def test_thread_reports_missing_only_when_fxtwitter_confirms_it(run_x, tombstone, expected):
-    post = "2100000000000000001"
+MISSING = "2100000000000000001"
+MISSING_ENDPOINT = f"https://api.fxtwitter.com/2/thread/{MISSING}"
+MISSING_STATUS = f"https://api.fxtwitter.com/2/status/{MISSING}"
+SYNDICATION = f"https://cdn.syndication.twimg.com/tweet-result?id={MISSING}&token=a"
+
+
+def test_thread_reports_a_deleted_post_from_its_tombstone(run_x):
     data = load("x_fx_thread_missing.json")
-    if tombstone:
-        data["status"] = tombstone
+    data["status"] = {"type": "tombstone", "provider": "twitter", "reason": "deleted"}
     web = FakeWeb(fx=[(404, data)])
-    code, result, _ = run_x(["thread", post], web)
+    code, result, _ = run_x(["thread", MISSING], web)
     assert code == 1 and not result["ok"] and not result["items"]
-    assert result["error"]["code"] == expected
-    assert ("post deleted" if tombstone else "HTTP 404") in result["error"]["message"]
-    assert web.urls == [f"https://api.fxtwitter.com/2/thread/{post}"]
+    assert result["error"]["code"] == "not_found" and "post deleted" in result["error"]["message"]
+    assert web.urls == [MISSING_ENDPOINT]
+
+
+def test_thread_404_is_not_found_once_the_post_routes_agree_it_is_missing(run_x):
+    """The live answer for a post that never existed: the thread 404 carries no post state, so the
+    two routes `x read` uses decide."""
+    web = FakeWeb(fx=[(404, load("x_fx_thread_missing.json")), (404, {"code": 404, "status": None})],
+                  syndication=[(404, b"")])
+    code, result, _ = run_x(["thread", MISSING], web)
+    assert code == 1 and not result["ok"] and not result["items"]
+    assert result["error"]["code"] == "not_found"
+    assert MISSING in result["error"]["message"]
+    assert web.urls == [MISSING_ENDPOINT, MISSING_STATUS, SYNDICATION]
+    assert result["meta"]["attempts"] == [
+        {"backend": "fxtwitter", "outcome": "not_found", "requests": 3, "ms": result["meta"]["attempts"][0]["ms"]},
+    ]
+
+
+def test_thread_404_for_a_post_that_exists_is_an_upstream_error(run_x):
+    status = load("x_fx_thread_single.json")["status"]
+    status = {**status, "id": MISSING}
+    web = FakeWeb(fx=[(404, load("x_fx_thread_missing.json")), (200, {"code": 200, "status": status})])
+    code, result, _ = run_x(["thread", MISSING], web)
+    assert code == 1 and not result["ok"] and not result["items"]
+    assert result["error"]["code"] == "upstream_error"
+    assert "the post exists" in result["error"]["message"]
+    assert f"rsrc x read {MISSING}" in result["error"]["message"]
+    assert web.urls == [MISSING_ENDPOINT, MISSING_STATUS]
+
+
+def test_thread_404_stays_unconfirmed_when_the_post_routes_fail(run_x):
+    web = FakeWeb(fx=[(404, load("x_fx_thread_missing.json")), (404, {"code": 404, "status": None})],
+                  syndication=[(500, b"")])
+    code, result, _ = run_x(["thread", MISSING], web)
+    assert code == 1 and result["error"]["code"] == "upstream_error"
+    assert "could not confirm" in result["error"]["message"]
+    assert web.urls[:2] == [MISSING_ENDPOINT, MISSING_STATUS] and web.urls[2:] and set(web.urls[2:]) == {SYNDICATION}
 
 
 def test_thread_retries_a_transient_server_failure(run_x):

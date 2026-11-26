@@ -22,7 +22,7 @@ Done when every entry is opened, or named in your answer as unopened with the re
 
 ## One self-thread
 
-`rsrc x thread URL_OR_ID` takes the status URL or ID of any post in a self-thread. FxTwitter returns the author's posts starting with the first one, in the same item format as `x read`. A standalone post returns one item with a note in `meta.notes`.
+`rsrc x thread URL_OR_ID` takes the status URL or ID of any post in a self-thread. FxTwitter returns the author's posts starting with the first one, in the same item format as `x read`. A standalone post returns one item with a note in `meta.notes`. When FxTwitter has no thread for the ID, the command spends up to two more requests to tell a missing post (`not_found`) from a FxTwitter failure (`upstream_error`).
 
 FxTwitter can cut long threads short without warning. `meta.notes` gives the number returned and flags a likely cut when first lines carry consistent counters like `(1/6)` that indicate more posts. To check for more, run `rsrc x replies LAST_POST_ID --rank recency` on the last returned post and look for replies by the same author.
 

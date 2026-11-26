@@ -292,12 +292,14 @@ def run_thread(args, ctx) -> dict:
         return env.envelope(CHANNEL, "thread", input, FX_BACKEND,
                             error=env.error("usage", f"not a post URL or ID: {args.post}"))
     client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
+    syndication = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
     started = time.monotonic()
     try:
-        records = fx.thread(client, post_id)
+        records = fx.thread(client, post_id, syndication_client=syndication)
     except HttpError as e:
+        requests = client.requests_made + syndication.requests_made
         return env.envelope(CHANNEL, "thread", input, FX_BACKEND, error=env.error(e.code, str(e)),
-                            meta={"attempts": [_attempt(FX_BACKEND, e.code, client, started)]})
+                            meta={"attempts": [env.attempt(FX_BACKEND, e.code, requests, env.elapsed_ms(started))]})
     count = len(records)
     notes = ["1 post returned" if count == 1 else f"{count} posts returned"]
     if (total := fx.numbered_thread_total(records)) and total > count:
