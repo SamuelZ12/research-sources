@@ -18,6 +18,10 @@ SUBREDDIT = re.compile(r"[A-Za-z0-9_]+")
 CHANNEL = "reddit"
 
 
+class _WrongPost(http.HttpError):
+    code = "url_mismatch"
+
+
 def _rows(client, path, **params):
     # Do not follow redirects or try another backend on an archive refusal.
     url = f"{API}/{path}?{urlencode(params)}"
@@ -207,11 +211,48 @@ def _score_order(entry):
     return score is None, -(score or 0), item["published_at"] or "9999", item["id"]
 
 
+def _validate_comment_post(row, post_id, comment_id):
+    other = row.get("link_id")
+    if not isinstance(other, str) or not re.fullmatch(r"t3_[a-z0-9]+", other):
+        raise http.HttpError(f"Arctic Shift returned t1_{comment_id} without a valid post ID")
+    if other != "t3_" + post_id:
+        raise _WrongPost(f"Arctic Shift lists t1_{comment_id} under {other}, expected t3_{post_id}")
+
+
+def _comment_by_id(client, post_id, comment_id):
+    matches = _rows(client, "comments/ids", ids=comment_id)
+    if not matches:
+        raise http.NotFound(f"Arctic Shift has no comment t1_{comment_id}")
+    row = matches[0] if len(matches) == 1 else None
+    if not isinstance(row, dict) or row.get("id") != comment_id:
+        raise http.HttpError(f"Arctic Shift did not return the requested comment t1_{comment_id}")
+    _validate_comment_post(row, post_id, comment_id)
+    return row
+
+
+def _focused_tree(client, post_id, comment_id, with_replies):
+    if not with_replies:
+        return [{"kind": "t1", "data": _comment_by_id(client, post_id, comment_id)}]
+
+    comment = "t1_" + comment_id
+    rows = _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT, parent_id=comment)
+    if not rows:
+        _comment_by_id(client, post_id, comment_id)
+        raise http.HttpError(f"Arctic Shift returned no tree for {comment}")
+    node = rows[0] if len(rows) == 1 and isinstance(rows[0], dict) else {}
+    root = node.get("data")
+    if node.get("kind") != "t1" or not isinstance(root, dict) or root.get("id") != comment_id:
+        raise http.HttpError(f"Arctic Shift did not return a tree rooted at {comment}")
+    _validate_comment_post(root, post_id, comment_id)
+    return rows
+
+
 def read(ctx, input_, post_id):
-    """Up to two requests: the post by ID and one bounded comment tree."""
+    """Read the post and a bounded tree. Look up the comment if its focused tree is empty."""
     started = time.monotonic()
     transport = http.single_hop_transport if ctx.transport is http.urllib_transport else ctx.transport
-    client = http.Client(min_interval=0, max_requests=2, transport=transport, sleep=ctx.sleep)
+    comment_id = input_.get("comment_id")
+    client = http.Client(min_interval=0, max_requests=3 if comment_id else 2, transport=transport, sleep=ctx.sleep)
     items, notes = [], ["This is an Arctic Shift archive copy of Reddit."]
     unavailable = {}  # item ID -> (kind, null fields), reported only for items that are returned
     removed = deleted = 0
@@ -232,25 +273,34 @@ def read(ctx, input_, post_id):
         post_item, placeholder = _item(post, "t3_" + post_id, path, unavailable)
         items.append(post_item)
         removed, deleted = int(placeholder == "[removed]"), int(placeholder == "[deleted]")
-        if input_["comments"]:
-            rows = _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT)
+        if input_["comments"] or comment_id:
+            rows = (_focused_tree(client, post_id, comment_id, with_replies=input_["comments"] > 1) if comment_id else
+                    _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT))
             comments, collapsed, orphans = _comments(rows, post_item["id"], path, unavailable)
             count = post_item["engagement"]["comments"]
             if not comments and (collapsed or (count is not None and count > 0)):
                 raise http.HttpError("Arctic Shift returned no comment records despite evidence of comments")
-            selected = sorted(comments, key=_score_order)[:input_["comments"]]
-            notes.append("Comments are sorted by descending archived score within the fetched tree, "
-                         "then oldest first for ties (unknown scores last).")
+            if comment_id:
+                linked, *replies = comments
+                linked[0]["raw"]["linked"] = True
+                selected = [linked, *sorted(replies, key=_score_order)[:max(0, input_["comments"] - 1)]]
+                notes.append(f"Focused on comment t1_{comment_id}.")
+                notes.append(f"Returned {len(selected)} of {len(comments)} comment records from the fetched branch.")
+            else:
+                selected = sorted(comments, key=_score_order)[:input_["comments"]]
+                notes.append("Comments are sorted by descending archived score within the fetched tree, "
+                             "then oldest first for ties (unknown scores last).")
             if orphans:
                 noun = "reply" if orphans == 1 else "replies"
                 notes.append(f"The fetched tree has {orphans} {noun} whose parent comment is not in it. "
                              "Their depth, and that of replies under them, is null.")
             if collapsed:
                 notes.append(f"Arctic Shift collapsed parts of the tree in the bounded {TREE_LIMIT}-comment fetch.")
-            reported = f"{count} comments reported by the post snapshot" if count is not None else "an unknown snapshot count"
-            noun = "comment" if len(selected) == 1 else "comments"
-            notes.append(f"Returned {len(selected)} {noun}. The fetched tree supplied {len(comments)} "
-                         f"comment records against {reported}.")
+            if not comment_id:
+                reported = f"{count} comments reported by the post snapshot" if count is not None else "an unknown snapshot count"
+                noun = "comment" if len(selected) == 1 else "comments"
+                notes.append(f"Returned {len(selected)} {noun}. The fetched tree supplied {len(comments)} "
+                             f"comment records against {reported}.")
             items.extend(item for item, _ in selected)
             removed += sum(marker == "[removed]" for _, marker in selected)
             deleted += sum(marker == "[deleted]" for _, marker in selected)

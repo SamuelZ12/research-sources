@@ -40,6 +40,51 @@ test("wait for the post or the rendered 404 document", async () => {
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/reddit_best_comments.json", import.meta.url)));
 
+test("a visible post does not release a still-rendering focused comment", async () => {
+  const focused = JSON.parse(readFileSync(new URL("./fixtures/reddit_comment_read.json", import.meta.url))).focused;
+  const [, comment, unrelated] = focused.comments;
+  const id = comment.attrs.thingid;
+  let rendered = unrelated;
+  let bodyText;
+  const target = {
+    querySelectorAll(selector) {
+      if (selector !== '[slot="comment"]') return [];
+      return [{ closest: () => ({}), innerText: "A nested reply" },
+              ...(bodyText === undefined ? [] : [
+                { closest: () => target, innerText: bodyText },
+                { closest: () => target, innerText: "Another owned body" },
+              ])];
+    },
+  };
+  const document = {
+    querySelector: selector => {
+      if (selector === "shreddit-post") return { getClientRects: () => [{}] };
+      if (selector === `shreddit-comment[thingid="${rendered.attrs.thingid}"]`) return target;
+      return null;
+    },
+  };
+  const seen = [];
+  const page = {
+    async goto() {},
+    async evaluate() { return {}; },
+    async waitForFunction(ready, arg) {
+      seen.push(Boolean(ready(arg)));
+      rendered = comment;
+      seen.push(Boolean(ready(arg)));
+      bodyText = "  ";
+      seen.push(Boolean(ready(arg)));
+      bodyText = comment.text;
+      seen.push(Boolean(ready(arg)));
+    },
+  };
+  await runInNewContext(`(async () => { ${source} })()`, {
+    document, performance: { getEntriesByType: () => [{ responseStatus: 200 }] },
+    INPUT: { action: "read", comment: id }, console: { log() {} },
+    taskSpace: () => ({ page: () => page, async finish() {} }),
+  });
+  assert.deepEqual(seen, [false, false, false, true]);
+});
+
 async function batchReplay(responses, delays, clock = Date, attrs = {}) {
   const requests = [], completes = [], closed = [];
   const pages = responses.map((response, index) => ({

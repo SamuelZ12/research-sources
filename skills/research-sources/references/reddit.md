@@ -22,6 +22,10 @@ For handpicked threads, search first and use `reddit read` on your choices.
 
 `read` returns the post first, then comments in page order with `raw.attrs.depth` and `raw.attrs.parentid`. Replies that Reddit folded behind "more replies" are not included. A pinned comment is kept, marked `raw.pinned: true`.
 
+Pass a comment's `url` to read the post, the linked comment, and its visible ancestors and replies. The linked comment has `raw.linked: true`, its ID is in `input.comment_id`, and `meta.notes` names the focus. `--comments` counts the linked comment. With `--comments 0`, the post and linked comment are still returned.
+
+A missing or removed linked comment returns `not_found`. A post/comment mismatch returns `url_mismatch`.
+
 A share link (`reddit.com/r/…/s/…`) costs one extra request, which finds the post it leads to. When that request fails with `upstream_error`, open the link in Ego and pass the `/comments/` URL it lands on.
 
 Missing threads return `not_found`. Private or banned communities and login walls return `blocked`. A removed thread can still have a post record. Check `meta.notes` for the removal notice.
@@ -33,10 +37,11 @@ When `ego-browser` is not installed, `reddit read` answers from the public Arcti
 An archive answer is a snapshot. Before you quote a score or comment count, read `meta.notes` for the capture time and say the figure is as of then.
 
 - Comments are ranked by archived score, and at most 200 are fetched. The notes say how many the archive supplied against the post's count.
+- A comment permalink returns the post, the linked comment, and its archived replies. An empty branch can cost one extra request to check where the comment belongs.
 - Deleted or removed items appear as `[deleted]` or `[removed]`.
 - A reply whose parent is outside the fetched tree has a null `raw.attrs.depth`.
 - Only `--sort top` is accepted.
-- `not_found` means the archive has no such post.
+- `not_found` means the archive has no such post or comment.
 - For an `/s/` link, get the `/comments/` URL or post ID first.
 - `rate_limited` stops archive reads for the session.
 

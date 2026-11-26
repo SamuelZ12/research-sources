@@ -1,0 +1,78 @@
+{
+  "data": [
+    {
+      "kind": "t1",
+      "data": {
+        "id": "lphy20c",
+        "link_id": "t3_1fs5dql",
+        "parent_id": "t3_1fs5dql",
+        "created_utc": 1727621404,
+        "score": 38,
+        "author": "example_commenter",
+        "body": "Public comment text omitted from fixture.",
+        "replies": {
+          "kind": "Listing",
+          "data": {
+            "children": [
+              {
+                "kind": "t1",
+                "data": {
+                  "id": "lq1fvs4",
+                  "link_id": "t3_1fs5dql",
+                  "parent_id": "t1_lphy20c",
+                  "created_utc": 1727903561,
+                  "score": 1,
+                  "author": "example_commenter",
+                  "body": "Public comment text omitted from fixture."
+                }
+              },
+              {
+                "kind": "t1",
+                "data": {
+                  "id": "lq6du1s",
+                  "link_id": "t3_1fs5dql",
+                  "parent_id": "t1_lphy20c",
+                  "created_utc": 1727980078,
+                  "score": 1,
+                  "author": "example_commenter",
+                  "body": "Public comment text omitted from fixture.",
+                  "replies": {
+                    "kind": "Listing",
+                    "data": {
+                      "children": [
+                        {
+                          "kind": "t1",
+                          "data": {
+                            "id": "lu4fjfn",
+                            "link_id": "t3_1fs5dql",
+                            "parent_id": "t1_lq6du1s",
+                            "created_utc": 1730086146,
+                            "score": 1,
+                            "author": "example_commenter",
+                            "body": "Public comment text omitted from fixture."
+                          }
+                        },
+                        {
+                          "kind": "t1",
+                          "data": {
+                            "id": "lxvuzn0",
+                            "link_id": "t3_1fs5dql",
+                            "parent_id": "t1_lq6du1s",
+                            "created_utc": 1731994546,
+                            "score": 1,
+                            "author": "example_commenter",
+                            "body": "Public comment text omitted from fixture."
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

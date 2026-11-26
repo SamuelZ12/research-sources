@@ -26,11 +26,17 @@ function readSearch() {
   });
 }
 
-function threadReady() {
+function threadReady(comment) {
   const post = document.querySelector("shreddit-post");
-  if (post && post.getClientRects().length) return true;
-  const navigation = performance.getEntriesByType("navigation")[0];
-  return navigation?.responseStatus === 404 &&
+  if (post && post.getClientRects().length) {
+    if (!comment) return true;
+    const node = document.querySelector('shreddit-comment[thingid="' + comment + '"]');
+    const body = node && [...node.querySelectorAll('[slot="comment"]')]
+      .find(slot => slot.closest("shreddit-comment") === node);
+    return !!body?.innerText.trim();
+  }
+  const status = performance.getEntriesByType("navigation")[0]?.responseStatus;
+  return (status === 404 || (comment && status === 200)) &&
     document.querySelector("h1")?.innerText.trim().toLowerCase() === "page not found";
 }
 
@@ -125,7 +131,7 @@ async function loadPage(task) {
   const page = task.page("p1");
   await page.goto(INPUT.url, { timeout: 30000 });
   out.loads = 1;
-  const guarded = INPUT.comment_search || INPUT.action === "comments";
+  const guarded = INPUT.comment_search || INPUT.action === "comments" || INPUT.comment;
   if (guarded) {
     out.status = await page.evaluate(() => performance.getEntriesByType("navigation")[0]?.responseStatus);
   }
@@ -157,7 +163,7 @@ async function loadPage(task) {
       out.loads += 1;
     }
   } else if (!denied) {
-    await page.waitForFunction(threadReady, undefined, { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(threadReady, INPUT.comment, { timeout: 15000 }).catch(() => {});
     Object.assign(out, await page.evaluate(readThread, INPUT.attrs));
   }
   Object.assign(out, await page.evaluate(pageState));

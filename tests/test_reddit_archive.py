@@ -12,6 +12,7 @@ from rsrc.envelope import ITEM_KEYS
 FIXTURES = Path(__file__).parent / "fixtures"
 POST = (FIXTURES / "reddit_archive_post.json").read_bytes()
 TREE = (FIXTURES / "reddit_archive_tree.json").read_bytes()
+COMMENT_TREE = (FIXTURES / "reddit_archive_comment_tree.json").read_bytes()
 POST_URL = "https://www.reddit.com/r/ModSupport/comments/1641krf/"
 POST_API = reddit_archive.API + "/posts/ids?ids=1641krf"
 TREE_API = reddit_archive.API + "/comments/tree?link_id=1641krf&limit=200"
@@ -80,6 +81,48 @@ def test_explicit_backend_and_comment_limit_rank_by_score(run):
     assert code == 0 and urls == [POST_API, TREE_API]
     assert [item["id"] for item in out["items"]] == ["t3_1641krf", "t1_jy7o5p5"]
     assert "Returned 1 comment. The fetched tree supplied 3" in " ".join(out["meta"]["notes"])
+
+
+@pytest.mark.parametrize("limit, replies", [(0, []), (3, ["t1_lq1fvs4", "t1_lq6du1s"])])
+def test_archive_reads_the_linked_comment_ahead_of_replies(run, limit, replies):
+    post = json.loads(POST)["data"][0]
+    post.update(id="1fs5dql", subreddit="DrewGooden")
+    url = "https://www.reddit.com/r/DrewGooden/comments/1fs5dql/_/lphy20c/"
+    if limit:
+        path = "comments/tree?link_id=1fs5dql&limit=200&parent_id=t1_lphy20c"
+        comments = (200, COMMENT_TREE)
+    else:
+        path = "comments/ids?ids=lphy20c"
+        row = json.loads(COMMENT_TREE)["data"][0]["data"]
+        del row["replies"]
+        comments = response({"data": [row]})
+    code, out, urls = run(["reddit", "read", url, "--backend", "arctic-shift", "--comments", str(limit)],
+                          response({"data": [post]}), comments, ego=True)
+    assert code == 0 and out["input"]["comment_id"] == "lphy20c"
+    item = out["items"][1]
+    assert (item["id"], item["url"], item["raw"]["linked"]) == ("t1_lphy20c", url, True)
+    assert [i["id"] for i in out["items"][2:]] == replies
+    assert "Focused on comment t1_lphy20c." in out["meta"]["notes"]
+    assert urls == [reddit_archive.API + "/posts/ids?ids=1fs5dql", reddit_archive.API + "/" + path]
+
+
+@pytest.mark.parametrize("found, expected", [(False, "not_found"), (True, "url_mismatch")])
+def test_archive_empty_focused_tree_checks_the_comment_by_id(run, found, expected):
+    comment = json.loads(COMMENT_TREE)["data"][0]["data"]
+    rows = [comment] if found else []
+    code, out, urls = run(["reddit", "read", POST_URL + "_/lphy20c/"],
+                          (200, POST), response({"data": []}), response({"data": rows}))
+    assert code == 1 and out["error"]["code"] == expected
+    assert "t1_lphy20c" in out["error"]["message"]
+    assert urls == [POST_API, TREE_API + "&parent_id=t1_lphy20c",
+                    reddit_archive.API + "/comments/ids?ids=lphy20c"]
+
+
+def test_archive_tree_root_on_another_post_is_url_mismatch(run):
+    code, out, urls = run(["reddit", "read", POST_URL + "_/lphy20c/"], (200, POST), (200, COMMENT_TREE))
+    assert code == 1 and out["error"]["code"] == "url_mismatch"
+    assert "t1_lphy20c" in out["error"]["message"] and "t3_1fs5dql" in out["error"]["message"]
+    assert urls == [POST_API, TREE_API + "&parent_id=t1_lphy20c"]
 
 
 def test_marked_content_never_leaks_into_raw_fields(run):

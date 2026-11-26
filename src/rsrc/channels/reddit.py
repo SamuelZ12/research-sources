@@ -56,12 +56,15 @@ RATE_MARKERS = ("whoa there, pardner", "too many requests")
 NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
 
 _POST_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com/(?:(?:r|u|user)/[^/]+/)?"
-                       r"comments/([a-z0-9]+)", re.IGNORECASE)
+                       r"comments/([a-z0-9]+)(?:/[^/?#]+(?:/([a-z0-9]+))?)?(?:/?\.json)?/?(?:[?#].*)?$",
+                       re.IGNORECASE)
 _SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE)
 _SHARE_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com(/(?:r|u|user)/[^/]+/s/[A-Za-z0-9]+)",
                         re.IGNORECASE)
 _BARE_ID = re.compile(r"^(?:t3_)?([a-z0-9]{4,12})$", re.IGNORECASE)
 _SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{2,21}$")
+_COMMENT_TOMBSTONE = re.compile(
+    r"\[(?:removed|deleted| removed by reddit )\]|comment (?:removed by moderator|deleted by user)", re.I)
 
 
 def register(subparsers) -> None:
@@ -80,7 +83,7 @@ def register(subparsers) -> None:
     search.set_defaults(run=run_search, action="search")
 
     read = actions.add_parser("read", help="one thread: the post and its top comments")
-    read.add_argument("post", help="post URL, share link, redd.it link, t3_ID or ID")
+    read.add_argument("post", help="post or comment URL, share link, redd.it link, t3_ID or ID")
     read.add_argument("--sort", choices=READ_SORTS, default="top", help="comment order (default top)")
     read.add_argument("--comments", type=int, default=50, help=f"comments, 0-{MAX_COMMENTS} (default 50)")
     read.add_argument("--backend", choices=(BACKEND, reddit_archive.BACKEND),
@@ -270,43 +273,101 @@ def run_read(args, ctx) -> dict:
                              "share links are only supported by the Ego Lite backend")
         if args.sort != "top":
             return env.usage(CHANNEL, "read", "Arctic Shift supports only --sort top (archived score)")
-        post_id, problem = parse_post(args.post)
-        if problem:
-            return env.usage(CHANNEL, "read", problem)
-        return reddit_archive.read(ctx, input_, post_id)
     if share:
-        post_id, failure, attempt = share_post(ctx, BASE + share.group(1))
+        target, failure, attempt = share_post(ctx, BASE + share.group(1))
         meta["attempts"].append(attempt)
         if failure:
             return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
     else:
-        post_id, problem = parse_post(args.post)
-        if problem:
-            return env.usage(CHANNEL, "read", problem)
+        target = parse_post(args.post)
+        if target is None:
+            return env.usage(CHANNEL, "read", f"not a Reddit post URL or ID: {args.post.strip()!r}")
+    post_id, comment_id = target
+    if comment_id:
+        input_["comment_id"] = comment_id
+    if backend == reddit_archive.BACKEND:
+        return reddit_archive.read(ctx, input_, post_id)
+
     sort = "confidence" if args.sort == "best" else args.sort
-    url = f"{BASE}/comments/{post_id}/?{urlencode({'sort': sort})}"
-    page, failure, attempt = _load(ctx, {"action": "read", "url": url,
+    comment = f"t1_{comment_id}" if comment_id else None
+    path = f"/comments/{post_id}/"
+    if comment:
+        path += f"comment/{comment_id}/"
+    url = f"{BASE}{path}?{urlencode({'sort': sort})}"
+    page, failure, attempt = _load(ctx, {"action": "read", "url": url, "comment": comment,
                                          "attrs": {"post": POST_ATTRS, "comment": COMMENT_ATTRS}})
     meta["attempts"].append(attempt)
+    if not failure and comment:
+        failure = access_failure(page)
     if failure:
+        attempt["outcome"] = failure[0]
         return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
     if not page.get("post"):
         code, message = page_failure(page, "read")
+        if comment and code == "not_found":
+            if page.get("status") == 200:
+                code, message = "url_mismatch", f"Reddit did not resolve {comment} under t3_{post_id}"
+            else:
+                message = f"no such Reddit comment: {comment}"
         attempt["outcome"] = code
         return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(code, message))
     post = post_item(page["post"])
     if post["id"] != f"t3_{post_id}":
         attempt["outcome"] = "url_mismatch"
         meta["rejected"] = [{"url": post["url"], "reason": "url_mismatch"}]
+        asked = f"{comment} under t3_{post_id}" if comment else f"t3_{post_id}"
         return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta,
-                            error=env.error("url_mismatch", f"asked for t3_{post_id}, page shows {post['id']}"))
+                            error=env.error("url_mismatch", f"asked for {asked}, page shows {post['id']}"))
     if page["post"].get("removal_notice"):
         meta["notes"] = [page["post"]["removal_notice"]]
     post["raw"]["kind"] = "post"
-    comments = [comment_item(c) for c in (page.get("comments") or [])[:args.comments]]
-    for comment in comments:
-        comment["raw"]["kind"] = "comment"
+    records = page.get("comments") or []
+    limit = args.comments
+    if comment:
+        records, failure = focused_comments(records, post["id"], comment)
+        if failure:
+            attempt["outcome"] = failure[0]
+            return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
+        limit = max(1, limit)
+        meta.setdefault("notes", []).append(f"Focused on comment {comment}.")
+    comments = [comment_item(record) for record in records[:limit]]
+    for item in comments:
+        item["raw"]["kind"] = "comment"
+    if comment:
+        comments[0]["raw"]["linked"] = True
     return env.envelope(CHANNEL, "read", input_, BACKEND, [post, *comments], meta=meta)
+
+
+def focused_comments(records, post_id, comment_id):
+    by_id = {}
+    replies = {}
+    for record in records:
+        attrs = record.get("attrs") or {}
+        id_ = attrs.get("thingid")
+        if id_ == comment_id and attrs.get("postid") != post_id:
+            return [], ("url_mismatch", f"{comment_id} does not belong to {post_id} on the returned page")
+        if id_ and attrs.get("postid") == post_id and id_ not in by_id:
+            by_id[id_] = record
+            replies.setdefault(attrs.get("parentid"), []).append(id_)
+    linked = by_id.get(comment_id)
+    text = (linked.get("text") or "").strip() if linked else ""
+    if not linked or _COMMENT_TOMBSTONE.fullmatch(text):
+        return [], ("not_found", f"Reddit did not show a readable comment for {comment_id}")
+    if not text:
+        return [], ("upstream_error", f"Reddit showed {comment_id} without a readable body")
+
+    context = {comment_id}
+    parent = linked["attrs"].get("parentid")
+    while parent in by_id and parent not in context:
+        context.add(parent)
+        parent = by_id[parent]["attrs"].get("parentid")
+    pending = list(replies.get(comment_id, []))
+    while pending:
+        reply = pending.pop()
+        if reply not in context:
+            context.add(reply)
+            pending.extend(replies.get(reply, []))
+    return [linked, *(record for id_, record in by_id.items() if id_ != comment_id and id_ in context)], None
 
 
 # --- inputs ----------------------------------------------------------------------
@@ -319,18 +380,25 @@ def search_url(query, subreddit, time_range, sort) -> str:
     return f"{BASE}/search/?{urlencode(params)}"
 
 
-def parse_post(value: str) -> tuple[str | None, str | None]:
-    """(base36 post id, None) or (None, usage message)."""
+def parse_post(value: str) -> tuple[str, str | None] | None:
     value = value.strip()
-    for pattern in (_POST_URL, _SHORT_URL, _BARE_ID):
+    post = _POST_URL.match(value)
+    if post:
+        return _post_target(post)
+    for pattern in (_SHORT_URL, _BARE_ID):
         match = pattern.match(value)
         if match:
             return match.group(1).lower(), None
-    return None, f"not a Reddit post URL or ID: {value!r}"
+    return None
 
 
-def share_post(ctx, url: str) -> tuple[str | None, tuple[str, str] | None, dict]:
-    """(post id, None, attempt) or (None, (code, message), attempt): the post a share link leads to."""
+def _post_target(match) -> tuple[str, str | None]:
+    post_id, comment_id = match.groups()
+    return post_id.lower(), comment_id.lower() if comment_id else None
+
+
+def share_post(ctx, url: str) -> tuple[tuple[str, str | None] | None, tuple[str, str] | None, dict]:
+    """Return the target, error and attempt for a share link."""
     client = Client(min_interval=1, transport=ctx.redirect, sleep=ctx.sleep)
     started = time.monotonic()
     try:
@@ -340,7 +408,7 @@ def share_post(ctx, url: str) -> tuple[str | None, tuple[str, str] | None, dict]
     # Only a redirect to a post URL counts: the header is not user input, so no bare IDs.
     post = _POST_URL.match(urljoin(url, location.decode("utf-8", "replace"))) if 300 <= status < 400 else None
     if post:
-        return post.group(1).lower(), None, env.attempt(SHARE_BACKEND, "ok", 1, env.elapsed_ms(started))
+        return _post_target(post), None, env.attempt(SHARE_BACKEND, "ok", 1, env.elapsed_ms(started))
     if status == 429:
         failure = "rate_limited", "Reddit rate-limited the share-link request (HTTP 429); stop and retry later"
     elif status == 404:

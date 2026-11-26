@@ -18,6 +18,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH = json.loads((FIXTURES / "reddit_search.json").read_text())
 THREAD = json.loads((FIXTURES / "reddit_thread.json").read_text())
 READ_STATES = json.loads((FIXTURES / "reddit_read_states.json").read_text())
+COMMENT_READ = json.loads((FIXTURES / "reddit_comment_read.json").read_text())
 BLOCK_TEXT = ("You've been blocked by network security. If you think you've been blocked by mistake, "
               "file a ticket below and we'll look into it. File a ticket")
 
@@ -226,8 +227,66 @@ def test_read_never_asks_the_page_for_viewer_fields(rsrc):
 def test_read_comment_limit(rsrc):
     code, out = rsrc(["read", "1xootop", "--comments", "3"], FakeEgo(printed(THREAD)))
     assert [i["id"] for i in out["items"]] == ["t3_1xootop"] + [c["attrs"]["thingid"] for c in THREAD["comments"][:3]]
-    code, out = rsrc(["read", "1xootop", "--comments", "0"], FakeEgo(printed(THREAD)))
+    code, out = rsrc(["read", "https://www.reddit.com/comments/1xootop.json", "--comments", "0"],
+                      FakeEgo(printed(THREAD)))
     assert [i["id"] for i in out["items"]] == ["t3_1xootop"]
+
+
+@pytest.mark.parametrize("suffix", [
+    "comment/lq6bsnz/", "_/lq6bsnz/", "descriptive-title/lq6bsnz/?context=3",
+    "comment/lq6bsnz.json", "comment/lq6bsnz/.json",
+])
+@pytest.mark.parametrize("limit, context", [(0, []), (10, ["t1_lpjwaxi"])])
+def test_read_focuses_on_comment_and_context(rsrc, suffix, limit, context):
+    fake = FakeEgo(printed(COMMENT_READ["focused"]))
+    url = "https://www.reddit.com/r/DrewGooden/comments/1fs5dql/" + suffix
+    code, out = rsrc(["read", url, "--comments", str(limit)], fake)
+    assert code == 0
+    assert [i["id"] for i in out["items"]] == ["t3_1fs5dql", "t1_lq6bsnz", *context]
+    target = out["items"][1]
+    assert target["raw"]["linked"] is True
+    assert target["url"] == COMMENT_READ["focused"]["url"].split("?")[0]
+    assert out["input"]["comment_id"] == "lq6bsnz"
+    assert out["meta"]["notes"] == ["Focused on comment t1_lq6bsnz."]
+    assert len(fake.calls) == out["meta"]["attempts"][0]["requests"] == 1
+    assert fake.input()["url"] == "https://www.reddit.com/comments/1fs5dql/comment/lq6bsnz/?sort=top"
+
+
+def test_focused_read_keeps_nested_replies_in_page_order(rsrc):
+    fixture = COMMENT_READ["focused"]
+    url = "https://www.reddit.com" + fixture["comments"][2]["attrs"]["permalink"]
+    code, out = rsrc(["read", url, "--comments", "3"], FakeEgo(printed({**fixture, "url": url})))
+    assert code == 0
+    assert [item["id"] for item in out["items"]] == ["t3_1fs5dql", "t1_lphy20c", "t1_lq6du1s", "t1_lu4fjfn"]
+
+
+@pytest.mark.parametrize("state, comment_id, expected", [
+    ("missing", "zzzzzzz", "not_found"),
+    ("wrong-confirm", "lq6bsnz", "url_mismatch"),
+    ("removed", "lq6bsnz", "not_found"),
+    ("unreadable", "lq6bsnz", "upstream_error"),
+    ("wrong-post-attribute", "lq6bsnz", "url_mismatch"),
+])
+def test_focused_read_reports_missing_or_crossed_comments(rsrc, state, comment_id, expected):
+    fixture = COMMENT_READ.get(state, COMMENT_READ["focused"])
+    if state in ("removed", "unreadable", "wrong-post-attribute"):
+        ancestor, linked, *rest = fixture["comments"]
+        if state in ("removed", "unreadable"):
+            linked = {**linked, "text": "[removed]" if state == "removed" else None}
+        else:
+            linked = {**linked, "attrs": {**linked["attrs"], "postid": "t3_1641krf"}}
+        fixture = {**fixture, "comments": [ancestor, linked, *rest]}
+    post_id = "1641krf" if state == "wrong-confirm" else "1fs5dql"
+    url = f"https://www.reddit.com/comments/{post_id}/comment/{comment_id}/"
+    code, out = rsrc(["read", url], FakeEgo(printed(fixture)))
+    assert code == 1 and out["error"]["code"] == expected and not out["items"]
+    assert f"t1_{comment_id}" in out["error"]["message"]
+
+
+def test_read_rejects_an_invalid_comment_id_without_loading_the_thread(rsrc):
+    fake = FakeEgo(printed(COMMENT_READ["focused"]))
+    code, out = rsrc(["read", "https://www.reddit.com/comments/1fs5dql/comment/lq6!bsnz/"], fake)
+    assert code == 2 and out["error"]["code"] == "usage" and not fake.calls
 
 
 def test_line_separator_characters_in_comments_survive(rsrc):
