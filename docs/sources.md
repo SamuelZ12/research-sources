@@ -6,7 +6,7 @@ This page has the full command syntax, what each source needs, and what each sou
 
 | Channel | Commands |
 |---|---|
-| X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
+| X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x thread URL_OR_ID`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
 | Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID [--backend ego-browser\|arctic-shift]` |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
@@ -47,9 +47,11 @@ A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear'
 
 ## X
 
-FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search with your own X session. [X with your own session](x-session.md) has the setup. `rsrc x read`, `rsrc x replies` and `rsrc x timeline` work without a login.
+FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search with your own X session. [X with your own session](x-session.md) has the setup. `rsrc x read`, `rsrc x thread`, `rsrc x replies` and `rsrc x timeline` work without a login.
 
 `rsrc x read` accepts a numeric post ID or a status or article URL on x.com or twitter.com. Article URLs use `x.com/HANDLE/article/POST_ID`. When FxTwitter supplies an article, either URL returns the article title and body. For an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
+
+`rsrc x thread` takes a status URL or post ID and returns the author's self-thread in order, starting with the first post. FxTwitter can return only part of a long thread. [X reference](../skills/research-sources/references/x.md#one-self-thread) explains how to check for more posts.
 
 On X search, `--limit` caps unique posts across all windows and `--per-window` caps each window (defaults to the total limit if given, otherwise 20). Timeline follows the search order with a shared budget of one to five requests (at least three for a browser timeline). With no explicit backend, a single route that fails setup before sending a request can fall back to FxTwitter. Signed-in records expand links where X supplies the destination. A confirmed missing post returns `not_found`, with the reason when available.
 

@@ -1,6 +1,6 @@
 # X
 
-`x read`, `x replies` and `x timeline` work without a login. `x search` needs the user's own X session while FxTwitter's public search is down.
+`x read`, `x thread`, `x replies` and `x timeline` work without a login. `x search` needs the user's own X session while FxTwitter's public search is down.
 
 X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrome` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads can cut long posts short and expose only likes. Say so when you quote one. When both public sources confirm a missing post, the read returns `not_found`. An ID dated more than a day in the future returns `not_found` without a request.
 
@@ -18,7 +18,13 @@ The post's photos, videos and GIFs are in `raw.media`, with `type`, `url` and `d
 
 Done when every entry is opened, or named in your answer as unopened with the reason.
 
-`x search`, `x replies` and `x timeline` items carry the same `raw.media`.
+`x search`, `x thread`, `x replies` and `x timeline` items carry the same `raw.media`.
+
+## One self-thread
+
+`rsrc x thread URL_OR_ID` takes the status URL or ID of any post in a self-thread. FxTwitter returns the author's posts starting with the first one, in the same item format as `x read`. A standalone post returns one item with a note in `meta.notes`.
+
+FxTwitter can cut long threads short without warning. `meta.notes` gives the number returned and flags a likely cut when first lines carry consistent counters like `(1/6)` that indicate more posts. To check for more, run `rsrc x replies LAST_POST_ID --rank recency` on the last returned post and look for replies by the same author.
 
 ## One account
 

@@ -17,6 +17,7 @@ Before your first command on a channel, read that channel's file. The files are 
 |---|---|---|
 | What people on X think about a topic | `rsrc x search QUERY --since YYYY-MM-DD` | `references/x.md` |
 | A specific x.com or twitter.com post or article | `rsrc x read URL_OR_ID [URL_OR_ID …]` | `references/x.md` |
+| A self-thread: every post the author chained under one post | `rsrc x thread URL_OR_ID` | `references/x.md` |
 | Replies to a post | `rsrc x replies URL_OR_ID [--rank likes\|recency] [--limit 100]` | `references/x.md` |
 | Who an X account is and what it posts | `rsrc x timeline HANDLE_OR_URL [--limit 20]` | `references/x.md` |
 | What people on Reddit say about a topic | `rsrc reddit search QUERY [--subreddit NAME] [--time hour\|day\|week\|month\|year\|all] [--sort relevance\|hot\|top\|new\|comments] [--limit 25] [--with-comments [N]]` (default past month, relevance) | `references/reddit.md` |
@@ -80,7 +81,7 @@ The channel's file lists the messages that change an action below. Check it befo
 
 **Stop scope.** A stop lasts for the session.
 
-- **X.** Use the envelope's `backend` to identify which backend stopped. A stop from FxTwitter (`search`, `read`, `replies` or `timeline`) ends all `rsrc x`. After a signed-in X backend stops, avoid that account on both search and timeline. `x read` and `x replies` may verify specific URLs, and never stand in for a search. `blocked` on `x read` or `check --live-x` covers that one post only.
+- **X.** Use the envelope's `backend` to identify which backend stopped. A stop from FxTwitter (`search`, `read`, `thread`, `replies` or `timeline`) ends all `rsrc x`. After a signed-in X backend stops, avoid that account on both search and timeline. `x read` and `x replies` may verify specific URLs, and never stand in for a search. `blocked` on `x read` or `check --live-x` covers that one post only.
 - **Reddit.** `rate_limited` or `blocked` stops all Reddit access: `rsrc reddit` and any Reddit page in Ego, which share the same browser and account.
 - **YouTube.** `rate_limited` or `blocked` stops all `rsrc youtube`, search and `check youtube` included. A `source_blocked` transcript status counts as `blocked`.
 - **GitHub.** A final `rate_limited` error stops the channel. A public limit recorded only in `meta.attempts` can precede a successful restart with the CLI login.

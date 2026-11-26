@@ -43,7 +43,7 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 
 | Source | Commands | Extra setup |
 |---|---|---|
-| X | `x read`, `x replies`, `x timeline`, `x search` | [Your own X session](docs/x-session.md), for `x search` only |
+| X | `x read`, `x thread`, `x replies`, `x timeline`, `x search` | [Your own X session](docs/x-session.md), for `x search` only |
 | Reddit | `reddit read`, `reddit search` | [Ego Lite](https://lite.ego.app/), for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
 | Hacker News | `hn search`, `hn read` | None |
 | YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
