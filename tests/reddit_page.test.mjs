@@ -85,6 +85,34 @@ test("a visible post does not release a still-rendering focused comment", async 
   assert.deepEqual(seen, [false, false, false, true]);
 });
 
+for (const tree of [true, false]) {
+  test(`a focused read reports whether the comment section rendered (${tree})`, async () => {
+    let printed;
+    const document = {
+      querySelector: selector => {
+        if (selector === "shreddit-post") return { getClientRects: () => [{}] };
+        return selector === "shreddit-comment-tree" && tree ? {} : null;
+      },
+      querySelectorAll: () => [],
+    };
+    const page = {
+      async goto() {},
+      async evaluate(fn, arg) {
+        const source = String(fn);
+        // readThread and pageState touch more of the page than this replay provides.
+        return source.includes("shreddit-comment-tree") ? fn(arg) : {};
+      },
+      async waitForFunction() { throw new Error("Timeout 15000ms exceeded"); },
+    };
+    await runInNewContext(`(async () => { ${source} })()`, {
+      document, performance: { getEntriesByType: () => [{ responseStatus: 200 }] },
+      INPUT: { action: "read", comment: "t1_zzzzzzz" }, console: { log(line) { printed = line; } },
+      taskSpace: () => ({ page: () => page, async finish() {} }),
+    });
+    assert.equal(JSON.parse(printed.slice("RSRC_REDDIT ".length)).comment_tree, tree);
+  });
+}
+
 async function batchReplay(responses, delays, clock = Date, attrs = {}) {
   const requests = [], completes = [], closed = [];
   const pages = responses.map((response, index) => ({

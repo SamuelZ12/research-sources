@@ -279,8 +279,42 @@ def test_focused_read_reports_missing_or_crossed_comments(rsrc, state, comment_i
     post_id = "1641krf" if state == "wrong-confirm" else "1fs5dql"
     url = f"https://www.reddit.com/comments/{post_id}/comment/{comment_id}/"
     code, out = rsrc(["read", url], FakeEgo(printed(fixture)))
-    assert code == 1 and out["error"]["code"] == expected and not out["items"]
+    assert code == 1 and out["error"]["code"] == expected
+    # A verified post stays readable when only its linked comment fails.
+    assert [item["id"] for item in out["items"]] == ([] if expected == "url_mismatch" else ["t3_1fs5dql"])
     assert f"t1_{comment_id}" in out["error"]["message"]
+
+
+def test_focused_read_times_out_when_the_comment_section_rendered_without_the_comment(rsrc):
+    """Recorded live Nov 25 2026: a comment that does not exist gets a page with the post and no
+    comment section, so a rendered section without the linked comment means it was still loading."""
+    fixture = COMMENT_READ["focused"]
+    others = [c for c in fixture["comments"] if c["attrs"]["thingid"] != "t1_lq6bsnz"]
+    url = "https://www.reddit.com/comments/1fs5dql/comment/lq6bsnz/"
+    code, out = rsrc(["read", url], FakeEgo(printed({**fixture, "comments": others, "comment_tree": True})))
+    assert code == 1 and out["error"]["code"] == "timeout" and "t1_lq6bsnz" in out["error"]["message"]
+    assert [item["id"] for item in out["items"]] == ["t3_1fs5dql"]
+    assert out["meta"]["attempts"][-1]["outcome"] == "timeout"
+
+    code, out = rsrc(["read", url], FakeEgo(printed({**COMMENT_READ["missing"], "comment_tree": False})))
+    assert code == 1 and out["error"]["code"] == "not_found"
+
+
+def test_focused_read_skips_context_comments_without_a_rendered_body(rsrc):
+    fixture = COMMENT_READ["focused"]
+    ancestor, linked, *rest = fixture["comments"]
+    url = "https://www.reddit.com/comments/1fs5dql/comment/lq6bsnz/"
+    code, out = rsrc(["read", url], FakeEgo(printed({**fixture, "comments": [{**ancestor, "text": None}, linked, *rest]})))
+    assert code == 0 and [item["id"] for item in out["items"]] == ["t3_1fs5dql", "t1_lq6bsnz"]
+
+
+@pytest.mark.parametrize("url, target", [
+    ("https://www.reddit.com/comments/1fs5dql.rss", ("1fs5dql", None)),
+    ("https://www.reddit.com/r/DrewGooden/comments/1fs5dql/slug/lq6bsnz.json", ("1fs5dql", "lq6bsnz")),
+    ("https://www.reddit.com/comments/1fs5dql/comment/lq6\u212Asnz/", None),
+])
+def test_post_urls_keep_feed_suffixes_and_reject_non_ascii_ids(url, target):
+    assert reddit.parse_post(url) == target
 
 
 def test_read_rejects_an_invalid_comment_id_without_loading_the_thread(rsrc):

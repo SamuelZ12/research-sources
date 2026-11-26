@@ -24,7 +24,7 @@ For handpicked threads, search first and use `reddit read` on your choices.
 
 Pass a comment's `url` to read the post, the linked comment, and its visible ancestors and replies. The linked comment has `raw.linked: true`, its ID is in `input.comment_id`, and `meta.notes` names the focus. `--comments` counts the linked comment. With `--comments 0`, the post and linked comment are still returned.
 
-A missing or removed linked comment returns `not_found`. A post/comment mismatch returns `url_mismatch`.
+A missing or removed linked comment returns `not_found`, and one that had not rendered within 15 s returns `timeout`. Both keep the post in `items`. A post/comment mismatch returns `url_mismatch`.
 
 A share link (`reddit.com/r/…/s/…`) costs one extra request, which finds the post it leads to. When that request fails with `upstream_error`, open the link in Ego and pass the `/comments/` URL it lands on.
 

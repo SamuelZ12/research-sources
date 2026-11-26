@@ -106,6 +106,21 @@ def test_archive_reads_the_linked_comment_ahead_of_replies(run, limit, replies):
     assert urls == [reddit_archive.API + "/posts/ids?ids=1fs5dql", reddit_archive.API + "/" + path]
 
 
+def test_archive_empty_focused_tree_still_returns_the_verified_comment(run):
+    post = json.loads(POST)["data"][0]
+    post.update(id="1fs5dql", subreddit="DrewGooden")
+    comment = json.loads(COMMENT_TREE)["data"][0]["data"]
+    del comment["replies"]
+    url = "https://www.reddit.com/r/DrewGooden/comments/1fs5dql/_/lphy20c/"
+    code, out, urls = run(["reddit", "read", url, "--backend", "arctic-shift"],
+                          response({"data": [post]}), response({"data": []}), response({"data": [comment]}), ego=True)
+    assert code == 0 and [item["id"] for item in out["items"]] == ["t3_1fs5dql", "t1_lphy20c"]
+    assert out["items"][1]["raw"]["linked"] is True
+    assert "Arctic Shift returned no reply tree for the comment, so its replies are not included." in out["meta"]["notes"]
+    assert urls[1:] == [reddit_archive.API + "/comments/tree?link_id=1fs5dql&limit=200&parent_id=t1_lphy20c",
+                        reddit_archive.API + "/comments/ids?ids=lphy20c"]
+
+
 @pytest.mark.parametrize("found, expected", [(False, "not_found"), (True, "url_mismatch")])
 def test_archive_empty_focused_tree_checks_the_comment_by_id(run, found, expected):
     comment = json.loads(COMMENT_TREE)["data"][0]["data"]

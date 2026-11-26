@@ -129,6 +129,20 @@ def test_thread_404_for_a_post_that_exists_is_an_upstream_error(run_x):
     assert web.urls == [MISSING_ENDPOINT, MISSING_STATUS]
 
 
+@pytest.mark.parametrize("change, detail", [
+    ({"id": "1917421753820930420"}, "different page"),
+    ({"text": "Log in to continue"}, "different page"),
+    ({"created_timestamp": "unknown"}, "unreadable post record"),
+])
+def test_thread_404_trusts_only_a_readable_record_of_the_requested_post(run_x, change, detail):
+    status = {**load("x_fx_thread_single.json")["status"], "id": MISSING, **change}
+    web = FakeWeb(fx=[(404, load("x_fx_thread_missing.json")), (200, {"code": 200, "status": status})])
+    code, result, _ = run_x(["thread", MISSING], web)
+    assert code == 1 and result["action"] == "thread" and result["error"]["code"] == "upstream_error"
+    assert "could not confirm" in result["error"]["message"] and detail in result["error"]["message"]
+    assert result["meta"]["attempts"][0]["requests"] == 2
+
+
 def test_thread_404_stays_unconfirmed_when_the_post_routes_fail(run_x):
     web = FakeWeb(fx=[(404, load("x_fx_thread_missing.json")), (404, {"code": 404, "status": None})],
                   syndication=[(500, b"")])

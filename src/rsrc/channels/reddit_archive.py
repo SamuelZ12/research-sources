@@ -231,20 +231,21 @@ def _comment_by_id(client, post_id, comment_id):
 
 
 def _focused_tree(client, post_id, comment_id, with_replies):
+    """(tree rows rooted at the comment, whether the archive had a reply tree for it)."""
     if not with_replies:
-        return [{"kind": "t1", "data": _comment_by_id(client, post_id, comment_id)}]
+        return [{"kind": "t1", "data": _comment_by_id(client, post_id, comment_id)}], True
 
     comment = "t1_" + comment_id
     rows = _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT, parent_id=comment)
     if not rows:
-        _comment_by_id(client, post_id, comment_id)
-        raise http.HttpError(f"Arctic Shift returned no tree for {comment}")
+        # The archive has no branch for this comment. The lookup by ID still returns the comment itself.
+        return [{"kind": "t1", "data": _comment_by_id(client, post_id, comment_id)}], False
     node = rows[0] if len(rows) == 1 and isinstance(rows[0], dict) else {}
     root = node.get("data")
     if node.get("kind") != "t1" or not isinstance(root, dict) or root.get("id") != comment_id:
         raise http.HttpError(f"Arctic Shift did not return a tree rooted at {comment}")
     _validate_comment_post(root, post_id, comment_id)
-    return rows
+    return rows, True
 
 
 def read(ctx, input_, post_id):
@@ -274,8 +275,10 @@ def read(ctx, input_, post_id):
         items.append(post_item)
         removed, deleted = int(placeholder == "[removed]"), int(placeholder == "[deleted]")
         if input_["comments"] or comment_id:
-            rows = (_focused_tree(client, post_id, comment_id, with_replies=input_["comments"] > 1) if comment_id else
-                    _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT))
+            if comment_id:
+                rows, has_tree = _focused_tree(client, post_id, comment_id, with_replies=input_["comments"] > 1)
+            else:
+                rows = _rows(client, "comments/tree", link_id=post_id, limit=TREE_LIMIT)
             comments, collapsed, orphans = _comments(rows, post_item["id"], path, unavailable)
             count = post_item["engagement"]["comments"]
             if not comments and (collapsed or (count is not None and count > 0)):
@@ -286,6 +289,8 @@ def read(ctx, input_, post_id):
                 selected = [linked, *sorted(replies, key=_score_order)[:max(0, input_["comments"] - 1)]]
                 notes.append(f"Focused on comment t1_{comment_id}.")
                 notes.append(f"Returned {len(selected)} of {len(comments)} comment records from the fetched branch.")
+                if not has_tree:
+                    notes.append("Arctic Shift returned no reply tree for the comment, so its replies are not included.")
             else:
                 selected = sorted(comments, key=_score_order)[:input_["comments"]]
                 notes.append("Comments are sorted by descending archived score within the fetched tree, "

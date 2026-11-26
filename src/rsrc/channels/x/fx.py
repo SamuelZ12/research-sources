@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import NamedTuple
 from urllib.parse import quote, urlencode
 
+from rsrc import checks
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
 from rsrc.channels.x.search import check_status
 from rsrc.http import DecodeError, HttpError, NetworkError, NotFound
@@ -155,12 +156,19 @@ def thread(client, post_id: str, *, syndication_client=None) -> list[dict]:
 
 def _thread_404(client, post_id: str, context: str, syndication_client) -> HttpError:
     """The error for a thread 404. It carries no post state, so `read` says whether the post exists."""
-    post = read(client, post_id, syndication_client=syndication_client)
+    unconfirmed = f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing"
+    try:
+        post = read(client, post_id, syndication_client=syndication_client)
+    except (AttributeError, TypeError, ValueError, OverflowError, OSError):
+        return HttpError(f"{unconfirmed} (unreadable post record)")
     if "error" not in post:
+        # The same screen `x read` applies: another post or a login page confirms nothing.
+        if checks.screen_read({key: post.get(key) for key in ("id", "url", "text")}, post_id)[1]:
+            return HttpError(f"{unconfirmed} (the post route returned a different page)")
         return HttpError(f"{context}: HTTP 404, but the post exists. Read it alone with `rsrc x read {post_id}`")
     if post["code"] == "not_found":
         return NotFound(f"{post_id}: {post['error']}")
-    unconfirmed = f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing ({post['error']})"
+    unconfirmed = f"{unconfirmed} ({post['error']})"
     return NetworkError(unconfirmed) if post["code"] == "network_error" else HttpError(unconfirmed)
 
 

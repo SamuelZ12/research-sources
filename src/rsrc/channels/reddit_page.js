@@ -165,6 +165,8 @@ async function loadPage(task) {
   } else if (!denied) {
     await page.waitForFunction(threadReady, INPUT.comment, { timeout: 15000 }).catch(() => {});
     Object.assign(out, await page.evaluate(readThread, INPUT.attrs));
+    // The page of a comment that does not exist shows the post and no comment section.
+    if (INPUT.comment) out.comment_tree = await page.evaluate(() => !!document.querySelector("shreddit-comment-tree"));
   }
   Object.assign(out, await page.evaluate(pageState));
   // A failed pagination request may have a different status than the main document.

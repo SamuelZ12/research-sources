@@ -56,8 +56,8 @@ RATE_MARKERS = ("whoa there, pardner", "too many requests")
 NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
 
 _POST_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com/(?:(?:r|u|user)/[^/]+/)?"
-                       r"comments/([a-z0-9]+)(?:/[^/?#]+(?:/([a-z0-9]+))?)?(?:/?\.json)?/?(?:[?#].*)?$",
-                       re.IGNORECASE)
+                       r"comments/([a-z0-9]+)(?:/[^/?#]+(?:/([a-z0-9]+))?)?(?:/?\.(?:json|rss))?/?(?:[?#].*)?$",
+                       re.IGNORECASE | re.ASCII)
 _SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE)
 _SHARE_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com(/(?:r|u|user)/[^/]+/s/[A-Za-z0-9]+)",
                         re.IGNORECASE)
@@ -324,10 +324,12 @@ def run_read(args, ctx) -> dict:
     records = page.get("comments") or []
     limit = args.comments
     if comment:
-        records, failure = focused_comments(records, post["id"], comment)
+        records, failure = focused_comments(records, post["id"], comment, page.get("comment_tree"))
         if failure:
             attempt["outcome"] = failure[0]
-            return env.envelope(CHANNEL, "read", input_, BACKEND, meta=meta, error=env.error(*failure))
+            # The post is verified, so it stays in `items` unless the comment is another post's.
+            items = [] if failure[0] == "url_mismatch" else [post]
+            return env.envelope(CHANNEL, "read", input_, BACKEND, items, meta=meta, error=env.error(*failure))
         limit = max(1, limit)
         meta.setdefault("notes", []).append(f"Focused on comment {comment}.")
     comments = [comment_item(record) for record in records[:limit]]
@@ -338,7 +340,9 @@ def run_read(args, ctx) -> dict:
     return env.envelope(CHANNEL, "read", input_, BACKEND, [post, *comments], meta=meta)
 
 
-def focused_comments(records, post_id, comment_id):
+def focused_comments(records, post_id, comment_id, tree_rendered=None):
+    """The linked comment, then the readable comments above and below it in page order, or a failure.
+    `tree_rendered` says whether the page had a comment section when the wait for the comment ended."""
     by_id = {}
     replies = {}
     for record in records:
@@ -351,6 +355,9 @@ def focused_comments(records, post_id, comment_id):
             replies.setdefault(attrs.get("parentid"), []).append(id_)
     linked = by_id.get(comment_id)
     text = (linked.get("text") or "").strip() if linked else ""
+    if not linked and tree_rendered:
+        # A missing comment's page has no comment section at all, so this one was still loading.
+        return [], ("timeout", f"Reddit showed the post but had not rendered {comment_id} within 15 s")
     if not linked or _COMMENT_TOMBSTONE.fullmatch(text):
         return [], ("not_found", f"Reddit did not show a readable comment for {comment_id}")
     if not text:
@@ -367,7 +374,9 @@ def focused_comments(records, post_id, comment_id):
         if reply not in context:
             context.add(reply)
             pending.extend(replies.get(reply, []))
-    return [linked, *(record for id_, record in by_id.items() if id_ != comment_id and id_ in context)], None
+    # A comment whose body has not rendered links its replies above but is not worth a --comments slot.
+    return [linked, *(record for id_, record in by_id.items()
+                      if id_ != comment_id and id_ in context and (record.get("text") or "").strip())], None
 
 
 # --- inputs ----------------------------------------------------------------------
