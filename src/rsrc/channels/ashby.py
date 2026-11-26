@@ -2,10 +2,10 @@ import json
 import re
 import time
 from datetime import date, datetime, timezone
-from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urlsplit
 
 from rsrc import envelope as env
+from rsrc.html_markdown import to_markdown
 from rsrc.http import Client, HttpError, raise_refusal, single_hop_transport, urllib_transport
 
 BACKEND = "ashby-posting-api"
@@ -50,31 +50,6 @@ def board_role(value):
     if not BOARD.fullmatch(board) or board in (".", ".."):
         raise ValueError(GUIDANCE)
     return board, role
-
-
-class Description(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.parts = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag == "li":
-            self.parts.append("\n• ")
-        elif tag in ("p", "div", "br", "ul", "ol") or re.fullmatch("h[1-6]", tag):
-            if self.parts[-1:] != ["\n• "]:
-                self.parts.append("\n")
-
-    def handle_endtag(self, tag):
-        if tag in ("p", "div", "li", "ul", "ol") or re.fullmatch("h[1-6]", tag):
-            self.parts.append("\n")
-
-    def handle_data(self, data):
-        self.parts.append(re.sub(r"\s+", " ", data))
-
-    def render(self, html):
-        self.feed(html)
-        self.close()
-        return "\n".join(line.strip() for line in "".join(self.parts).splitlines() if line.strip())
 
 
 def fetch(board, ctx):
@@ -181,7 +156,7 @@ def run(args, ctx):
         for job in fetch(board, ctx):
             item = posting(job, board)
             if read and item["id"] == role:
-                text = Description().render(job.get("descriptionHtml") or "") or job.get("descriptionPlain")
+                text = to_markdown(job.get("descriptionHtml"), item["url"]) or job.get("descriptionPlain")
                 if not isinstance(text, str) or not text.strip():
                     raise HttpError("Ashby posting lacks a readable description")
                 item["text"] = "\n\n".join(filter(None, ("\n".join(facts(job)), text)))

@@ -49,7 +49,7 @@ def test_read(run, args):
     code, out = run("read", *args)
     assert code == 0
     assert out["items"][0]["text"] == ("Location: Europe\nWorkplace: Remote\nEmployment: FullTime\n"
-                                       "Team: Product / Engineering\n\nThe role\n• Build widgets.\n• Test & ship.")
+                                       "Team: Product / Engineering\n\n## The role\n\n- Build widgets.\n- Test & ship.")
     assert "descriptionHtml" in out["items"][0]["raw"]
 
 
@@ -62,7 +62,7 @@ def test_read_paid_role_with_secondary_locations_and_one_team(run):
     item, = out["items"]
     assert code == 0
     assert item["text"] == ("Location: North America, Boston, New York\nEmployment: FullTime\n"
-                            "Team: Product\nCompensation: $100K – $120K\n\nThe role\n• Build widgets.\n• Test & ship.")
+                            "Team: Product\nCompensation: $100K – $120K\n\n## The role\n\n- Build widgets.\n- Test & ship.")
     assert item["raw"] == job
 
 
@@ -145,3 +145,13 @@ def test_injected_compressed_board(capsys, headers):
     reply = (200, packed) if headers is None else (200, headers, packed)
     code = cli.main(["ashby", "search", "quartz"], cli.Context(transport=lambda *args: reply))
     assert code == 0 and len(json.loads(capsys.readouterr().out)["items"]) == 2
+
+
+def test_read_keeps_link_addresses_in_the_description(run):
+    board = json.loads(BOARD)
+    board["jobs"][0]["descriptionHtml"] = ('<p>Read <a href="https://example.com/values">our values</a> '
+                                           'and <a href="#benefits">benefits</a>.</p>')
+    code, out = run("read", "role-0", "--board", "quartz", body=json.dumps(board).encode())
+    assert code == 0 and out["items"][0]["text"].endswith(
+        "Read [our values](https://example.com/values) and "
+        f"[benefits]({out['items'][0]['url']}#benefits).")
