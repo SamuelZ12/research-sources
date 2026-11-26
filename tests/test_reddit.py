@@ -300,18 +300,31 @@ def test_focused_read_times_out_when_the_comment_section_rendered_without_the_co
     assert code == 1 and out["error"]["code"] == "not_found"
 
 
-def test_focused_read_skips_context_comments_without_a_rendered_body(rsrc):
+@pytest.mark.parametrize("body", [None, "  ", "[deleted]", "Comment removed by moderator"])
+def test_focused_read_skips_context_comments_without_a_readable_body(rsrc, body):
     fixture = COMMENT_READ["focused"]
     ancestor, linked, *rest = fixture["comments"]
     url = "https://www.reddit.com/comments/1fs5dql/comment/lq6bsnz/"
-    code, out = rsrc(["read", url], FakeEgo(printed({**fixture, "comments": [{**ancestor, "text": None}, linked, *rest]})))
+    code, out = rsrc(["read", url], FakeEgo(printed({**fixture, "comments": [{**ancestor, "text": body}, linked, *rest]})))
     assert code == 0 and [item["id"] for item in out["items"]] == ["t3_1fs5dql", "t1_lq6bsnz"]
+
+
+def test_focused_read_does_not_call_a_comment_without_a_post_id_another_posts(rsrc):
+    fixture = COMMENT_READ["focused"]
+    ancestor, linked, *rest = fixture["comments"]
+    attrs = {key: value for key, value in linked["attrs"].items() if key != "postid"}
+    url = "https://www.reddit.com/comments/1fs5dql/comment/lq6bsnz/"
+    code, out = rsrc(["read", url], FakeEgo(printed({**fixture, "comments": [ancestor, {**linked, "attrs": attrs}, *rest]})))
+    assert code == 1 and out["error"]["code"] == "upstream_error" and "t1_lq6bsnz" in out["error"]["message"]
+    assert [item["id"] for item in out["items"]] == ["t3_1fs5dql"]
 
 
 @pytest.mark.parametrize("url, target", [
     ("https://www.reddit.com/comments/1fs5dql.rss", ("1fs5dql", None)),
     ("https://www.reddit.com/r/DrewGooden/comments/1fs5dql/slug/lq6bsnz.json", ("1fs5dql", "lq6bsnz")),
     ("https://www.reddit.com/comments/1fs5dql/comment/lq6\u212Asnz/", None),
+    ("https://redd.it/abc\u212A", None),
+    ("abc\u212A", None),
 ])
 def test_post_urls_keep_feed_suffixes_and_reject_non_ascii_ids(url, target):
     assert reddit.parse_post(url) == target

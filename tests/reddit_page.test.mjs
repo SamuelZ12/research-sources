@@ -113,6 +113,21 @@ for (const tree of [true, false]) {
   });
 }
 
+test("a focused read fails when the wait for the comment breaks for a reason other than time", async () => {
+  const page = {
+    async goto() {},
+    async evaluate() { return {}; },
+    async waitForFunction() { throw new Error("Execution context was destroyed"); },
+  };
+  let finished = false;
+  await assert.rejects(runInNewContext(`(async () => { ${source} })()`, {
+    document: {}, performance: { getEntriesByType: () => [{ responseStatus: 200 }] },
+    INPUT: { action: "read", comment: "t1_lq6bsnz" }, console: { log() {} },
+    taskSpace: () => ({ page: () => page, async finish() { finished = true; } }),
+  }), /Execution context was destroyed/);
+  assert.equal(finished, true);
+});
+
 async function batchReplay(responses, delays, clock = Date, attrs = {}) {
   const requests = [], completes = [], closed = [];
   const pages = responses.map((response, index) => ({

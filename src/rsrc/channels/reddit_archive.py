@@ -313,6 +313,9 @@ def read(ctx, input_, post_id):
             notes.append("Comments were not requested.")
     except http.HttpError as exc:
         failure = env.error(exc.code, str(exc))
+        if isinstance(exc, _WrongPost):
+            # The link names another post's comment, so the post read so far is not what was asked for.
+            items, removed, deleted = [], 0, 0
 
     if removed or deleted:
         notes.append(f"Arctic Shift marked {deleted} returned items as deleted and {removed} as removed. "

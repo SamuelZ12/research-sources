@@ -135,7 +135,7 @@ def test_archive_empty_focused_tree_checks_the_comment_by_id(run, found, expecte
 
 def test_archive_tree_root_on_another_post_is_url_mismatch(run):
     code, out, urls = run(["reddit", "read", POST_URL + "_/lphy20c/"], (200, POST), (200, COMMENT_TREE))
-    assert code == 1 and out["error"]["code"] == "url_mismatch"
+    assert code == 1 and out["error"]["code"] == "url_mismatch" and out["items"] == []
     assert "t1_lphy20c" in out["error"]["message"] and "t3_1fs5dql" in out["error"]["message"]
     assert urls == [POST_API, TREE_API + "&parent_id=t1_lphy20c"]
 

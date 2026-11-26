@@ -92,14 +92,36 @@ MISSING_STATUS = f"https://api.fxtwitter.com/2/status/{MISSING}"
 SYNDICATION = f"https://cdn.syndication.twimg.com/tweet-result?id={MISSING}&token=a"
 
 
-def test_thread_reports_a_deleted_post_from_its_tombstone(run_x):
-    data = load("x_fx_thread_missing.json")
-    data["status"] = {"type": "tombstone", "provider": "twitter", "reason": "deleted"}
-    web = FakeWeb(fx=[(404, data)])
+TOMBSTONE = {"type": "tombstone", "provider": "twitter", "reason": "deleted"}
+
+
+def test_thread_reports_a_deleted_post_once_the_post_routes_agree(run_x):
+    data = {**load("x_fx_thread_missing.json"), "status": TOMBSTONE}
+    web = FakeWeb(fx=[(404, data), (404, {"code": 404, "status": TOMBSTONE})], syndication=[(404, b"")])
     code, result, _ = run_x(["thread", MISSING], web)
     assert code == 1 and not result["ok"] and not result["items"]
     assert result["error"]["code"] == "not_found" and "post deleted" in result["error"]["message"]
-    assert web.urls == [MISSING_ENDPOINT]
+    assert web.urls == [MISSING_ENDPOINT, MISSING_STATUS, SYNDICATION]
+
+
+def test_thread_tombstone_is_not_a_missing_post_when_syndication_still_has_it(run_x):
+    data = {**load("x_fx_thread_missing.json"), "status": TOMBSTONE}
+    found = {**load("x_syndication.json"), "id_str": MISSING}
+    web = FakeWeb(fx=[(404, data), (404, {"code": 404, "status": TOMBSTONE})], syndication=[(200, found)])
+    code, result, _ = run_x(["thread", MISSING], web)
+    assert code == 1 and result["error"]["code"] == "upstream_error"
+    assert "the post exists" in result["error"]["message"]
+
+
+def test_thread_rejects_a_login_page_in_place_of_the_requested_post(run_x):
+    data = load("x_fx_thread_single.json")
+    post = data["status"]["id"]
+    for status in (data["status"], data["thread"][0]):
+        status["text"] = "Log in to continue"
+        status["raw_text"] = {"text": "Log in to continue", "facets": []}
+    code, result, _ = run_x(["thread", post], FakeWeb(fx=[(200, data)]))
+    assert code == 1 and not result["items"] and result["error"]["code"] == "blocked"
+    assert result["meta"]["rejected"][0]["reason"] == "blocked_page"
 
 
 def test_thread_404_is_not_found_once_the_post_routes_agree_it_is_missing(run_x):

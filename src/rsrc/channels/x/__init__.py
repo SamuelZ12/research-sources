@@ -300,6 +300,13 @@ def run_thread(args, ctx) -> dict:
         requests = client.requests_made + syndication.requests_made
         return env.envelope(CHANNEL, "thread", input, FX_BACKEND, error=env.error(e.code, str(e)),
                             meta={"attempts": [env.attempt(FX_BACKEND, e.code, requests, env.elapsed_ms(started))]})
+    asked = next(record for record in records if record["id"] == post_id)
+    if isinstance(asked["text"], str) and checks.is_block_page(None, asked["text"]):
+        # `x read` rejects the same record, so it must not come back here as a quotable post.
+        return env.envelope(CHANNEL, "thread", input, FX_BACKEND,
+                            error=env.error("blocked", f"{args.post}: the returned post is a block or login page"),
+                            meta={"attempts": [_attempt(FX_BACKEND, "blocked", client, started)],
+                                  "rejected": [{"url": asked["url"], "reason": "blocked_page"}]})
     count = len(records)
     notes = ["1 post returned" if count == 1 else f"{count} posts returned"]
     if (total := fx.numbered_thread_total(records)) and total > count:

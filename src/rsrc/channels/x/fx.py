@@ -142,30 +142,30 @@ def thread(client, post_id: str, *, syndication_client=None) -> list[dict]:
     context = f"fxtwitter thread {post_id}"
     if failure:
         if failure.status == 404:
-            raise _thread_404(client, post_id, context, syndication_client)
+            raise _no_thread(client, post_id, f"{context}: HTTP 404", syndication_client)
         raise failure.error(context)
-    status = data.get("status")
-    if is_tombstone(status):
-        if reason := tombstone_reason(status, post_id):
-            raise NotFound(f"{post_id}: {TOMBSTONE_LABELS.get(reason, 'post unavailable')}")
-        raise HttpError(f"{context}: unrecognized tombstone")
+    if is_tombstone(data.get("status")):
+        raise _no_thread(client, post_id, f"{context}: post unavailable", syndication_client)
     if data.get("code", 200) != 200:
         raise HttpError(f"{context}: unsuccessful thread response")
     return validate_thread(data["thread"], post_id)
 
 
-def _thread_404(client, post_id: str, context: str, syndication_client) -> HttpError:
-    """The error for a thread 404. It carries no post state, so `read` says whether the post exists."""
-    unconfirmed = f"{context}: HTTP 404. FxTwitter could not confirm whether the post is missing"
+def _no_thread(client, post_id: str, context: str, syndication_client) -> HttpError:
+    """The error for a thread answer without posts (a 404 or a tombstone). `read` decides whether the
+    post is missing, since it also asks X's syndication route and can find a post FxTwitter lost."""
+    unconfirmed = f"{context}. FxTwitter could not confirm whether the post is missing"
     try:
         post = read(client, post_id, syndication_client=syndication_client)
+        # The same screen `x read` applies: another post or a login page confirms nothing.
+        rejected = "error" not in post and checks.screen_read(
+            {key: post.get(key) for key in ("id", "url", "text")}, post_id)[1]
     except (AttributeError, TypeError, ValueError, OverflowError, OSError):
         return HttpError(f"{unconfirmed} (unreadable post record)")
     if "error" not in post:
-        # The same screen `x read` applies: another post or a login page confirms nothing.
-        if checks.screen_read({key: post.get(key) for key in ("id", "url", "text")}, post_id)[1]:
+        if rejected:
             return HttpError(f"{unconfirmed} (the post route returned a different page)")
-        return HttpError(f"{context}: HTTP 404, but the post exists. Read it alone with `rsrc x read {post_id}`")
+        return HttpError(f"{context}, but the post exists. Read it alone with `rsrc x read {post_id}`")
     if post["code"] == "not_found":
         return NotFound(f"{post_id}: {post['error']}")
     unconfirmed = f"{unconfirmed} ({post['error']})"

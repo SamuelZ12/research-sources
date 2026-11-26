@@ -58,10 +58,10 @@ NOT_FOUND_MARKERS = ("page not found", "nobody on reddit goes by that name")
 _POST_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com/(?:(?:r|u|user)/[^/]+/)?"
                        r"comments/([a-z0-9]+)(?:/[^/?#]+(?:/([a-z0-9]+))?)?(?:/?\.(?:json|rss))?/?(?:[?#].*)?$",
                        re.IGNORECASE | re.ASCII)
-_SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE)
+_SHORT_URL = re.compile(r"^https?://redd\.it/([a-z0-9]+)/?(?:[?#].*)?$", re.IGNORECASE | re.ASCII)
 _SHARE_URL = re.compile(r"^https?://(?:(?:www|old|new|np|m|sh)\.)?reddit\.com(/(?:r|u|user)/[^/]+/s/[A-Za-z0-9]+)",
                         re.IGNORECASE)
-_BARE_ID = re.compile(r"^(?:t3_)?([a-z0-9]{4,12})$", re.IGNORECASE)
+_BARE_ID = re.compile(r"^(?:t3_)?([a-z0-9]{4,12})$", re.IGNORECASE | re.ASCII)
 _SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{2,21}$")
 _COMMENT_TOMBSTONE = re.compile(
     r"\[(?:removed|deleted| removed by reddit )\]|comment (?:removed by moderator|deleted by user)", re.I)
@@ -348,6 +348,8 @@ def focused_comments(records, post_id, comment_id, tree_rendered=None):
     for record in records:
         attrs = record.get("attrs") or {}
         id_ = attrs.get("thingid")
+        if id_ == comment_id and attrs.get("postid") is None:
+            return [], ("upstream_error", f"Reddit showed {comment_id} without saying which post it belongs to")
         if id_ == comment_id and attrs.get("postid") != post_id:
             return [], ("url_mismatch", f"{comment_id} does not belong to {post_id} on the returned page")
         if id_ and attrs.get("postid") == post_id and id_ not in by_id:
@@ -374,9 +376,12 @@ def focused_comments(records, post_id, comment_id, tree_rendered=None):
         if reply not in context:
             context.add(reply)
             pending.extend(replies.get(reply, []))
-    # A comment whose body has not rendered links its replies above but is not worth a --comments slot.
+    # A comment with no body yet, or a deleted one, links its replies above but is not worth a --comments slot.
+    def readable(record):
+        body = (record.get("text") or "").strip()
+        return body and not _COMMENT_TOMBSTONE.fullmatch(body)
     return [linked, *(record for id_, record in by_id.items()
-                      if id_ != comment_id and id_ in context and (record.get("text") or "").strip())], None
+                      if id_ != comment_id and id_ in context and readable(record))], None
 
 
 # --- inputs ----------------------------------------------------------------------

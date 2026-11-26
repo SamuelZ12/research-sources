@@ -163,7 +163,10 @@ async function loadPage(task) {
       out.loads += 1;
     }
   } else if (!denied) {
-    await page.waitForFunction(threadReady, INPUT.comment, { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(threadReady, INPUT.comment, { timeout: 15000 }).catch((error) => {
+      // Only a timeout says the linked comment is absent. Any other failure says nothing about it.
+      if (INPUT.comment && !/time.?out|timed out/i.test(String(error))) throw error;
+    });
     Object.assign(out, await page.evaluate(readThread, INPUT.attrs));
     // The page of a comment that does not exist shows the post and no comment section.
     if (INPUT.comment) out.comment_tree = await page.evaluate(() => !!document.querySelector("shreddit-comment-tree"));
