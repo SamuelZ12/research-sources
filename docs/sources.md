@@ -49,7 +49,7 @@ A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear'
 
 FxTwitter's search has failed since 2026-11-19, and FxTwitter's API specification lists it as "Search posts (unavailable)". Until it returns, `rsrc x search` fails with `upstream_error` unless you search with your own X session. [X with your own session](x-session.md) has the setup. `rsrc x read`, `rsrc x thread`, `rsrc x replies` and `rsrc x timeline` work without a login.
 
-`rsrc x read` accepts a numeric post ID or a status or article URL on x.com or twitter.com. Article URLs use `x.com/HANDLE/article/POST_ID`. When FxTwitter supplies an article, either URL returns the article title and body. For an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
+`rsrc x read` accepts a numeric post ID or a status or article URL on x.com or twitter.com. Article URLs use `x.com/HANDLE/article/POST_ID`. When FxTwitter supplies an article, either URL returns the article title and its body as Markdown, with links, images and embedded posts in place. For an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
 
 `rsrc x thread` takes a status URL or post ID and returns the author's self-thread in order, starting with the first post. FxTwitter can return only part of a long thread. [X reference](../skills/research-sources/references/x.md#one-self-thread) explains how to check for more posts.
 
@@ -65,13 +65,13 @@ Reddit returns `not_found` for a missing thread and `blocked` for a private or b
 
 Add `--with-comments` after a search query for up to three readable top-level comments in Reddit's Best order on each of the first three threads. Pinned comments are skipped there and reported in `meta.notes`; `reddit read` keeps them with `raw.pinned: true`. Pass `--with-comments 5` for five threads, the maximum. The selected threads load concurrently in one Ego task space, one extra page load each. For short groups, `meta.notes` distinguishes a complete thread from a 15-second wait that expired.
 
-`rsrc reddit read` uses Ego Lite when `ego-browser` is on your `PATH`, and the [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive otherwise or with `--backend arctic-shift`. An archive thread read sends up to two requests to `arctic-shift.photon-reddit.com` and none to Reddit. It returns the post, then up to 200 archived comments ranked by archived score. Scores and comment counts are the archive's snapshot; `meta.notes` gives the capture time and how many comments the archive supplied. Content the archive marks deleted or removed is shown as a placeholder. Search and `/s/` share links need Ego Lite. The archive sets its rate limits by load and makes no uptime promise.
+`rsrc reddit read` uses Ego Lite when `ego-browser` is on your `PATH`, and the [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive otherwise or with `--backend arctic-shift`. An archive thread read sends up to two requests to `arctic-shift.photon-reddit.com` and none to Reddit. It returns the post, then up to 200 archived comments ranked by archived score. Scores and comment counts are the archive's snapshot; `meta.notes` gives the capture time and how many comments the archive supplied. Content the archive marks deleted or removed is shown as a placeholder. On both routes, post and comment text is Markdown with link and image addresses, and a post's gallery images, image, video or link address comes first. Search and `/s/` share links need Ego Lite. The archive sets its rate limits by load and makes no uptime promise.
 
 A comment permalink makes `reddit read` return the post and the linked comment first. Ego Lite includes ancestors and replies shown on the permalink page. Arctic Shift includes archived replies and can spend one extra request checking an empty branch. The linked comment has `raw.linked: true` and is included even with `--comments 0`.
 
 ## YouTube
 
-YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. When results arrive without channel names, search looks each one up through YouTube's public oEmbed endpoint and reports recovered and unavailable names in `meta.notes`.
+A `youtube read` transcript comes in lines of about 20 seconds, each led by its start time. YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. When results arrive without channel names, search looks each one up through YouTube's public oEmbed endpoint and reports recovered and unavailable names in `meta.notes`.
 
 A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read.
 
