@@ -29,7 +29,7 @@ Before your first command on a channel, read that channel's file. The files are 
 | One YouTube video: its details and its transcript | `rsrc youtube read URL_OR_ID [--words 5000]` | `references/youtube.md` |
 | One GitHub repo | `rsrc gh repo OWNER/REPO` | `references/gh.md` |
 | Find repositories | `rsrc gh search QUERY [--limit 20]` | `references/gh.md` |
-| GitHub issues | `rsrc gh issues QUERY [--repo OWNER/REPO] [--state open\|closed\|all] [--limit 30]` | `references/gh.md` |
+| GitHub issues, or pull requests with `is:pr` | `rsrc gh issues [QUERY] [--repo OWNER/REPO] [--state open\|closed\|all] [--limit 30]` | `references/gh.md` |
 | Bluesky posts about a topic or linking to a page | `rsrc bluesky search QUERY [--author HANDLE] [--domain DOMAIN] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--top]` or `rsrc bluesky search --url URL` | `references/bluesky.md` |
 | A Bluesky post, its replies, or an account's recent feed | `rsrc bluesky read POST`, `rsrc bluesky replies POST [--limit N]`, `rsrc bluesky timeline HANDLE_OR_URL [--limit N]` | `references/bluesky.md` |
 | Product Hunt products, makers or a particular launch | `rsrc producthunt search QUERY [--limit N]`, `rsrc producthunt read URL_OR_SLUG` | `references/producthunt.md` |

@@ -218,7 +218,7 @@ def test_issue_search_uses_authenticated_rest(rsrc, flags, qualifiers):
     assert argv[:2] == ["gh", "api"]
     path = urlsplit(argv[2])
     assert path.path == "search/issues"
-    assert parse_qs(path.query) == {"q": ["( docs OR help )" + qualifiers + " type:issue"],
+    assert parse_qs(path.query) == {"q": ["( docs OR help )" + qualifiers + " is:issue"],
                                     "per_page": ["1"], "page": ["1"], "advanced_search": ["true"]}
     assert out["items"][0]["id"] == "python/cpython#157847"
 
@@ -391,7 +391,7 @@ def test_public_issue_search(rsrc, public):
     assert code == 0
     assert out["items"][0]["id"] == "python/cpython#157847"
     assert set(out["items"][0]["raw"]) == set(gh.ISSUE_FIELDS.split(","))
-    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["( documentation ) repo:python/cpython state:open type:issue"]
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["( documentation ) repo:python/cpython state:open is:issue"]
 
 
 @pytest.mark.parametrize("update", [{"incomplete_results": True}, {"items": [{}]}, {"items": []}])
@@ -731,3 +731,83 @@ def test_public_search_page_two_failure_restarts_at_page_one(rsrc, public):
     assert [parse_qs(urlsplit(argv[-1]).query)["page"] for argv in runner.argvs] == [["1"], ["2"]]
     assert [i["title"] for i in out["items"]] == [issue["title"] for issue in issues]
     assert [a["outcome"] for a in out["meta"]["attempts"]] == ["ok", "rate_limited", "ok", "ok"]
+
+
+@pytest.mark.parametrize("route", ["public", "signed", "restart"])
+@pytest.mark.parametrize("qualifier", ["is:pr", "is:pull-request", "type:pr", 'is:"pr"'])
+def test_issue_search_returns_explicit_pull_requests(rsrc, public, route, qualifier):
+    response = (FIXTURES / "gh_public_prs.json").read_text()
+    calls = public(*{"public": [response], "signed": [], "restart": [(502, {}, b"")]}[route])
+    runner = FakeGh() if route == "public" else FakeGh(ok(response))
+    query = f"author:Skirano {qualifier}"
+    args = ["issues", query, "--repo", "modelcontextprotocol/servers", "--state", "all", "--limit", "1"]
+    if route == "signed":
+        args += ["--backend", "gh"]
+    code, out = rsrc(args, runner)
+
+    assert code == 0 and out["input"]["query"] == query
+    [item] = out["items"]
+    assert item["id"] == "modelcontextprotocol/servers#180"
+    assert item["url"] == "https://github.com/modelcontextprotocol/servers/pull/180"
+    assert item["raw"]["isPullRequest"] is True
+    urls = [call.full_url for call in calls] + [argv[-1] for argv in runner.argvs]
+    assert [parse_qs(urlsplit(url).query)["q"] for url in urls] == [
+        [f"( {query} ) repo:modelcontextprotocol/servers"]
+    ] * (2 if route == "restart" else 1)
+
+
+@pytest.mark.parametrize("query", ["is:issue", "type:issue", "label:docs OR (IS:ISSUE state:open)"])
+def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query):
+    calls = public((FIXTURES / "gh_public_issues.json").read_text())
+    code, out = rsrc(["issues", query, "--repo", "python/cpython", "--limit", "1"], FakeGh())
+    assert code == 0 and out["items"][0]["raw"]["isPullRequest"] is False
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [f"( {query} ) repo:python/cpython state:open"]
+
+
+def test_issue_search_ignores_type_qualifiers_in_quoted_text(rsrc, public):
+    calls = public((FIXTURES / "gh_public_issues.json").read_text())
+    query = '"is:pr" OR label:"type:pr"'
+    code, _ = rsrc(["issues", query, "--repo", "python/cpython", "--limit", "1"], FakeGh())
+    assert code == 0
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [
+        f"( {query} ) repo:python/cpython state:open is:issue"
+    ]
+
+
+def test_enterprise_issue_search_lets_the_query_choose_types(rsrc):
+    runner = FakeGh(ok(SEARCH_ISSUES))
+    query = "is:pr OR is:issue"
+    code, _ = rsrc(["issues", query], runner, {"GH_HOST": "github.example.com"})
+    [argv] = runner.argvs
+    assert code == 0 and "--include-prs" in argv and argv[-2:] == ["--", query]
+
+
+@pytest.mark.parametrize("qualifier", ["team-review-requested:example/team", "review-requested:example-user"])
+def test_review_request_search_uses_the_viewers_login(rsrc, public, qualifier):
+    calls = public()
+    runner = FakeGh(ok((FIXTURES / "gh_public_prs.json").read_text()))
+    code, out = rsrc(["issues", f"is:pr {qualifier}", "--repo",
+                      "modelcontextprotocol/servers", "--limit", "1"], runner)
+    assert code == 0 and out["backend"] == "gh" and not calls
+
+
+@pytest.mark.parametrize("query", [[], [""], ["  "]])
+def test_issue_search_lists_repo_with_no_query(rsrc, public, query):
+    calls = public((FIXTURES / "gh_public_issues.json").read_text())
+    code, out = rsrc(["issues", *query, "--repo", "python/cpython", "--limit", "1"], FakeGh())
+    assert code == 0 and out["items"][0]["id"] == "python/cpython#157847"
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == ["repo:python/cpython state:open is:issue"]
+
+
+def test_issue_search_requires_a_query_or_repo(rsrc):
+    runner = FakeGh()
+    code, out = rsrc(["issues", ""], runner)
+    assert code == 2 and out["error"]["code"] == "usage"
+    assert "pass a query or --repo" in out["error"]["message"] and not runner.calls
+
+
+@pytest.mark.parametrize("repo", ["owner/.", "owner/.."])
+def test_issue_search_without_query_rejects_dot_repo(rsrc, public, repo):
+    calls = public((FIXTURES / "gh_public_issues.json").read_text())
+    code, out = rsrc(["issues", "--repo", repo, "--limit", "1"], FakeGh())
+    assert code == 2 and "--repo expects OWNER/REPO" in out["error"]["message"] and not calls

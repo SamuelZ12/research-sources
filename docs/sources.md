@@ -11,7 +11,7 @@ This page has the full command syntax, what each source needs, and what each sou
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
-| GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues QUERY` |
+| GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues [QUERY] [--repo OWNER/REPO]` |
 | Bluesky | `rsrc bluesky search QUERY` or `rsrc bluesky search --url URL`, `rsrc bluesky read POST`, `rsrc bluesky replies POST`, `rsrc bluesky timeline HANDLE_OR_URL` |
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
@@ -76,6 +76,8 @@ A video read selects original-language captions. It may fall back to a second yt
 ## GitHub
 
 On github.com, `gh repo` and `gh issues --repo` try public REST first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Pass `--backend gh` to use your login directly for private reads, permissions or signed search rankings.
+
+`gh issues --repo OWNER/REPO` lists the repository's open issues. Add `is:pr` to the query to search pull requests.
 
 A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
 

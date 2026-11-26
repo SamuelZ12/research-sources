@@ -22,7 +22,9 @@ REPO_FIELDS = ("fullName,url,description,owner,pushedAt,stargazersCount,forksCou
 ISSUE_FIELDS = ("repository,number,url,title,author,createdAt,updatedAt,closedAt,state,"
                 "body,commentsCount,labels,isPullRequest")
 
-_OWNER_REPO = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9._-]+")
+_OWNER_REPO = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/(?!\.{1,2}$)[A-Za-z0-9._-]+")
+_QUERY_TOKENS = re.compile(r'(?:"(?:\\.|[^"\\])*"|[^\s()"])+')
+_ISSUE_TYPE = re.compile(r'-?(?:(?:is|type):("?)(?:issue|pr)\1|is:("?)pull-request\2)', re.I)
 
 
 def register(subparsers) -> None:
@@ -39,8 +41,9 @@ def register(subparsers) -> None:
     search.set_defaults(run=run_search, action="search")
 
     issues = actions.add_parser("issues", help="search issues")
-    issues.add_argument("query", metavar="QUERY")
-    issues.add_argument("--repo", metavar="OWNER/REPO", help="only issues in this repository")
+    issues.add_argument("query", metavar="QUERY", nargs="?", default="",
+                        help="use is:pr in the query to return pull requests")
+    issues.add_argument("--repo", metavar="OWNER/REPO", help="search only this repository")
     issues.add_argument("--limit", type=int, default=30, help=f"issues, 1-{MAX_LIMIT} (default %(default)s)")
     issues.add_argument("--state", choices=("open", "closed", "all"), default="open",
                         help="issue state (default %(default)s)")
@@ -223,7 +226,7 @@ def classify(result: proc.Result) -> tuple[str, str]:
 def run_repo(args, ctx) -> dict:
     requested = args.repo
     input_ = {"repo": requested}
-    if not _OWNER_REPO.fullmatch(requested) or requested.split("/")[1] in (".", ".."):
+    if not _OWNER_REPO.fullmatch(requested):
         return env.usage(CHANNEL, "repo", f"expected OWNER/REPO, got {requested!r}")
 
     return _route(ctx, "repo", input_, _read_repo, scoped=True, force=args.backend == BACKEND)
@@ -317,20 +320,29 @@ def run_search(args, ctx) -> dict:
 
 def run_issues(args, ctx) -> dict:
     input_ = {"query": args.query, "repo": args.repo, "limit": args.limit, "state": args.state}
-    problem = _check_query(args.query, args.limit)
-    if not problem and args.repo is not None and not _OWNER_REPO.fullmatch(args.repo):
-        problem = f"--repo expects OWNER/REPO, got {args.repo!r}"
-    if problem:
-        return env.usage(CHANNEL, "issues", problem)
+    if args.repo is not None and not _OWNER_REPO.fullmatch(args.repo):
+        return env.usage(CHANNEL, "issues", f"--repo expects OWNER/REPO, got {args.repo!r}")
+    if not args.query.strip() and not args.repo:
+        return env.usage(CHANNEL, "issues", "pass a query or --repo OWNER/REPO")
+    if not 1 <= args.limit <= MAX_LIMIT:
+        return env.usage(CHANNEL, "issues", f"--limit must be between 1 and {MAX_LIMIT}")
     argv = ["gh", "search", "issues", "--limit", str(args.limit), "--json", ISSUE_FIELDS]
+    if _has_issue_type(args.query):
+        argv.append("--include-prs")
     if args.repo:
         argv += ["--repo", args.repo]
     if args.state != "all":
         argv += ["--state", args.state]
-    argv += ["--", args.query]
+    if args.query.strip():
+        argv += ["--", args.query]
     # A public issue can belong to a private project or mention a team visible to the viewer.
-    scoped = bool(args.repo) and not re.search(r"@me\b|\b(?:repo|project|team):|\bno:project\b", args.query, re.I)
+    scoped = bool(args.repo) and not re.search(
+        r"@me\b|\b(?:repo|project|team|review-requested|team-review-requested):|\bno:project\b", args.query, re.I)
     return _search(ctx, "issues", input_, argv, _issue_item, scoped=scoped, force=args.backend == BACKEND)
+
+
+def _has_issue_type(query: str) -> bool:
+    return any(_ISSUE_TYPE.fullmatch(token) for token in _QUERY_TOKENS.findall(query))
 
 
 def _check_query(query: str, limit: int) -> str | None:
@@ -346,7 +358,7 @@ def _repo_record(stdout: str) -> dict:
     required = {"html_url", "description", "owner", "stargazers_count", "forks_count", "open_issues_count", "pushed_at"}
     if not isinstance(data, dict) or not required.issubset(data) or not isinstance(data.get("full_name"), str):
         raise ValueError("incomplete repository record")
-    if not _OWNER_REPO.fullmatch(data["full_name"]) or data["full_name"].split("/")[1] in (".", ".."):
+    if not _OWNER_REPO.fullmatch(data["full_name"]):
         raise ValueError("not a repository record")
     # GitHub adds a short-lived clone credential to a private repository's record.
     data.pop("temp_clone_token", None)
@@ -377,14 +389,15 @@ def _public_repo(r):
 
 def _public_issue(r):
     repo = r["repository_url"].removeprefix("https://api.github.com/repos/")
-    if not _OWNER_REPO.fullmatch(repo) or r["html_url"] != f"https://github.com/{repo}/issues/{r['number']}":
-        raise ValueError("not a GitHub issue")
+    pr = r["html_url"] == f"https://github.com/{repo}/pull/{r['number']}"
+    if not _OWNER_REPO.fullmatch(repo) or (not pr and r["html_url"] != f"https://github.com/{repo}/issues/{r['number']}"):
+        raise ValueError("not a GitHub issue or pull request")
     labels = [dict(id=label["node_id"], name=label["name"], color=label["color"], description=label["description"] or "")
               for label in r["labels"]]
     return dict(repository={"name": repo.split("/")[1], "nameWithOwner": repo},
                 number=r["number"], url=r["html_url"], title=r["title"], author=_user(r["user"]),
                 createdAt=r["created_at"], updatedAt=r["updated_at"], closedAt=r["closed_at"] or "0001-01-01T00:00:00Z",
-                state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=False)
+                state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=pr)
 
 
 def _rest_search(gh, action, args, *, authenticated=False):
@@ -393,12 +406,14 @@ def _rest_search(gh, action, args, *, authenticated=False):
     endpoint, convert = "repositories", _public_repo
     if action == "issues":
         endpoint, convert = "issues", _public_issue
-        query = f"( {query} )"
+        parts = [f"( {query} )"] if query.strip() else []
         if args["repo"]:
-            query += " repo:" + args["repo"]
+            parts.append("repo:" + args["repo"])
         if args["state"] != "all":
-            query += " state:" + args["state"]
-        query += " type:issue"
+            parts.append("state:" + args["state"])
+        if not _has_issue_type(query):
+            parts.append("is:issue")
+        query = " ".join(parts)
 
     def page(stdout):
         data = json.loads(stdout)

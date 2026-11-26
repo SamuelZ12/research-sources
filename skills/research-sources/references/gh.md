@@ -2,7 +2,7 @@
 
 On github.com, `gh repo` and `gh issues --repo` try public reads first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Use `--backend gh` for private reads, viewer permissions or signed search rankings.
 
-`gh repo` returns stars, last push, the latest release, and the first 4,000 characters of the README. `gh issues` defaults to `--state open`.
+`gh repo` returns stars, last push, the latest release, and the first 4,000 characters of the README. `gh issues` defaults to open issues. Pass `--repo OWNER/REPO` alone to list its issues, or put `is:pr` in the query to return pull requests. Pull requests have a `/pull/` URL and `raw.isPullRequest: true`.
 
 After a public failure or an empty scoped search, the command restarts with the login if one is available. Unscoped searches use the login first. So do queries with `@me`, a team, a project or additional repository filters.
 
