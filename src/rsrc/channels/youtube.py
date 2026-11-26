@@ -418,11 +418,12 @@ def _transcript(ytdlp: _YtDlp, video_id: str, info: dict, words: int, notes: lis
             raise policy.Unavailable("incomplete_metadata")
         track, source, record["language"] = policy.choose_track(info)
         if track is None:
-            text, made = _recognise(ytdlp, video_id, info, record["language"])
+            cues, made = _recognise(ytdlp, video_id, info, record["language"])
         else:
-            text = policy.clean_vtt(_caption_text(ytdlp, video_id, info, track, source, notes))
+            cues = policy.caption_cues(_caption_text(ytdlp, video_id, info, track, source, notes),
+                                       scrolling=source == "automatic")
             made = {"source": f"youtube-{source}", "track": track}
-        spoken = text.split()
+        text, spoken = policy.timed_transcript(cues, words)
         if not spoken:
             raise policy.Unavailable("transcript_empty")
     except policy.Unavailable as refusal:
@@ -432,12 +433,12 @@ def _transcript(ytdlp: _YtDlp, video_id: str, info: dict, words: int, notes: lis
     except _Failed as failure:
         record["status"] = _RUN_STATUS.get(failure.code, "upstream_error")
         return None, record, failure
-    cut = len(spoken) > words
+    cut = spoken > words
     if cut:
-        notes.append(f"transcript cut to {words} of {len(spoken)} words (--words)")
+        notes.append(f"transcript cut to {words} of {spoken} words (--words)")
     truncated = cut or made.get("inference_truncated", False)
-    record.update(made, status="partial" if truncated else "ok", words=min(len(spoken), words), truncated=truncated)
-    return " ".join(spoken[:words]), record, None
+    record.update(made, status="partial" if truncated else "ok", words=min(spoken, words), truncated=truncated)
+    return text, record, None
 
 
 def _caption_text(ytdlp: _YtDlp, video_id: str, info: dict, track: str, source: str, notes: list[str]) -> str:
@@ -524,9 +525,10 @@ def _caption_file(ytdlp: _YtDlp, video_id: str, track: str, source: str) -> str:
         raise policy.Unavailable("caption_fetch_empty")
 
 
-def _recognise(ytdlp: _YtDlp, video_id: str, info: dict, language: str) -> tuple[str, dict]:
+def _recognise(ytdlp: _YtDlp, video_id: str, info: dict, language: str) -> tuple[list[tuple[float, str]], dict]:
     """On-device speech recognition of the original audio: one yt-dlp run for the audio, then
-    `vidscribe` with the model from the local cache. Returns the text and its record fields.
+    `vidscribe` with the model from the local cache. Returns the timed lines of its SRT file and
+    the record fields.
 
     Every limit is checked before the audio run. vidscribe makes no request, so it is not counted
     in `requests`, and its failure is a missing transcript (`local_asr_error`), not a failed read.
@@ -552,13 +554,19 @@ def _recognise(ytdlp: _YtDlp, video_id: str, info: dict, language: str) -> tuple
             # Offline, so the model comes from the local cache and is never downloaded. HF_HOME is
             # not passed on, so that cache must be at its default place.
             result = ytdlp.runner(
-                ["vidscribe", str(audio), "-a", "-f", "txt", "-m", MODEL, "-o", os.path.join(directory, "transcript")],
+                ["vidscribe", str(audio), "-a", "-f", "srt", "-m", MODEL, "-o", os.path.join(directory, "transcript")],
                 timeout, env={**ytdlp.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"})
         except (proc.Missing, proc.Timeout):
             raise policy.Unavailable("local_asr_error") from None
-    if result.code != 0:
-        raise policy.Unavailable("local_asr_error")
-    return result.stdout, {"source": "local-qwen-asr", "model": MODEL, "media_duration": info["duration"],
+        files = sorted(Path(directory, "transcript").glob("*.srt"))
+        if result.code != 0 or len(files) != 1:
+            raise policy.Unavailable("local_asr_error")
+        try:
+            srt = files[0].read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            raise policy.Unavailable("local_asr_error") from None
+        cues = policy.caption_cues(srt, scrolling=False)
+    return cues, {"source": "local-qwen-asr", "model": MODEL, "media_duration": info["duration"],
                            "inference_truncated": "transcript cut off" in result.stderr.lower()}
 
 

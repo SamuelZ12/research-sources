@@ -1,5 +1,5 @@
 """The YouTube transcript policy: which caption track is the video's own language, a caption file
-as text, and which videos may be given to speech recognition. Pure functions;
+as timed lines, and which videos may be given to speech recognition. Pure functions;
 `rsrc.channels.youtube` makes the runs.
 
 yt-dlp's metadata is untrusted input. A language that cannot be told is never read as "no
@@ -17,7 +17,13 @@ ASR_LANGUAGES = frozenset("zh en yue ar de fr es pt id it ko ru th vi ja tr hi m
 MAX_MEDIA_SECONDS = 600
 LIVE = ("is_live", "is_upcoming", "post_live")  # yt-dlp's live_status while a stream has no final recording
 
-_TAG = re.compile(r"<[^>]*>")
+# A caption tag (`<c>`, `</i>`, `<v.loud Ann>`) or an inline timestamp (`<00:00:01.200>`); not a
+# comparison such as `x < y and z > w` in recognised speech.
+_TAG = re.compile(r"</?(?:c|i|b|u|v|ruby|rt|lang)(?:[.\s][^<>]*)?>|<\d+:[\d:.]+>")
+_VOICE = re.compile(r"<v(?:\.[^\s<>]*)?[ \t]+([^\s<>][^<>]*)>")
+# A cue's timing line, WebVTT (`00:01.000`, hours optional) or SRT (`00:00:01,000`).
+_TIMING = re.compile(r"(?:(\d{1,4}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s+-->")
+CHUNK_SECONDS = 20  # a transcript line spans about this long, so a quote can be found by its time
 _ONE_TAG = re.compile(r"[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*")  # one language tag, not a '+'-joined selection
 _LANGUAGE = re.compile(r"[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*")
 
@@ -126,23 +132,57 @@ def check_recognisable(info: dict, language: str) -> None:
         raise Unavailable("media_duration_limit")
 
 
-def clean_vtt(text: str) -> str:
-    """A WebVTT caption file as its spoken text on one line.
+def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]]:
+    """A WebVTT or SRT caption file as (start in seconds, spoken line) pairs, in order.
 
     Only cue payload is kept: the lines after a timing line, up to the next empty line. That drops
-    the header, note and style blocks, cue numbers, and the timings with their settings. Tags are
-    removed, entities decoded and whitespace collapsed. A line identical to the line before it is
-    dropped, because automatic captions repeat each line as it scrolls; a line said again later
-    in the video is kept."""
-    lines: list[str] = []
-    in_cue = False
+    the header, note and style blocks, cue numbers, and the timings' settings. Tags are removed,
+    except that a voice tag `<v Ann>` becomes `Ann: `; entities are decoded and whitespace
+    collapsed. With `scrolling` (YouTube's automatic captions repeat each line as it scrolls up), a
+    line identical to the line before it is dropped and keeps the start of the cue it first
+    appears in; a line said again later in the video is kept."""
+    cues: list[tuple[float, str]] = []
+    start = None
     for raw in text.splitlines():
-        if "-->" in raw:
-            in_cue = True
+        timing = _TIMING.match(raw.lstrip(" \t"))
+        if timing:
+            hours, minutes, seconds, millis = timing.groups()
+            start = int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds) + int(millis.ljust(3, "0")[:3]) / 1000
         elif not raw:
-            in_cue = False
-        elif in_cue:
-            line = " ".join(html.unescape(_TAG.sub("", raw)).split())
-            if line and (not lines or lines[-1] != line):
-                lines.append(line)
-    return " ".join(lines)
+            start = None
+        elif start is not None:
+            line = _VOICE.sub(lambda m: " " + m[1].strip() + ": ", raw)
+            line = " ".join(html.unescape(_TAG.sub("", line)).split())
+            if line and not (scrolling and cues and cues[-1][1] == line):
+                cues.append((start, line))
+    return cues
+
+
+def timed_transcript(cues: list[tuple[float, str]], words: int) -> tuple[str, int]:
+    """The first `words` spoken words as lines of about `CHUNK_SECONDS` each, every line led by the
+    time its first caption starts (`[MM:SS]`, or `[H:MM:SS]` from an hour on), and the count of
+    all spoken words."""
+    lines, chunk, at, kept, total = [], [], 0.0, 0, 0
+    for start, line in cues:
+        spoken = line.split()
+        total += len(spoken)
+        spoken = spoken[:max(words - kept, 0)]
+        if not spoken:
+            continue
+        kept += len(spoken)
+        if chunk and start - at >= CHUNK_SECONDS:
+            lines.append(f"[{clock(at)}] {' '.join(chunk)}")
+            chunk = []
+        if not chunk:
+            at = start
+        chunk += spoken
+    if chunk:
+        lines.append(f"[{clock(at)}] {' '.join(chunk)}")
+    return "\n".join(lines), total
+
+
+def clock(seconds: float) -> str:
+    whole = int(seconds)
+    if whole >= 3600:
+        return f"{whole // 3600}:{whole // 60 % 60:02d}:{whole % 60:02d}"
+    return f"{whole // 60:02d}:{whole % 60:02d}"

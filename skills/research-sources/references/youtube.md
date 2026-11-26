@@ -14,7 +14,7 @@
 
 `youtube read` takes one video and about 5 to 15 s. Pass a URL or the 11-character ID. For an ID that starts with `-`, pass the URL.
 
-It returns views, likes and comment count, and the whole description in `raw.description`. `text` holds the transcript and nothing else, cut to `--words` words (default 5,000).
+It returns views, likes and comment count, and the whole description in `raw.description`. `text` holds the transcript and nothing else, cut to `--words` words (default 5,000). Each line covers about 20 seconds and starts with the time it begins, as `[MM:SS]` (`[H:MM:SS]` from an hour on). Cite that time with a quote: `https://youtu.be/ID?t=MmSs`.
 
 The transcript is in the language the video was spoken in. On a dubbed video, that is the audio track YouTube marks as original. It is never a translated caption track. Translate it yourself and say you did.
 

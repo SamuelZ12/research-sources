@@ -3,6 +3,7 @@
 import io
 from unittest.mock import Mock
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,16 @@ META_UPLOADED = (FIXTURES / "youtube_meta_uploaded.json").read_text(encoding="ut
 META_DUBBED = (FIXTURES / "youtube_meta_dubbed.json").read_text(encoding="utf-8")  # vlfCjWuv4es: 20 `-orig` tracks
 UPLOADED_VTT = (FIXTURES / "youtube_uploaded.vtt").read_text(encoding="utf-8")  # 558 words
 AUTOMATIC_VTT = (FIXTURES / "youtube_automatic.vtt").read_text(encoding="utf-8")  # 3618 words
+STAMP = re.compile(r"^\[(?:\d+:)?\d\d:\d\d\] ", re.M)
+
+
+def spoken(text: str) -> list[str]:
+    """The words of a timed transcript, without its line times."""
+    return STAMP.sub("", text).split()
+
+
+def timed(caption: str) -> str:
+    return youtube.policy.timed_transcript(youtube.policy.caption_cues(caption), 10**6)[0]
 
 FIXED = ["yt-dlp", "--ignore-config", "--no-cookies-from-browser", "--retries", "0", "--extractor-retries", "0"]
 SEARCH_FLAGS = ["--flat-playlist", "--dump-json", "--extractor-args", "youtubetab:approximate_date"]
@@ -533,7 +544,7 @@ def test_read_gets_only_the_chosen_vtt_from_the_first_extraction(
     assert code == 0 and len(fake.calls) == 1
     [(method, target, headers)] = calls
     assert method == "GET" and f"v={video}&" in target and "tlang=" not in target
-    assert out["items"][0]["text"] == youtube.policy.clean_vtt(vtt)
+    assert out["items"][0]["text"] == timed(vtt)
     assert out["items"][0]["raw"]["transcript"]["track"] == track
 
 
@@ -558,7 +569,7 @@ def test_a_refused_or_broken_direct_caption_get_falls_back_to_one_caption_run(rs
     fake = FakeRunner(ok(with_caption_url(META_UPLOADED, "subtitles", "en")), caption_run(UPLOADED_VTT))
     code, out = rsrc(["read", UPLOADED], fake)
     assert code == 0 and out["ok"] is True and len(calls) == 1 and len(fake.calls) == 2
-    assert out["items"][0]["text"] == youtube.policy.clean_vtt(UPLOADED_VTT)
+    assert out["items"][0]["text"] == timed(UPLOADED_VTT)
     [note] = [n for n in out["meta"]["notes"] if "direct caption request failed" in n]
     assert "used a yt-dlp caption run" in note
 
@@ -591,8 +602,10 @@ def test_read_text_is_the_uploaded_transcript(rsrc):
     code, out = rsrc(["read", UPLOADED], read_uploaded())
 
     [item] = out["items"]
-    assert len(item["text"].split()) == 558
-    assert "-->" not in item["text"] and "\n" not in item["text"] and "<" not in item["text"]
+    assert len(spoken(item["text"])) == 558
+    assert item["text"].startswith("[00:00] Claude Fable 5.2 is out.")
+    assert "-->" not in item["text"] and "<" not in item["text"]
+    assert all(STAMP.match(line) for line in item["text"].splitlines())
     assert item["raw"]["transcript"] == {"status": "ok", "source": "youtube-uploaded", "language": "en",
                                          "track": "en", "words": 558, "truncated": False}
 
@@ -601,7 +614,7 @@ def test_read_text_is_the_automatic_transcript_of_the_original_audio(rsrc):
     code, out = rsrc(["read", DUBBED], read_dubbed())
 
     [item] = out["items"]
-    assert len(item["text"].split()) == 3618
+    assert len(spoken(item["text"])) == 3618
     assert item["raw"]["transcript"] == {"status": "ok", "source": "youtube-automatic", "language": "en",
                                          "track": "en-orig", "words": 3618, "truncated": False}
 
@@ -675,7 +688,8 @@ def test_read_words_cuts_the_transcript_and_says_so(rsrc):
 
     [item] = out["items"]
     assert code == 0
-    assert item["text"].split() == whole["items"][0]["text"].split()[:100]
+    assert spoken(item["text"]) == spoken(whole["items"][0]["text"])[:100]
+    assert whole["items"][0]["text"].startswith(item["text"].rsplit(" ", 1)[0])
     assert item["raw"]["transcript"] == {"status": "partial", "source": "youtube-uploaded", "language": "en",
                                          "track": "en", "words": 100, "truncated": True}
     assert out["input"] == {"video": UPLOADED, "words": 100}
@@ -714,7 +728,19 @@ def test_read_output_holds_no_caption_or_stream_address(rsrc, caption_http):
 MODEL = "mlx-community/Qwen3-ASR-1.7B-8bit"
 MAX_AUDIO = 50 * 1024 * 1024
 SPOKEN = "All right, so here we are in front of the elephants."  # hand-written: recognition has not run live
-VIDSCRIBE_STDERR = "transcript: /tmp/out/transcript/audio.txt\n"
+SPOKEN_SRT = f"1\n00:00:00,000 --> 00:00:04,500\n{SPOKEN}\n"  # vidscribe's SRT shape, checked live Nov 26 2026
+VIDSCRIBE_STDERR = "transcript: /tmp/out/transcript/audio.srt\n"
+
+
+def vidscribe_run(srt: str | None = SPOKEN_SRT, stderr: str = VIDSCRIBE_STDERR, code: int = 0):
+    """Answers the vidscribe run: writes `srt` (None: no file) as `audio.srt` in the `-o` folder."""
+    def respond(argv):
+        if srt is not None:
+            folder = Path(argv[argv.index("-o") + 1])
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / "audio.srt").write_text(srt, encoding="utf-8")
+        return proc.Result(code, "", stderr)
+    return respond
 
 
 def no_captions(**changes) -> str:
@@ -734,7 +760,7 @@ def audio_run(size: int | None = 4096):
 
 def recognition(vidscribe=None, info: str | None = None, size: int | None = 4096):
     return FakeRunner(ok(info or no_captions()), audio_run(size),
-                      ok(SPOKEN + "\n", VIDSCRIBE_STDERR) if vidscribe is None else vidscribe)
+                      vidscribe_run() if vidscribe is None else vidscribe)
 
 
 def refused(out, status: str, language: str | None = "en") -> bool:
@@ -761,7 +787,7 @@ def test_a_video_with_no_caption_track_gets_an_audio_run_then_vidscribe(rsrc, en
     assert (audio_timeout, audio_options) == (30, {"env": four, "file_limit": MAX_AUDIO})
     directory = Path(audio).parent
     assert Path(audio).name == "audio.m4a" and directory.parent == Path(environ["TMPDIR"])
-    assert asr_argv == ["vidscribe", audio, "-a", "-f", "txt", "-m", MODEL, "-o", str(directory / "transcript")]
+    assert asr_argv == ["vidscribe", audio, "-a", "-f", "srt", "-m", MODEL, "-o", str(directory / "transcript")]
     assert asr_timeout == 60
     assert asr_options == {"env": {**four, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}}  # no download
     assert not directory.exists()
@@ -772,7 +798,7 @@ def test_a_recognised_transcript_is_the_text_and_says_how_it_was_made(rsrc):
     code, out = rsrc(["read", UPLOADED], recognition())
 
     [item] = out["items"]
-    assert code == 0 and item["text"] == SPOKEN
+    assert code == 0 and item["text"] == "[00:00] " + SPOKEN
     assert item["raw"]["transcript"] == {
         "status": "ok", "source": "local-qwen-asr", "language": "en", "track": None, "words": 11,
         "truncated": False, "model": MODEL, "media_duration": 208, "inference_truncated": False}
@@ -781,13 +807,13 @@ def test_a_recognised_transcript_is_the_text_and_says_how_it_was_made(rsrc):
 
 
 def test_a_recognition_that_was_cut_off_is_partial(rsrc):
-    cut_off = ok(SPOKEN + "\n", "warning: transcript cut off in 0:30-1:00 (likely a repetition loop)\n" + VIDSCRIBE_STDERR)
+    cut_off = vidscribe_run(stderr="warning: transcript cut off in 0:30-1:00 (likely a repetition loop)\n" + VIDSCRIBE_STDERR)
 
     code, out = rsrc(["read", UPLOADED], recognition(cut_off))
 
     [item] = out["items"]
     transcript = item["raw"]["transcript"]
-    assert code == 0 and item["text"] == SPOKEN
+    assert code == 0 and item["text"] == "[00:00] " + SPOKEN
     assert (transcript["status"], transcript["truncated"], transcript["inference_truncated"]) == ("partial", True, True)
 
 
@@ -796,7 +822,7 @@ def test_a_recognised_transcript_is_cut_to_words_too(rsrc):
 
     [item] = out["items"]
     transcript = item["raw"]["transcript"]
-    assert item["text"] == "All right, so"
+    assert item["text"] == "[00:00] All right, so"
     assert (transcript["status"], transcript["words"], transcript["truncated"]) == ("partial", 3, True)
     assert transcript["inference_truncated"] is False
 
@@ -867,12 +893,13 @@ def test_an_audio_file_of_exactly_the_limit_is_recognised(rsrc):
 
     code, out = rsrc(["read", UPLOADED], fake)
 
-    assert len(fake.calls) == 3 and out["items"][0]["text"] == SPOKEN
+    assert len(fake.calls) == 3 and out["items"][0]["text"] == "[00:00] " + SPOKEN
 
 
 @pytest.mark.parametrize("vidscribe", [
     proc.Result(1, "", "Traceback (most recent call last): model not found in the local cache\n"),
-    proc.Result(1, SPOKEN, ""),
+    vidscribe_run(code=1),
+    vidscribe_run(srt=None),
     proc.Timeout("vidscribe timed out after 60 s"),
     proc.Missing("vidscribe not found"),
 ])
@@ -885,9 +912,9 @@ def test_vidscribe_failing_is_a_missing_transcript_not_a_failed_read(rsrc, vidsc
     assert out["meta"]["attempts"][0]["outcome"] == "ok"
 
 
-@pytest.mark.parametrize("stdout", ["", " \n\n"])
-def test_vidscribe_printing_nothing_is_an_empty_transcript(rsrc, stdout):
-    code, out = rsrc(["read", UPLOADED], recognition(ok(stdout, VIDSCRIBE_STDERR)))
+@pytest.mark.parametrize("srt", ["", " \n\n", "1\n00:00:00,000 --> 00:00:01,000\n \n"])
+def test_vidscribe_writing_no_words_is_an_empty_transcript(rsrc, srt):
+    code, out = rsrc(["read", UPLOADED], recognition(vidscribe_run(srt)))
 
     assert code == 0 and refused(out, "transcript_empty")
 
@@ -1114,7 +1141,7 @@ def test_a_caption_file_of_exactly_4_mib_is_read(rsrc):
 
     code, out = rsrc(["read", UPLOADED], FakeRunner(ok(META_UPLOADED), caption_run(vtt)))
 
-    assert out["items"][0]["raw"]["transcript"]["status"] == "ok" and len(out["items"][0]["text"].split()) == 558
+    assert out["items"][0]["raw"]["transcript"]["status"] == "ok" and len(spoken(out["items"][0]["text"])) == 558
 
 
 def test_a_caption_file_that_cannot_be_read_is_caption_fetch_empty(rsrc):
@@ -1347,12 +1374,12 @@ def taking(clock: Clock, seconds: float, response):
 
 def test_each_run_gets_its_own_limit_while_the_100_s_last(rsrc, clock):
     fake = FakeRunner(taking(clock, 29, ok(no_captions())), taking(clock, 29, audio_run()),
-                      ok(SPOKEN, VIDSCRIBE_STDERR))
+                      vidscribe_run())
 
     code, out = rsrc(["read", UPLOADED], fake)
 
     assert [timeout for _, timeout, _ in fake.calls] == [30, 30, 42]  # 100 - 29 - 29 is less than vidscribe's 60
-    assert code == 0 and out["items"][0]["text"] == SPOKEN
+    assert code == 0 and out["items"][0]["text"] == "[00:00] " + SPOKEN
 
 
 def test_a_run_gets_only_what_is_left_of_the_100_s(rsrc, clock):

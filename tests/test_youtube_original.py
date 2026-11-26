@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from rsrc.channels.youtube_original import Unavailable, choose_track, clean_vtt
+from rsrc.channels.youtube_original import Unavailable, caption_cues, choose_track, timed_transcript
 
 FIXTURES = Path(__file__).parent / "fixtures"
 UPLOADED_VTT = (FIXTURES / "youtube_uploaded.vtt").read_text(encoding="utf-8")  # C33hJGt-ySg, track en
@@ -20,29 +20,58 @@ _MARKUP = re.compile(r"WEBVTT|Kind:|Language:|-->|\d\d:\d\d:\d\d\.\d\d\d|align:|
 
 # caption text
 
-def test_uploaded_captions_become_the_spoken_text_only():
-    text = clean_vtt(UPLOADED_VTT)
+STAMP = re.compile(r"^\[(?:\d+:)?\d\d:\d\d\] ", re.M)
 
-    assert text.startswith("Claude Fable 5.2 is out. It's our most capable generally available model for technical fields.")
-    assert text.endswith("follow the steps in the guide linked below.")
-    assert len(text.split()) == 558
-    assert not _MARKUP.search(text)
+
+def transcript(caption: str, words: int = 10**6) -> str:
+    return timed_transcript(caption_cues(caption), words)[0]
+
+
+def spoken(text: str) -> str:
+    """The words of a timed transcript, without its line times."""
+    return " ".join(STAMP.sub("", text).split())
+
+
+def test_uploaded_captions_become_the_spoken_text_only():
+    text = transcript(UPLOADED_VTT)
+
+    assert text.startswith("[00:00] Claude Fable 5.2 is out. It's our most capable generally available model for technical fields.")
+    assert spoken(text).endswith("follow the steps in the guide linked below.")
+    assert len(spoken(text).split()) == 558
+    assert not _MARKUP.search(STAMP.sub("", text))
 
 
 def test_automatic_captions_keep_each_scrolling_line_once():
-    text = clean_vtt(AUTOMATIC_VTT)
+    text = transcript(AUTOMATIC_VTT)
 
-    assert text.startswith("I had some technical difficulties during my talk this morning, so I ran back home and "
-                           "I'm just going to record it from my computer instead. So, hi everyone. I'm Lydia.")
-    assert text.endswith("best practices in the docs as well. Thank you so much.")
-    assert len(text.split()) == 3618
-    assert not _MARKUP.search(text)
+    assert spoken(text).startswith("I had some technical difficulties during my talk this morning, so I ran back home and "
+                                   "I'm just going to record it from my computer instead. So, hi everyone. I'm Lydia.")
+    assert spoken(text).endswith("best practices in the docs as well. Thank you so much.")
+    assert len(spoken(text).split()) == 3618
+    assert not _MARKUP.search(STAMP.sub("", text))
 
 
-def test_text_is_one_line_with_single_spaces():
-    text = clean_vtt(AUTOMATIC_VTT)
+def test_each_line_starts_with_its_first_caption_time_and_spans_about_20_seconds():
+    lines = transcript(AUTOMATIC_VTT).splitlines()
+    times = [STAMP.match(line)[0] for line in lines]
 
-    assert text == " ".join(text.split())
+    assert len(times) == len(lines) > 1
+    assert lines[0].startswith("[00:00] I had some technical difficulties")
+    seconds = [int(t[1:3]) * 60 + int(t[4:6]) for t in times]
+    assert seconds == sorted(seconds) and all(20 <= b - a <= 40 for a, b in zip(seconds, seconds[1:]))
+
+
+def test_times_from_an_hour_on_carry_the_hour_and_srt_is_read_too():
+    srt = ("1\n00:59:58,500 --> 01:00:01,000\nlast words\n\n"
+           "2\n01:00:30,000 --> 01:00:31,000\nof the hour\n")
+
+    assert transcript(srt) == "[59:58] last words\n[1:00:30] of the hour"
+
+
+def test_words_cut_the_transcript_and_the_total_counts_every_word():
+    text, total = timed_transcript(caption_cues(UPLOADED_VTT), 6)
+
+    assert (text, total) == ("[00:00] Claude Fable 5.2 is out. It's", 558)
 
 
 def test_a_line_said_again_later_is_kept_and_cue_numbers_are_dropped():
@@ -51,39 +80,53 @@ def test_a_line_said_again_later_is_kept_and_cue_numbers_are_dropped():
            "2\n00:00:02.000 --> 00:00:03.000\nNo.\n\n"
            "3\n00:00:03.000 --> 00:00:04.000\nYes.\n")
 
-    assert clean_vtt(vtt) == "Yes. No. Yes."
+    assert caption_cues(vtt) == [(1.0, "Yes."), (2.0, "No."), (3.0, "Yes.")]
 
 
-def test_a_line_repeated_by_the_next_cue_is_kept_once():
+def test_a_line_repeated_by_the_next_cue_is_kept_once_with_its_first_time():
     vtt = ("WEBVTT\n\n"
            "00:00:01.000 --> 00:00:02.000\nfirst line\n\n"
            "00:00:02.000 --> 00:00:03.000\nfirst line\nsecond line\n\n"
            "00:00:03.000 --> 00:00:04.000\nsecond line\n \n")
 
-    assert clean_vtt(vtt) == "first line second line"
+    assert caption_cues(vtt) == [(1.0, "first line"), (2.0, "second line")]
 
 
-def test_notes_styles_tags_and_cue_settings_are_removed_and_entities_decoded():
+def test_notes_styles_tags_and_cue_settings_are_removed_speakers_kept_and_entities_decoded():
     vtt = ("WEBVTT - a title\nKind: captions\nLanguage: en\n\n"
            "NOTE\na comment\nover two lines\n\n"
            "STYLE\n::cue { color: red }\n\n"
-           "intro\n00:00:01.000 --> 00:00:02.000 align:start position:0%\n"
+           "intro\n00:01.000 --> 00:02.000 align:start position:0%\n"
            "<v Ann>Tom &amp; Jerry</v>   said&nbsp;<i>hi</i>\n\n"
            "NOTE a comment on one line\n\n"
            "00:00:02.000 --> 00:00:03.000\n2 &lt; 3<00:00:02.500><c> always</c>\n")
 
-    assert clean_vtt(vtt) == "Tom & Jerry said hi 2 < 3 always"
+    assert transcript(vtt) == "[00:01] Ann: Tom & Jerry said hi 2 < 3 always"
 
 
 def test_windows_line_endings_are_read_the_same():
     vtt = "WEBVTT\r\n\r\n00:00:01.000 --> 00:00:02.000\r\none\r\n\r\n00:00:02.000 --> 00:00:03.000\r\ntwo\r\n"
 
-    assert clean_vtt(vtt) == "one two"
+    assert transcript(vtt) == "[00:01] one two"
 
 
 def test_a_file_without_cues_is_empty_text():
-    assert clean_vtt("WEBVTT\nKind: captions\nLanguage: en\n") == ""
-    assert clean_vtt("") == ""
+    assert timed_transcript(caption_cues("WEBVTT\nKind: captions\nLanguage: en\n"), 10) == ("", 0)
+    assert timed_transcript(caption_cues(""), 10) == ("", 0)
+
+
+def test_recognised_speech_keeps_repeated_lines_comparisons_and_indented_timings():
+    srt = ("1\n 00:00:01,000 --> 00:00:02,000\nYes.\n\n"
+           "2\n00:00:02,000 --> 00:00:03,000\nYes.\n\n"
+           "3\n00:00:03,000 --> 00:00:04,000\nx < y and z > w\n")
+
+    assert caption_cues(srt, scrolling=False) == [(1.0, "Yes."), (2.0, "Yes."), (3.0, "x < y and z > w")]
+
+
+def test_adjacent_speakers_stay_apart():
+    vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n<v Ann>Hello</v><v.loud Bob>Hi</v>\n"
+
+    assert caption_cues(vtt) == [(1.0, "Ann: Hello Bob: Hi")]
 
 
 # track choice
@@ -236,3 +279,7 @@ def test_malformed_formats_mark_no_language_original(formats):
     info["formats"] = formats
 
     assert refusal(info) == "ambiguous_original_language"
+
+
+def test_speech_with_angle_brackets_but_no_tag_is_kept():
+    assert caption_cues("1\n00:00:01,000 --> 00:00:02,000\nx<y and z>w\n", scrolling=False) == [(1.0, "x<y and z>w")]
