@@ -2,13 +2,13 @@
 
 `x read`, `x thread`, `x replies` and `x timeline` work without a login. `x search` needs the user's own X session while FxTwitter's public search is down.
 
-X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrome` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads can cut long posts short and expose only likes. Say so when you quote one. When both public sources confirm a missing post, the read returns `not_found`. An ID dated more than a day in the future returns `not_found` without a request.
+X posts identify their source as `fxtwitter`, `x-graphql`, `x-browser`, `x-chrome` or `syndication`. Signed-in results expand links when X provides a destination. Syndication reads expose only likes, and they cut long posts short: then `raw.text_truncated` is true and `meta.notes` says so. Say so when you quote one, or rerun later for the full text. When both public sources confirm a missing post, the read returns `not_found`. An ID dated more than a day in the future returns `not_found` without a request.
 
 ## One post or article
 
 `x read` accepts a post ID or a status or article URL on x.com or twitter.com. Use `x.com/HANDLE/article/POST_ID` for an article URL. If you have an `x.com/i/article/ARTICLE_ID` link, pass the post that links to the article instead.
 
-For a post with an article from FxTwitter, `title` and `text` contain the article title and body. Links are in `raw.article.links`, and embedded posts appear in the body as `[post: URL]`. The item ID and URL identify the publishing post, and `raw.text` keeps the post text. For other posts, `text` contains the post text.
+For a post with an article from FxTwitter, `title` and `text` contain the article title and body as Markdown: headings, lists, quotes, code fences, bold and italic, links in place as `[text](URL)`, the cover and inline images as `![image](URL)`, and embedded posts as `[post: URL]`. `raw.article.links` and `raw.article.images` list the addresses. An embed FxTwitter does not resolve shows as a marker such as `[image]`. The item ID and URL identify the publishing post, and `raw.text` keeps the post text. For other posts, `text` contains the post text.
 
 The post's photos, videos and GIFs are in `raw.media`, with `type`, `url` and `duration` in seconds. A quoted post's media are in `raw.quoted.media`. Open every entry before you explain, summarize or quote a post.
 

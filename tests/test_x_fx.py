@@ -83,6 +83,7 @@ def test_fxtwitter_article_maps_to_record():
             "https://www.wsj.com/articles/SB10001424053111903480904576512250915629460",
             "https://a16z.com/the-techno-optimist-manifesto/",
         ],
+        "images": [],
     }
 
 
@@ -111,7 +112,7 @@ def test_fxtwitter_article_survives_a_null_entity_and_an_empty_atomic_placeholde
     assert status_record(status)["article"]["text"] == "[post: https://x.com/i/status/7]"
 
 
-def test_fxtwitter_article_keeps_code_indentation_and_ignores_blank_or_bad_parts():
+def test_fxtwitter_article_keeps_code_indentation_and_marks_an_unresolved_embed():
     status = load("x_fx_status.json")["status"]
     status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [
         {"type": "unstyled", "text": "   "},
@@ -119,7 +120,7 @@ def test_fxtwitter_article_keeps_code_indentation_and_ignores_blank_or_bad_parts
         {"type": "atomic", "text": " ", "entityRanges": [{"key": "2"}]},
     ], "entityMap": {"1": {"type": "MARKDOWN", "data": {"markdown": "\n    first()\n    second()\n"}},
                      "2": {"type": "TWEET", "data": {"tweetId": "\uff11\uff12\uff13"}}}}}
-    assert status_record(status)["article"]["text"] == "    first()\n    second()"
+    assert status_record(status)["article"]["text"] == "    first()\n    second()\n\n[post]"
     status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [{"type": "unstyled", "text": "Body"}],
                                                                    "entityMap": None}}
     assert status_record(status)["article"]["text"] == "Body"
@@ -135,7 +136,8 @@ def test_fxtwitter_reply_carries_parent_id():
 def test_fxtwitter_quote_is_attached():
     status = load("x_fx_status.json")["status"]
     status["quote"] = {"id": "42", "text": "quoted text", "author": {"screen_name": "bob"}}
-    assert status_record(status)["quoted"] == {"id": "42", "author": "bob", "text": "quoted text", "media": []}
+    assert status_record(status)["quoted"] == {"id": "42", "author": "bob", "text": "quoted text", "media": [],
+                                               "text_truncated": False}
 
 
 # The recorded search page and the recorded x-graphql page both hold this post and its one video.
@@ -353,3 +355,101 @@ def test_future_post_ids_are_impossible_without_network():
     for sequence in (0, 4194303):
         post = str(((future - 1288834974657) << 22) + sequence)
         assert read(Client(min_interval=1, transport=FakeWeb()), post)["code"] == "not_found"
+
+
+def test_article_keeps_images_links_styles_and_embeds_in_place():
+    article = status_record(load("x_fx_article_media.json")["status"])["article"]
+    text = article["text"]
+    cover, first, second = ("https://pbs.twimg.com/media/HYFS4EYXQAAfLZM.jpg",
+                            "https://pbs.twimg.com/media/HYFPYYmWcAEbzlm.png",
+                            "https://pbs.twimg.com/media/HYFkOliWkAA48er.jpg")
+    assert text.startswith(f"![cover image]({cover})\n\n## Fear stayed high")
+    assert "BTC fell into the **mid-55Ks** and Fear & Greed stayed in **Extreme Fear**." in text
+    assert (f"then the bounce gave people an opening to call the bottom.\n\n"
+            f"![Fear and greed index on coinglass.com]({first})\n\nKaleo called the dip") in text  # its caption
+    assert text.index(first) < text.index(f"![image]({second})")
+    assert "[post: https://x.com/i/status/2126016038374391942]" in text
+    assert "to read as confirmation \U0001f978" in text  # an emoji entity adds nothing to its character
+    assert article["images"] == [cover, first, second]
+
+
+def test_article_renders_inline_links_lists_dividers_and_code_fences():
+    status = load("x_fx_status.json")["status"]
+    status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [
+        {"type": "unstyled", "text": "Read \u2600\ufe0f the docs now", "entityRanges": [{"key": 0, "offset": 8, "length": 8}],
+         "inlineStyleRanges": [{"style": "Italic", "offset": 17, "length": 3}]},
+        {"type": "atomic", "text": " ", "entityRanges": [{"key": 1, "offset": 0, "length": 1}]},
+        {"type": "ordered-list-item", "text": "One"},
+        {"type": "ordered-list-item", "text": "Inner", "depth": 1},
+        {"type": "ordered-list-item", "text": "Two"},
+        {"type": "unordered-list-item", "text": "Dot"},
+        {"type": "code-block", "text": "a = 1"},
+        {"type": "code-block", "text": "  b = 2"},
+        {"type": "atomic", "text": " ", "entityRanges": [{"key": 2, "offset": 0, "length": 1}]},
+    ], "entityMap": {"0": {"type": "LINK", "data": {"url": "https://example.com/docs"}},
+                     "1": {"type": "DIVIDER", "data": {}},
+                     "2": {"type": "POLL", "data": {}}}}}
+    assert status_record(status)["article"]["text"] == (
+        "Read \u2600\ufe0f [the docs](https://example.com/docs) *now*\n\n---\n\n"
+        "1. One\n    1. Inner\n2. Two\n\n- Dot\n\n```\na = 1\n  b = 2\n```\n\n[poll]")
+
+
+def test_syndication_expands_links_and_flags_a_long_post_it_cut_short():
+    post = syndication_record(load("x_syndication_long.json"))
+    assert post["text"] == ("ライオンズのUNIX解説書：なぜ20年間も密かにコピーされ続けたのか\n"
+                            "https://fosscomics.com/posts/17.%20Lions%27%20Commentary%20on%20Unix/")
+    assert post["text_truncated"] is True
+
+
+def test_syndication_drops_only_the_link_to_its_own_photo():
+    data = load("x_syndication.json")
+    del data["note_tweet"]
+    post = syndication_record(data)
+    assert post["text_truncated"] is False
+    assert post["text"].endswith("先让它记得住")
+    assert post["media"][0]["type"] == "photo"
+
+
+def test_syndication_restores_escaped_characters_and_flags_a_cut_quote():
+    data = load("x_syndication.json")
+    data["text"] = "AT&amp;T &lt;3 https://t.co/abc"
+    data["entities"] = {"urls": [{"url": "https://t.co/abc", "expanded_url": "https://example.com/x"}]}
+    data["quoted_tweet"] = {"id_str": "5", "text": "start of a long quote", "user": {"screen_name": "q"},
+                            "note_tweet": {"id": "n"}}
+    post = syndication_record(data)
+    assert post["text"] == "AT&T <3 https://example.com/x"
+    assert post["quoted"]["text_truncated"] is True
+
+
+def test_article_lists_resume_numbering_after_a_nested_bullet_and_code_keeps_blank_lines():
+    status = load("x_fx_status.json")["status"]
+    status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [
+        {"type": "ordered-list-item", "text": "One"},
+        {"type": "unordered-list-item", "text": "aside", "depth": 1},
+        {"type": "ordered-list-item", "text": "Two"},
+        {"type": "unordered-list-item", "text": "deep", "depth": 10**9},
+        {"type": "code-block", "text": "s = 1"},
+        {"type": "code-block", "text": ""},
+        {"type": "code-block", "text": "```"},
+        {"type": "atomic", "entityRanges": [{"key": "m", "offset": 0, "length": 1}]},
+    ], "entityMap": {"m": {"type": "MEDIA", "data": {"caption": "Chart", "mediaItems": [{"mediaId": "9"}]}}}}}
+    assert status_record(status)["article"]["text"] == (
+        "1. One\n    - aside\n2. Two\n" + "    " * 8 + "- deep\n\n"
+        "````\ns = 1\n\n```\n````\n\n[image: Chart]")
+
+
+def test_syndication_ignores_malformed_link_lists():
+    data = load("x_syndication.json")
+    data["entities"] = {"urls": 7, "media": [{"url": None}]}
+    assert syndication_record(data)["text"].endswith("https://t.co/klNefwolrr")
+
+
+def test_article_code_samples_split_by_an_empty_paragraph_stay_apart_and_unknown_blocks_keep_text():
+    status = load("x_fx_status.json")["status"]
+    status["article"] = {"id": "42", "title": "Title", "content": {"blocks": [
+        {"type": "code-block", "text": "a"}, {"type": "unstyled", "text": ""}, {"type": "code-block", "text": "b"},
+        {"type": "end", "text": "after"},
+        {"type": "unstyled", "text": "Map [detail]", "entityRanges": [{"key": "l", "offset": 0, "length": 12}]},
+    ], "entityMap": {"l": {"type": "LINK", "data": {"url": "https://example.com/m"}}}}}
+    assert status_record(status)["article"]["text"] == (
+        "```\na\n```\n\n```\nb\n```\n\nafter\n\n[Map \\[detail\\]](https://example.com/m)")

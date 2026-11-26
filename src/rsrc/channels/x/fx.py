@@ -11,8 +11,9 @@ from typing import NamedTuple
 from urllib.parse import quote, urlencode
 
 from rsrc import checks
+from rsrc.html_markdown import destination, fence, label, link
 from rsrc.channels.x.record import legacy_media, make_record, media_entry, to_int
-from rsrc.channels.x.search import check_status
+from rsrc.channels.x.search import check_status, expand_links
 from rsrc.http import DecodeError, HttpError, NetworkError, NotFound
 
 FX_API = "https://api.fxtwitter.com/2"
@@ -380,14 +381,20 @@ def status_record(status: dict) -> dict:
         lang=status.get("lang"),
         reply_to_id=(status.get("replying_to") or {}).get("status"),
         quoted={"id": quote.get("id"), "author": (quote.get("author") or {}).get("screen_name"),
-                "text": quote.get("text"), "media": fx_media(quote)} if quote else None,
+                "text": quote.get("text"), "media": fx_media(quote), "text_truncated": False} if quote else None,
         media=fx_media(status),
         article=fx_article(status.get("article")),
+        text_truncated=False,
         source="fxtwitter",
     )
 
 
 def fx_article(article) -> dict | None:
+    """An X Article as Markdown: headings, lists, quotes and fenced code by block type; links, bold,
+    italic and strikethrough in place; images as `![caption or image](URL)`; embedded posts as
+    `[post: URL]`. An embed the article names but FxTwitter does not resolve stays as a marker such
+    as `[image]`. Offsets in the article's ranges count code points (checked on emoji and CJK
+    articles, Nov 2026)."""
     if not isinstance(article, dict):
         return None
     article_id, title, content = article.get("id"), article.get("title"), article.get("content")
@@ -402,41 +409,175 @@ def fx_article(article) -> dict | None:
         entries = entities.items()
     else:
         entries = ()
+    files = _article_files(article.get("media_entities"))
 
     # A malformed entity or block is skipped; it never costs the rest of the article.
-    links, embeds = [], {}
+    links, hrefs, embeds, shown_files = [], {}, {}, {}
     for key, value in entries:
         if not isinstance(key, (str, int)) or not isinstance(value, dict) or not isinstance(value.get("data"), dict):
             continue
         kind, data = value.get("type"), value["data"]
         if kind == "LINK" and isinstance(data.get("url"), str) and data["url"]:
             links.append(data["url"])
-        elif kind == "TWEET" and re.fullmatch(r"[0-9]+", str(data.get("tweetId"))):
-            embeds[str(key)] = f"[post: https://x.com/i/status/{data['tweetId']}]"
+            hrefs[str(key)] = data["url"]
+        elif kind == "TWEET":
+            post = re.fullmatch(r"[0-9]+", str(data.get("tweetId")))
+            embeds[str(key)] = f"[post: https://x.com/i/status/{post[0]}]" if post else "[post]"
         elif kind == "MARKDOWN" and isinstance(data.get("markdown"), str):
             embeds[str(key)] = data["markdown"].strip("\n")
+        elif kind == "MEDIA":
+            embeds[str(key)], shown_files[str(key)] = _article_media(data, files)
+        elif kind == "DIVIDER":
+            embeds[str(key)] = "---"
+        elif isinstance(kind, str) and kind not in ("LINK", "TWEMOJI"):  # a TWEMOJI's character is in the text
+            embeds[str(key)] = f"[{kind.lower()}]"
 
-    paragraphs = []
+    cover = _article_file(article.get("cover_media"))
+    parts = [("cover", 0, f"![cover image]({destination(cover)})")] if cover else []
+    images = [cover] if cover else []
+    numbers: dict[int, int] = {}
     for block in blocks:
-        if not isinstance(block, dict):
+        if not isinstance(block, dict) or not isinstance(block.get("type"), str):
             continue
-        kind, text = block.get("type"), block.get("text")
+        kind, text = block["type"], block.get("text")
+        if kind != "atomic" and not isinstance(text, str):
+            continue
+        depth = min(block["depth"], MAX_DEPTH) if type(block.get("depth")) is int and block["depth"] > 0 else 0
+        # A list keeps the counters of the lists it sits in; anything else ends every list.
+        numbers = {d: n for d, n in numbers.items() if d < depth or (d == depth and kind == "ordered-list-item")} \
+            if kind.endswith("list-item") else {}
         if kind == "atomic":
             text = _article_embed(block.get("entityRanges"), embeds)
-        if isinstance(kind, str) and isinstance(text, str) and text.strip():
-            paragraphs.append(ARTICLE_BLOCK_PREFIX.get(kind, "") + text)
-    if not paragraphs:
+            for entry in block.get("entityRanges") if isinstance(block.get("entityRanges"), list) else ():
+                images += shown_files.get(str(entry.get("key")) if isinstance(entry, dict) else None, [])
+        elif kind != "code-block":
+            text = _inline(text, block, hrefs)
+        if kind != "code-block" and not text.strip():
+            if parts and parts[-1][0] == "code-block":  # an empty paragraph still ends a code sample
+                parts.append(("break", 0, ""))
+            continue
+        if kind == "ordered-list-item":
+            numbers[depth] = numbers.get(depth, 0) + 1
+            text = f"{numbers[depth]}. {text}"
+        elif kind != "code-block":
+            text = ARTICLE_BLOCK_PREFIX.get(kind, "") + text
+        if kind.endswith("list-item"):
+            text = "    " * depth + text
+        parts.append((kind, depth, text))
+    if not any(text.strip() for kind, _, text in parts if kind != "cover"):
         return None
-    return {"id": article_id, "title": title, "text": "\n\n".join(paragraphs), "links": list(dict.fromkeys(links))}
+    return {"id": article_id, "title": title, "text": _join_blocks(parts), "links": list(dict.fromkeys(links)),
+            "images": list(dict.fromkeys(images))}
+
+
+MAX_DEPTH = 8  # list nesting kept; deeper items indent no further
+
+
+def _join_blocks(parts: list[tuple[str, int, str]]) -> str:
+    """Blocks separated by a blank line; items of one list, nested items included, by a line break;
+    a run of code blocks inside one fence longer than any backtick run in it."""
+    out, previous, code = [], (None, 0), []
+    for kind, depth, text in [*parts, (None, 0, "")]:
+        if kind == "code-block":
+            code.append(text)
+            previous = (kind, depth)
+            continue
+        if code:
+            if any(line.strip() for line in code):
+                out.append(fence("\n".join(code)))
+            code = []
+        if kind is None:
+            break
+        if kind == "break":
+            previous = (kind, depth)
+            continue
+        in_list = kind.endswith("list-item") and previous[0] and previous[0].endswith("list-item")
+        if in_list and (kind == previous[0] or depth or previous[1]):
+            out[-1] += "\n" + text
+        else:
+            out.append(text)
+        previous = (kind, depth)
+    return "\n\n".join(out)
+
+
+STYLE_MARKS = {"Bold": "**", "Italic": "*", "Strikethrough": "~~"}
+
+
+def _inline(text: str, block: dict, hrefs: dict[str, str]) -> str:
+    """A block's text with its links as `[text](URL)` and its bold, italic and strikethrough ranges marked."""
+    styles: list[set[str]] = [set() for _ in text]
+    targets: list[str | None] = [None] * len(text)
+    for entry in block.get("inlineStyleRanges") if isinstance(block.get("inlineStyleRanges"), list) else ():
+        if isinstance(entry, dict) and isinstance(entry.get("style"), str) and entry["style"] in STYLE_MARKS:
+            for i in _span(entry, len(text)):
+                styles[i].add(STYLE_MARKS[entry["style"]])
+    for entry in block.get("entityRanges") if isinstance(block.get("entityRanges"), list) else ():
+        if isinstance(entry, dict) and (href := hrefs.get(str(entry.get("key")))):
+            for i in _span(entry, len(text)):
+                targets[i] = href
+    starts = [i for i in range(len(text)) if i == 0 or (styles[i], targets[i]) != (styles[i - 1], targets[i - 1])]
+    out = []
+    for start, end in zip(starts, [*starts[1:], len(text)]):
+        segment, style, target = text[start:end], styles[start], targets[start]
+        lead = segment[:len(segment) - len(segment.lstrip())]
+        trail = segment[len(segment.rstrip()):]
+        core = segment.strip()
+        if core:
+            if target and core != target:
+                core = link(core, target)
+            marks = "".join(mark for mark in STYLE_MARKS.values() if mark in style)
+            core = marks + core + marks[::-1]
+        out.append(lead + core + trail if core else segment)
+    return "".join(out)
+
+
+def _span(entry: dict, size: int) -> range:
+    offset, length = entry.get("offset"), entry.get("length")
+    if type(offset) is not int or type(length) is not int or offset < 0 or length < 1:
+        return range(0)
+    return range(min(offset, size), min(offset + length, size))
 
 
 def _article_embed(ranges, embeds: dict[str, str]) -> str:
-    """The embedded post marker or Markdown an atomic block points at, or \"\" (images and others)."""
+    """What an atomic block shows: its embedded post marker, Markdown, image, divider or embed marker."""
     if isinstance(ranges, list):
-        for entry in ranges:
-            if isinstance(entry, dict) and (post := embeds.get(str(entry.get("key")))):
-                return post
+        shown = [embeds[str(entry.get("key"))] for entry in ranges
+                 if isinstance(entry, dict) and embeds.get(str(entry.get("key")))]
+        return "\n\n".join(shown)
     return ""
+
+
+def _article_files(media) -> dict[str, str]:
+    """Each article media ID mapped to its image file, from FxTwitter's `media_entities`."""
+    files = {}
+    for entry in media if isinstance(media, list) else ():
+        media_id = entry.get("media_id") if isinstance(entry, dict) else None
+        if isinstance(media_id, str) and media_id and (url := _article_file(entry)):
+            files[media_id] = url
+    return files
+
+
+def _article_file(entry) -> str | None:
+    info = entry.get("media_info") if isinstance(entry, dict) else None
+    url = info.get("original_img_url") if isinstance(info, dict) else None
+    return url if isinstance(url, str) and url.startswith("https://") else None
+
+
+def _article_media(data: dict, files: dict[str, str]) -> tuple[str, list[str]]:
+    """An article MEDIA embed as one `![caption](URL)` per image (`[image: caption]` when no file is
+    listed for it), and the files shown."""
+    caption = " ".join(data["caption"].split()) if isinstance(data.get("caption"), str) else ""
+    shown, urls = [], []
+    items = data.get("mediaItems")
+    for item in items if isinstance(items, list) and items else [None]:
+        media_id = item.get("mediaId") if isinstance(item, dict) else None
+        url = files.get(media_id) if isinstance(media_id, str) else None
+        if url:
+            urls.append(url)
+            shown.append(f"![{label(caption) or 'image'}]({destination(url)})")
+        else:
+            shown.append(f"[image: {caption}]" if caption else "[image]")
+    return "\n\n".join(shown), urls
 
 
 def fx_media(status: dict) -> list[dict]:
@@ -449,22 +590,38 @@ def fx_media(status: dict) -> list[dict]:
 
 
 def syndication_record(data: dict) -> dict:
-    """Syndication truncates long posts' text; counts other than likes aren't provided."""
+    """Counts other than likes aren't provided. For a long post (one with a `note_tweet`) syndication
+    sends only the first part of the text, so the record says `text_truncated`."""
     quoted = data.get("quoted_tweet") if isinstance(data.get("quoted_tweet"), dict) else None
     created = data.get("created_at")
     return make_record(
         id=data["id_str"],
         author=(data.get("user") or {}).get("screen_name"),
         created_at=created[:19] + "Z" if created else None,
-        text=data.get("text"),
+        text=_syndication_text(data),
         likes=to_int(data.get("favorite_count")),
         lang=data.get("lang"),
         reply_to_id=data.get("in_reply_to_status_id_str"),
         quoted={"id": quoted.get("id_str"), "author": (quoted.get("user") or {}).get("screen_name"),
-                "text": quoted.get("text"), "media": legacy_media(quoted.get("mediaDetails"))} if quoted else None,
+                "text": _syndication_text(quoted), "media": legacy_media(quoted.get("mediaDetails")),
+                "text_truncated": bool(quoted.get("note_tweet"))} if quoted else None,
         media=legacy_media(data.get("mediaDetails")),
+        text_truncated=bool(data.get("note_tweet")),
         source="syndication",
     )
+
+
+def _syndication_text(data: dict) -> str | None:
+    """The post text with its t.co links replaced by the addresses X lists for them, and X's
+    escaped `&`, `<` and `>` restored, as on the x-graphql route."""
+    text = data.get("text")
+    if not isinstance(text, str):
+        return None
+    text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    entities = data.get("entities") if isinstance(data.get("entities"), dict) else {}
+    urls, media = ([e for e in entities.get(key) if isinstance(e, dict) and isinstance(e.get("url"), str)]
+                   if isinstance(entities.get(key), list) else [] for key in ("urls", "media"))
+    return expand_links(text, urls, media, data.get("id_str"))
 
 
 def joined_iso(joined) -> str | None:

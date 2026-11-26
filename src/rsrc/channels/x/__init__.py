@@ -279,6 +279,13 @@ def run_read(args, ctx) -> dict:
                 failures.append(("url_mismatch", f"{arg}: returned post {record['id']} is not the requested post"))
             continue
         items.append(to_item(record))
+        cut = ["text"] if record["text_truncated"] else []
+        if (record["quoted"] or {}).get("text_truncated"):
+            cut.append("quoted post's text")
+        if cut:
+            meta.setdefault("notes", []).append(
+                f"{record['id']}: X's embed endpoint sent only the start of the {' and the '.join(cut)} "
+                "(a long post); FxTwitter was unavailable. Rerun later for the full text.")
     error = None
     if not items and failures and meta.get("truncated") is None:
         error = env.error(*failures[0])

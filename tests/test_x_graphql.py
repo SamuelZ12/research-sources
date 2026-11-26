@@ -82,7 +82,13 @@ def test_top_page_includes_conversation_module_posts_and_skips_prompts():
 def test_long_post_uses_note_tweet_text():
     long = tweet(note_tweet={"note_tweet_results": {"result": {"text": "the full long text"}}})
     records, _ = parse_page(page(long))
-    assert records[0]["text"] == "the full long text"
+    assert records[0]["text"] == "the full long text" and records[0]["text_truncated"] is False
+
+
+def test_long_post_without_its_note_text_is_flagged_as_cut_short():
+    long = tweet(note_tweet={"note_tweet_results": {"result": {}}})
+    records, _ = parse_page(page(long))
+    assert records[0]["text_truncated"] is True
 
 
 def test_visibility_wrapper_is_unwrapped():

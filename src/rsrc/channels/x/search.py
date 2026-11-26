@@ -340,6 +340,7 @@ def to_record(result):
         author=author,
         created_at=_iso(legacy.get("created_at")),
         text=expand_links(text, [*original_links, *links, *note_links], entities.get("media") or [], result["rest_id"]),
+        text_truncated=bool(result.get("note_tweet")) and not note.get("text"),
         likes=to_int(legacy.get("favorite_count")),
         reposts=to_int(legacy.get("retweet_count")),
         replies=to_int(legacy.get("reply_count")),
@@ -349,7 +350,7 @@ def to_record(result):
         reply_to_id=legacy.get("in_reply_to_status_id_str"),
         conversation_id=legacy.get("conversation_id_str"),
         quoted={"id": quoted["id"], "author": quoted["author"], "text": quoted["text"],
-                "media": quoted["media"]} if quoted else None,
+                "media": quoted["media"], "text_truncated": False} if quoted else None,
         media=legacy_media(entities.get("media")),
         source="x-graphql",
     )

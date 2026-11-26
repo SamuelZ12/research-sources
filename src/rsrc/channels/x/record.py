@@ -3,7 +3,7 @@
 import math
 
 FIELDS = ("id", "url", "author", "created_at", "text", "likes", "reposts", "replies", "quotes",
-          "views", "lang", "reply_to_id", "conversation_id", "quoted", "media", "article", "source")
+          "views", "lang", "reply_to_id", "conversation_id", "quoted", "media", "article", "text_truncated", "source")
 MEDIA_TYPES = ("photo", "video", "gif")
 LEGACY_TYPES = {"photo": "photo", "video": "video", "animated_gif": "gif"}
 
