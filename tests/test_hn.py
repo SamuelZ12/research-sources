@@ -405,7 +405,7 @@ def test_read_cuts_the_comments_and_says_so(rsrc, flags, last_id, note):
     assert out["meta"]["notes"] == [note]
 
 
-@pytest.mark.parametrize("comments", ["128", "200"])
+@pytest.mark.parametrize("comments", ["128", "200", "250", "500", "1000"])
 def test_read_with_no_more_comments_than_asked_has_no_note(rsrc, comments):
     code, out = rsrc(["read", "50148855", "--comments", comments], FakeTransport((200, ITEM)))
 
@@ -463,7 +463,7 @@ def test_read_accepts_a_comment_id(rsrc):
     (["read", "https://news.ycombinator.com/item?id=5014\n8855"], "numeric ID"),
     (["read", "1234567890123456"], "numeric ID"),
     (["read", "50148855", "--comments", "-1"], "--comments"),
-    (["read", "50148855", "--comments", "201"], "--comments"),
+    (["read", "50148855", "--comments", "1001"], "--comments must be between 0 and 1000"),
     (["read", "50148855", "--comments", "many"], "--comments"),
 ])
 def test_read_usage_errors_make_no_request(rsrc, argv, words):

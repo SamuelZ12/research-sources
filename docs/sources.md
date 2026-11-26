@@ -8,7 +8,7 @@ This page has the full command syntax, what each source needs, and what each sou
 |---|---|
 | X | `rsrc x connect [--cdp ENDPOINT]`, `rsrc x search QUERY [--since YYYY-MM-DD] [--limit N] [--backend BACKEND]`, `rsrc x read URL_OR_ID [URL_OR_ID …]`, `rsrc x thread URL_OR_ID`, `rsrc x replies URL_OR_ID`, `rsrc x timeline HANDLE_OR_URL [--backend BACKEND] [--max-requests N]` (profile and newest posts) |
 | Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID [--backend ego-browser\|arctic-shift]` |
-| Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID` |
+| Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID [--comments N]` (up to 1000 comments) |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
 | GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues [QUERY] [--repo OWNER/REPO]` |

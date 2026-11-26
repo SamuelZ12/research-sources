@@ -23,7 +23,7 @@ Before your first command on a channel, read that channel's file. The files are 
 | What people on Reddit say about a topic | `rsrc reddit search QUERY [--subreddit NAME] [--time hour\|day\|week\|month\|year\|all] [--sort relevance\|hot\|top\|new\|comments] [--limit 25] [--with-comments [N]]` (default past month, relevance) | `references/reddit.md` |
 | One Reddit thread: the post and its top comments | `rsrc reddit read URL_OR_ID [--sort top\|best\|new\|controversial\|old\|qa] [--comments 50] [--backend ego-browser\|arctic-shift]` | `references/reddit.md` |
 | Hacker News stories on a topic | `rsrc hn search QUERY --since YYYY-MM-DD [--until YYYY-MM-DD] [--sort relevance\|date] [--limit 30]` | `references/hn.md` |
-| One Hacker News thread: the story or comment, then the comments below it | `rsrc hn read URL_OR_ID [--comments 50]` | `references/hn.md` |
+| One Hacker News thread, with up to 1000 comments | `rsrc hn read URL_OR_ID [--comments 50]` | `references/hn.md` |
 | Prediction markets on a topic, with current prices | `rsrc polymarket search QUERY [--limit 10]` | `references/polymarket.md` |
 | YouTube videos on a topic | `rsrc youtube search QUERY [--limit 10]` | `references/youtube.md` |
 | One YouTube video: its details and its transcript | `rsrc youtube read URL_OR_ID [--words 5000]` | `references/youtube.md` |

@@ -14,6 +14,8 @@ An item's `url` is the Hacker News discussion. The linked article is `raw.url` o
 
 `hn read` returns the requested item first, then comments depth-first in posting order, with `raw.depth` and `raw.item.parent_id`.
 
+`--comments` defaults to 50 and accepts up to 1000.
+
 - Posting order is not a ranking, and Hacker News publishes no comment scores. Weigh a comment by what it says, whatever its position.
 - Comments without text (deleted) are left out.
 - `meta.notes` says `N of M comments returned` when `--comments` cut the thread short.

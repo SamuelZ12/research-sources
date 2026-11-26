@@ -20,7 +20,7 @@ SOURCE = "hackernews"
 API = "https://hn.algolia.com/api/v1"
 DISCUSSION = "https://news.ycombinator.com/item?id="
 MAX_LIMIT = 100
-MAX_COMMENTS = 200
+MAX_COMMENTS = 1000
 
 _ID = re.compile(r"[0-9]{1,15}")
 _BLANK = re.compile(r"[\x00-\x20\x7f]")  # urlsplit silently drops tabs and newlines inside a URL
