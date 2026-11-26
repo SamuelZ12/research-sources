@@ -4,10 +4,11 @@ import json
 import re
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from rsrc import envelope as env
 from rsrc import http
+from rsrc.html_markdown import destination
 
 BACKEND = "arctic-shift"
 API = "https://arctic-shift.photon-reddit.com/api"
@@ -116,6 +117,12 @@ def _item(row, post_id, thread_path, unavailable, *, depth=None):
     path = thread_path if is_post else thread_path + "_/" + row["id"] + "/"
     text = _body(row.get("selftext" if is_post else "body"))
     placeholder = _placeholder(row, text)
+    if is_post and not placeholder:
+        hint = _string(row.get("post_hint")) or ("text" if row.get("is_self") is True else None)
+        media = post_media("hosted:video" if row.get("is_video") is True else hint,
+                           _string(row.get("url")), _gallery(row) if row.get("is_gallery") is True else None,
+                           REDDIT + thread_path)
+        text = "\n\n".join(part for part in (media, text) if part) or None
     title = _string(row.get("title")) if is_post and not placeholder else None
     if not (title or text or placeholder):
         raise http.HttpError(f"Arctic Shift returned {kind} {id_} with no readable content")
@@ -164,6 +171,66 @@ def _item(row, post_id, thread_path, unavailable, *, depth=None):
         raw["removal_notice"] = f"Arctic Shift marked this post as {placeholder}."
     return env.item(id=id_, url=REDDIT + path, author=author, published_at=published_at,
                     title=title, text=raw["text"], source=CHANNEL, engagement=engagement, raw=raw), placeholder
+
+
+def post_media(post_type, href, gallery, permalink) -> str:
+    """What a post shows above its body, as Markdown, for both Reddit routes: each gallery slide
+    (`[image]` for one without a file, then its caption and link), the image of an image post, or
+    the address of a video or link post. "" for a text post, or one whose address is its own thread.
+
+    `gallery` holds a dict per slide: `url` (None when unknown), and optionally `caption`, `link`
+    and `video`."""
+    if gallery:
+        return "\n\n".join(_slide(slide) for slide in gallery if isinstance(slide, dict))
+    if not href or post_type in ("text", "self") or (permalink and _same_page(href, permalink)):
+        return ""
+    if post_type in ("image", "gif"):
+        return f"![image]({destination(href)})"
+    if post_type in ("video", "hosted:video", "rich:video"):
+        return f"[video]({destination(href)})"
+    return f"[link]({destination(href)})"
+
+
+def _slide(slide: dict) -> str:
+    url, caption, outbound = slide.get("url"), slide.get("caption"), slide.get("link")
+    if not url:
+        shown = "[image]"
+    elif slide.get("video") or re.search(r"\.mp4(?:[?#]|$)", url):
+        shown = f"[video]({destination(url)})"
+    else:
+        shown = f"![image]({destination(url)})"
+    return "\n".join(part for part in (shown, caption, outbound and f"[link]({destination(outbound)})") if part)
+
+
+def _same_page(href: str, permalink: str) -> bool:
+    def path(url):
+        try:
+            parts = urlsplit(url)
+        except ValueError:
+            return url
+        return parts.netloc.lower().removeprefix("www."), parts.path.rstrip("/").lower()
+    return path(href) == path(permalink)
+
+
+def _gallery(row) -> list[dict]:
+    """A gallery post's slides in order, from the archived `gallery_data` and `media_metadata`:
+    each file (None when the archive has none), caption and outbound link."""
+    items = (row.get("gallery_data") or {}).get("items") if isinstance(row.get("gallery_data"), dict) else None
+    metadata = row.get("media_metadata") if isinstance(row.get("media_metadata"), dict) else {}
+    slides = []
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        media_id = item.get("media_id")
+        entry = metadata.get(media_id) if isinstance(media_id, str) else None
+        source = entry.get("s") if isinstance(entry, dict) and isinstance(entry.get("s"), dict) else {}
+        url = source.get("u") or source.get("gif") or source.get("mp4")
+        slides.append({"url": url.replace("&amp;", "&") if isinstance(url, str) and url.startswith("https://") else None,
+                       "video": url is source.get("mp4") and not (source.get("u") or source.get("gif")),
+                       "caption": " ".join(item["caption"].split()) if isinstance(item.get("caption"), str) else None,
+                       "link": item["outbound_url"] if isinstance(item.get("outbound_url"), str)
+                       and item["outbound_url"].startswith(("https://", "http://")) else None})
+    return slides
 
 
 def _comments(rows, post_id, path, unavailable):

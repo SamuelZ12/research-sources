@@ -27,13 +27,16 @@ function readSearch() {
 }
 
 function threadReady(comment) {
+  // Runs in the page, so it carries its own helpers. A comment body has rendered once it shows
+  // text or media (an image-only comment has no text).
+  const hasBody = (body) => !!body && (!!body.innerText.trim() || !!body.querySelector?.("img[src], video[src], video source[src], iframe[src]"));
   const post = document.querySelector("shreddit-post");
   if (post && post.getClientRects().length) {
     if (!comment) return true;
     const node = document.querySelector('shreddit-comment[thingid="' + comment + '"]');
     const body = node && [...node.querySelectorAll('[slot="comment"]')]
       .find(slot => slot.closest("shreddit-comment") === node);
-    return !!body?.innerText.trim();
+    return hasBody(body);
   }
   const status = performance.getEntriesByType("navigation")[0]?.responseStatus;
   return (status === 404 || (comment && status === 200)) &&
@@ -61,6 +64,7 @@ function pageState() {
 }
 
 function readThread(attrs) {
+  const hasBody = (body) => !!body && (!!body.innerText.trim() || !!body.querySelector?.("img[src], video[src], video source[src], iframe[src]"));
   const communityGate = document.querySelector('guard-community-modal [slot="title"]');
   if (communityGate) return { community_gate: communityGate.textContent.trim() };
   if (/^\/login\/?$/.test(location.pathname) && document.querySelector('form[action$="/account/login"]')) {
@@ -98,15 +102,30 @@ function readThread(attrs) {
       const hidden = node.hasAttribute("collapsed") && node.getAttribute("collapsed") !== "false";
       const tombstone = /^(?:\[(?:removed|deleted)\]|comment (?:removed by moderator|deleted by user))$/i;
       if (hidden || tombstone.test(text || "")) continue;
-      if (!text || !node.getAttribute("thingid")) { pendingRoot = true; continue; }
+      if (!hasBody(body) || !node.getAttribute("thingid")) { pendingRoot = true; continue; }
     }
-    const comment = { attrs: pick(node, attrs.comment), text };
+    // `html` keeps what innerText drops (link and image addresses, lists, code); Python renders it.
+    const comment = { attrs: pick(node, attrs.comment), text, html: body ? body.innerHTML : null };
     if (pinned) comment.pinned = true;
     comments.push(comment);
   }
   if (!post) return { post: null, comments };
   const body = own(post, "text-body", "shreddit-post");
-  const record = { attrs: pick(post, attrs.post), text: body ? body.innerText.trim() : null };
+  // A gallery's slides, in order: the full-size file when the slide has one, else its preview
+  // (null for a slide not rendered yet, so the count still shows), and the slide's caption, which
+  // Reddit puts in the image's alt text as "r/<sub> - <caption>" (the post title when it has none).
+  const prefix = (post.getAttribute("subreddit-prefixed-name") || "") + " - ";
+  const gallery = [...post.querySelectorAll('gallery-carousel li[slot^="page-"]')]
+    .filter((slide) => slide.closest("shreddit-post") === post)
+    .map((slide) => {
+      const image = slide.querySelector('img[src^="https://i.redd.it/"]') || slide.querySelector("img.media-lightbox-img");
+      const alt = image?.getAttribute("alt") || "";
+      const caption = alt.startsWith(prefix) ? alt.slice(prefix.length) : null;
+      return { url: image?.getAttribute("src") || null,
+               caption: caption && caption !== post.getAttribute("post-title") ? caption : null };
+    });
+  const record = { attrs: pick(post, attrs.post), text: body ? body.innerText.trim() : null,
+                   html: body ? body.innerHTML : null, gallery };
   const removal = [...post.querySelectorAll('[slot="post-message-banner"]')].find((banner) =>
     banner.closest("shreddit-post") === post && /\bremoved\b/i.test(banner.innerText));
   if (removal) record.removal_notice = removal.innerText.trim();

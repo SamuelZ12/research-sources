@@ -1,0 +1,271 @@
+{
+ "loads": 1,
+ "url": "https://www.reddit.com/r/LocalLLaMA/comments/1y6b8yu/release_inkling_2_mini_gsqrco_quants/?sort=top",
+ "title": "[Release] Inkling 2 Mini GSQ-RCO quants : r/LocalLLaMA",
+ "page_text": "Skip to main content\n[Release] Inkling 2 Mini GSQ-RCO quants : r/LocalLLaMA\nAdvertise on Reddit\nOpen chat\nCreate\nCreate post\nOpen inbox\nExpand user menu\n1\nRepost\nGo to LocalLLaMA\nr/LocalLLaMA\n•\n3h ago\nu/Loginhe\n[Release] Inkling 2 Mini GSQ-RCO quants\nResources\n\nWe have released Inkling-2-Mini quantized with GSQ and RCO, at 2.75 to 3.50 bits per weight.\n\nInkling-2-Mini is a looped sparse mixture-of-experts model: 24 layers, of which the middle 12 run three times with the same weights, 128 routed experts per layer, of which 8 are active per token, 26.4B parameters and a 1M-token context window. It is released with its routed experts in NVFP4 and MXFP8.\n\nWhat's inside\n\nFour quantized GGUFs: IQ2_S (2.75 bpw, 8.98 GB), Q2_K_XL (3.00 bpw, 9.79 GB), IQ3_XXS (3.25 bpw, 10.61 GB) and IQ3_S (3.50 bpw, 11.43 GB). The bit-width is the average over the whole file.\n\nThe token embedding is BF16 in every build (0.93 GB of each file). It is a lookup table that llama.cpp always keeps in system memory, so it takes no VRAM: 8.05 to 10.50 GB of each file go to the GPU. Quantizing it would shrink the download by about 0.7 GB and free no VRAM.\n\nOne shared vision projector (0.64 GB) for image input. It is identical for every build and needs to be downloaded only once.\n\nGSQ (Gumbel-Softmax Quantization): post-training scalar quantization that jointly learns grid assignments and group scales, closing most of the gap between scalar and vector quantization at low bit-widths while remaining deployable in standard GGUF types.\n\nRCO (Riemannian Constrained Optimization): enforces exact budgets by gradient descent on the task loss, without per-constraint tuning. Here it assigns a quantization type to each of 169 tensors under the target file size, with separate ladders for the attention tensors and the output head (IQ4_XS to Q8_0) and the routed experts (IQ1_S to IQ3_S for the gate/up matrices, Q2_0 or IQ4_NL for the down matrices).\n\nAn embedded chat template with the base model's reasoning effort ",
+ "search_page": false,
+ "posts": [],
+ "post": {
+  "attrs": {
+   "id": "t3_1y6b8yu",
+   "permalink": "/r/LocalLLaMA/comments/1y6b8yu/release_inkling_2_mini_gsqrco_quants/",
+   "post-title": "[Release] Inkling 2 Mini GSQ-RCO quants",
+   "author": "Loginhe",
+   "created-timestamp": "2026-11-26T20:41:41.961000+0000",
+   "score": "68",
+   "comment-count": "19",
+   "subreddit-prefixed-name": "r/LocalLLaMA",
+   "post-type": "gallery",
+   "domain": "reddit.com",
+   "content-href": "https://www.reddit.com/gallery/1y6b8yu",
+   "upvote-ratio": "0.9358974358974359",
+   "item-state": "UNMODERATED",
+   "post-language": "en"
+  },
+  "text": "We have released Inkling-2-Mini quantized with GSQ and RCO, at 2.75 to 3.50 bits per weight.\n\nInkling-2-Mini is a looped sparse mixture-of-experts model: 24 layers, of which the middle 12 run three times with the same weights, 128 routed experts per layer, of which 8 are active per token, 26.4B parameters and a 1M-token context window. It is released with its routed experts in NVFP4 and MXFP8.\n\nWhat's inside\n\nFour quantized GGUFs: IQ2_S (2.75 bpw, 8.98 GB), Q2_K_XL (3.00 bpw, 9.79 GB), IQ3_XXS (3.25 bpw, 10.61 GB) and IQ3_S (3.50 bpw, 11.43 GB). The bit-width is the average over the whole file.\n\nThe token embedding is BF16 in every build (0.93 GB of each file). It is a lookup table that llama.cpp always keeps in system memory, so it takes no VRAM: 8.05 to 10.50 GB of each file go to the GPU. Quantizing it would shrink the download by about 0.7 GB and free no VRAM.\n\nOne shared vision projector (0.64 GB) for image input. It is identical for every build and needs to be downloaded only once.\n\nGSQ (Gumbel-Softmax Quantization): post-training scalar quantization that jointly learns grid assignments and group scales, closing most of the gap between scalar and vector quantization at low bit-widths while remaining deployable in standard GGUF types.\n\nRCO (Riemannian Constrained Optimization): enforces exact budgets by gradient descent on the task loss, without per-constraint tuning. Here it assigns a quantization type to each of 169 tensors under the target file size, with separate ladders for the attention tensors and the output head (IQ4_XS to Q8_0) and the routed experts (IQ1_S to IQ3_S for the gate/up matrices, Q2_0 or IQ4_NL for the down matrices).\n\nAn embedded chat template with the base model's reasoning effort (none, minimal, low, medium, high, xhigh or max).\n\nResults\n\nIQ3_S keeps 99.2% of the base model's task average and stays within 1.0 point of it on every benchmark. All numbers were measured at reasoning effort xhigh; AIME25 is averaged over 10 runs, GPQA-Diamond and LiveCodeBench v6 over 3 runs each.\n\nModel\tbpw\tSize\tAIME25\tGPQA-Diamond\tLiveCodeBench v6\tTask average\tShare of base\n\nBase\tn/a\tn/a\t99.33\t86.87\t79.62\t88.61\t100.0%\nIQ2_S\t2.75\t8.98 GB\t92.33\t84.34\t73.90\t83.52\t94.3%\nQ2_K_XL\t3.00\t9.79 GB\t97.00\t86.53\t76.95\t86.83\t98.0%\nIQ3_XXS\t3.25\t10.61 GB\t96.00\t85.86\t77.90\t86.59\t97.7%\nIQ3_S\t3.50\t11.43 GB\t98.33\t86.20\t79.05\t87.86\t99.2%\n\nThe setup and the commands to reproduce these numbers are in https://github.com/IST-DASLab/GSQ-RCO-eval.\n\nRunning it\n\nThe files are standard GGUF and run in llama.cpp b12611 or newer, the first build with the fix for the layer loop.\n\nhf download ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF --include \"*IQ3_S.gguf\" --local-dir .\nllama-server -m Inkling-2-Mini-GSQ-RCO-IQ3_S.gguf -ngl 99 --reasoning-effort xhigh\n\nFor image input, download mmproj-Inkling-2-Mini-BF16.gguf from the same repository and pass it with --mmproj.\n\nLinks\n\nQuantized models: https://huggingface.co/ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF\n\nEvaluation setup: https://github.com/IST-DASLab/GSQ-RCO-eval\n\nGSQ: paper https://arxiv.org/abs/2604.18556 | code https://github.com/IST-DASLab/GSQ\n\nRCO: paper https://arxiv.org/abs/2605.00649 | code https://github.com/IST-DASLab/RCO\n\nThe repository ships the complete per-tensor RCO allocation for every build (704 tensors each).\n\nFeedback is welcome, particularly on capabilities that the three benchmarks do not cover. Requests for models to quantize are also welcome.\n\nFor more updates follow us on X too: https://x.com/mhelcig/status/2126048821583188286\n\nFrom the ISTA Deep Algorithms and Systems Lab.",
+  "html": "\n       <div class=\"text-neutral-content\" slot=\"text-body\">\n    <div class=\"mb-xs px-md xs:px-0 overflow-hidden\" data-post-click-location=\"text-body\">\n      <div id=\"t3_1y6b8yu-post-rtjson-content\" class=\"md text-14-scalable pb-2xs [--emote-size:20px]\" about=\"t3_1y6b8yu\" property=\"schema:articleBody\" dir=\"auto\">\n      <p>\n      We have released Inkling-2-Mini quantized with GSQ and RCO, at 2.75 to 3.50 bits per weight.\n    </p><p>\n      Inkling-2-Mini is a looped sparse mixture-of-experts model: 24 layers, of which the middle 12 run three times with the same weights, 128 routed experts per layer, of which 8 are active per token, 26.4B parameters and a 1M-token context window. It is released with its routed experts in NVFP4 and MXFP8.\n    </p><p>\n      <strong>What's inside</strong>\n    </p><ul>\n        <li>\n      <p>\n      Four quantized GGUFs: IQ2_S (2.75 bpw, 8.98 GB), Q2_K_XL (3.00 bpw, 9.79 GB), IQ3_XXS (3.25 bpw, 10.61 GB) and IQ3_S (3.50 bpw, 11.43 GB). The bit-width is the average over the whole file.\n    </p>\n    </li><li>\n      <p>\n      The token embedding is BF16 in every build (0.93 GB of each file). It is a lookup table that llama.cpp always keeps in system memory, so it takes no VRAM: 8.05 to 10.50 GB of each file go to the GPU. Quantizing it would shrink the download by about 0.7 GB and free no VRAM.\n    </p>\n    </li><li>\n      <p>\n      One shared vision projector (0.64 GB) for image input. It is identical for every build and needs to be downloaded only once.\n    </p>\n    </li><li>\n      <p>\n      GSQ (Gumbel-Softmax Quantization): post-training scalar quantization that jointly learns grid assignments and group scales, closing most of the gap between scalar and vector quantization at low bit-widths while remaining deployable in standard GGUF types.\n    </p>\n    </li><li>\n      <p>\n      RCO (Riemannian Constrained Optimization): enforces exact budgets by gradient descent on the task loss, without per-constraint tuning. Here it assigns a quantization type to each of 169 tensors under the target file size, with separate ladders for the attention tensors and the output head (IQ4_XS to Q8_0) and the routed experts (IQ1_S to IQ3_S for the gate/up matrices, Q2_0 or IQ4_NL for the down matrices).\n    </p>\n    </li><li>\n      <p>\n      An embedded chat template with the base model's reasoning effort (none, minimal, low, medium, high, xhigh or max).\n    </p>\n    </li>\n      </ul><p>\n      <strong>Results</strong>\n    </p><p>\n      IQ3_S keeps 99.2% of the base model's task average and stays within 1.0 point of it on every benchmark. All numbers were measured at reasoning effort xhigh; AIME25 is averaged over 10 runs, GPQA-Diamond and LiveCodeBench v6 over 3 runs each.\n    </p><table class=\"overflow-x-auto\">\n      <thead>\n        <tr>\n          <th class=\"align-left\">\n              Model\n            </th><th class=\"align-left\">\n              bpw\n            </th><th class=\"align-left\">\n              Size\n            </th><th class=\"align-left\">\n              AIME25\n            </th><th class=\"align-left\">\n              GPQA-Diamond\n            </th><th class=\"align-left\">\n              LiveCodeBench v6\n            </th><th class=\"align-left\">\n              Task average\n            </th><th class=\"align-left\">\n              Share of base\n            </th>\n        </tr>\n        <tr></tr>\n      </thead>\n\n      <tbody>\n        <tr>\n            <td class=\"align-left\">\n                Base\n              </td><td class=\"align-left\">\n                n/a\n              </td><td class=\"align-left\">\n                n/a\n              </td><td class=\"align-left\">\n                99.33\n              </td><td class=\"align-left\">\n                86.87\n              </td><td class=\"align-left\">\n                79.62\n              </td><td class=\"align-left\">\n                88.61\n              </td><td class=\"align-left\">\n                100.0%\n              </td>\n          </tr><tr>\n            <td class=\"align-left\">\n                IQ2_S\n              </td><td class=\"align-left\">\n                2.75\n              </td><td class=\"align-left\">\n                8.98 GB\n              </td><td class=\"align-left\">\n                92.33\n              </td><td class=\"align-left\">\n                84.34\n              </td><td class=\"align-left\">\n                73.90\n              </td><td class=\"align-left\">\n                83.52\n              </td><td class=\"align-left\">\n                94.3%\n              </td>\n          </tr><tr>\n            <td class=\"align-left\">\n                Q2_K_XL\n              </td><td class=\"align-left\">\n                3.00\n              </td><td class=\"align-left\">\n                9.79 GB\n              </td><td class=\"align-left\">\n                97.00\n              </td><td class=\"align-left\">\n                86.53\n              </td><td class=\"align-left\">\n                76.95\n              </td><td class=\"align-left\">\n                86.83\n              </td><td class=\"align-left\">\n                98.0%\n              </td>\n          </tr><tr>\n            <td class=\"align-left\">\n                IQ3_XXS\n              </td><td class=\"align-left\">\n                3.25\n              </td><td class=\"align-left\">\n                10.61 GB\n              </td><td class=\"align-left\">\n                96.00\n              </td><td class=\"align-left\">\n                85.86\n              </td><td class=\"align-left\">\n                77.90\n              </td><td class=\"align-left\">\n                86.59\n              </td><td class=\"align-left\">\n                97.7%\n              </td>\n          </tr><tr>\n            <td class=\"align-left\">\n                IQ3_S\n              </td><td class=\"align-left\">\n                3.50\n              </td><td class=\"align-left\">\n                11.43 GB\n              </td><td class=\"align-left\">\n                98.33\n              </td><td class=\"align-left\">\n                86.20\n              </td><td class=\"align-left\">\n                79.05\n              </td><td class=\"align-left\">\n                87.86\n              </td><td class=\"align-left\">\n                99.2%\n              </td>\n          </tr>\n      </tbody>\n    </table><p>\n      The setup and the commands to reproduce these numbers are in <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://github.com/IST-DASLab/GSQ-RCO-eval\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://github.com/IST-DASLab/GSQ-RCO-eval</a>.\n    </p><p>\n      <strong>Running it</strong>\n    </p><p>\n      The files are standard GGUF and run in llama.cpp b12611 or newer, the first build with the fix for the layer loop.\n    </p><pre>hf download ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF --include \"*IQ3_S.gguf\" --local-dir .\nllama-server -m Inkling-2-Mini-GSQ-RCO-IQ3_S.gguf -ngl 99 --reasoning-effort xhigh</pre><p>\n      For image input, download <code>mmproj-Inkling-2-Mini-BF16.gguf</code> from the same repository and pass it with <code>--mmproj</code>.\n    </p><p>\n      <strong>Links</strong>\n    </p><ul>\n        <li>\n      <p>\n      Quantized models: <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://huggingface.co/ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://huggingface.co/ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF</a>\n    </p>\n    </li><li>\n      <p>\n      Evaluation setup: <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://github.com/IST-DASLab/GSQ-RCO-eval\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://github.com/IST-DASLab/GSQ-RCO-eval</a>\n    </p>\n    </li><li>\n      <p>\n      GSQ: paper <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://arxiv.org/abs/2604.18556\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://arxiv.org/abs/2604.18556</a> | code <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://github.com/IST-DASLab/GSQ\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://github.com/IST-DASLab/GSQ</a>\n    </p>\n    </li><li>\n      <p>\n      RCO: paper <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://arxiv.org/abs/2605.00649\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://arxiv.org/abs/2605.00649</a> | code <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://github.com/IST-DASLab/RCO\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://github.com/IST-DASLab/RCO</a>\n    </p>\n    </li>\n      </ul><p>\n      The repository ships the complete per-tensor RCO allocation for every build (704 tensors each).\n    </p><p>\n      Feedback is welcome, particularly on capabilities that the three benchmarks do not cover. Requests for models to quantize are also welcome.\n    </p><p>\n      For more updates follow us on X too: <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://x.com/mhelcig/status/2126048821583188286\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://x.com/mhelcig/status/2126048821583188286</a>\n    </p><p>\n      From the ISTA Deep Algorithms and Systems Lab.\n    </p>\n    </div>\n    </div>\n  </div> \n    ",
+  "gallery": [
+   {
+    "url": "https://i.redd.it/vw5opchaq04i1.png",
+    "caption": null
+   },
+   {
+    "url": "https://i.redd.it/p8tjh93bq04i1.png",
+    "caption": null
+   }
+  ]
+ },
+ "comments": [
+  {
+   "attrs": {
+    "thingid": "t1_19t8ifk8pyehu",
+    "postid": "t3_1y6b8yu",
+    "author": "Relative-Ingenuity15",
+    "created": "2026-11-26T21:11:38.854000+0000",
+    "score": "9",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8ifk8pyehu/"
+   },
+   "text": "You also need to add the DSpark to your quants to make this model faster, I tried iq3_s and it is amazing running at 50-60 TPS decode on one ancient Nvidia p100",
+   "html": "\n        <div id=\"t1_19t8ifk8pyehu-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      You also need to add the DSpark to your quants to make this model faster, I tried iq3_s and it is amazing running at 50-60 TPS decode on one ancient Nvidia p100\n    </p> <figure class=\"rte-media\">\n      <a href=\"https://preview.redd.it/release-inkling-2-mini-gsq-rco-quants-v0-tv9pitxsv04i1.jpeg?width=2752&amp;format=pjpg&amp;auto=webp&amp;s=a23e4536ec6b1a8998bfa15fc885d06a5dcc9c85\" rel=\"noopener ugc\" target=\"_blank\" class=\"w-fit\">\n      <img src=\"https://preview.redd.it/release-inkling-2-mini-gsq-rco-quants-v0-tv9pitxsv04i1.jpeg?width=2752&amp;format=pjpg&amp;auto=webp&amp;s=a23e4536ec6b1a8998bfa15fc885d06a5dcc9c85\" alt=\"Comment Image\" class=\"mb-0 max-w-[240px] min-w-[20px] rounded-1 non-lightboxed-content\" width=\"240\" height=\"auto\" srcset=\"https://preview.redd.it/release-inkling-2-mini-gsq-rco-quants-v0-tv9pitxsv04i1.jpeg?width=320&amp;crop=smart&amp;auto=webp&amp;s=59a9e58e3c51aa5c835c8a92873ff3716bc0707e 1x, https://preview.redd.it/release-inkling-2-mini-gsq-rco-quants-v0-tv9pitxsv04i1.jpeg?width=640&amp;crop=smart&amp;auto=webp&amp;s=9118fa4ec820785e7a264339d9665adfa525112c 2x\" sizes=\"(min-width: 1415px) 750px, (min-width: 768px) 50vw, 100vw\" style=\"object-fit: cover;aspect-ratio:240/133.95348837209303\" loading=\"lazy\">\n    </a>\n      \n    </figure>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8lw5f0g1d1",
+    "parentid": "t1_19t8ifk8pyehu",
+    "postid": "t3_1y6b8yu",
+    "author": "Loginhe",
+    "created": "2026-11-26T22:29:14.334000+0000",
+    "score": "4",
+    "depth": "1",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8lw5f0g1d1/"
+   },
+   "text": "done",
+   "html": "\n        <div id=\"t1_19t8lw5f0g1d1-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      done\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8hmom72l7m",
+    "postid": "t3_1y6b8yu",
+    "author": "semangeIof",
+    "created": "2026-11-26T20:53:39.754000+0000",
+    "score": "5",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8hmom72l7m/"
+   },
+   "text": "can I use this model on sycl without having to do attention in system RAM yet?",
+   "html": "\n        <div id=\"t1_19t8hmom72l7m-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      can I use this model on sycl without having to do attention in system RAM yet?\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8hq331cs83",
+    "postid": "t3_1y6b8yu",
+    "author": "Normal_Charge_2821",
+    "created": "2026-11-26T20:55:46.872000+0000",
+    "score": "5",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8hq331cs83/"
+   },
+   "text": "there was a time 2bit quants tend to hallucinate too much it is unusable. what is the case nowadays?",
+   "html": "\n        <div id=\"t1_19t8hq331cs83-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      there was a time 2bit quants tend to hallucinate too much it is unusable. what is the case nowadays?\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8i5b6oiwv7",
+    "parentid": "t1_19t8hq331cs83",
+    "postid": "t3_1y6b8yu",
+    "author": "OnlyKindaThrowAway",
+    "created": "2026-11-26T21:05:15.785000+0000",
+    "score": "6",
+    "depth": "1",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8i5b6oiwv7/"
+   },
+   "text": "depends, are we defining 2 bit as \"q2\" or \"literally 2 bits per weight\"?",
+   "html": "\n        <div id=\"t1_19t8i5b6oiwv7-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      depends, are we defining 2 bit as \"q2\" or \"literally 2 bits per weight\"?\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8i9tew4gyp",
+    "parentid": "t1_19t8i5b6oiwv7",
+    "postid": "t3_1y6b8yu",
+    "author": "Normal_Charge_2821",
+    "created": "2026-11-26T21:08:04.173000+0000",
+    "score": "2",
+    "depth": "2",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8i9tew4gyp/"
+   },
+   "text": "q2",
+   "html": "\n        <div id=\"t1_19t8i9tew4gyp-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      q2\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8ijblimnkw",
+    "parentid": "t1_19t8i9tew4gyp",
+    "postid": "t3_1y6b8yu",
+    "author": "OnlyKindaThrowAway",
+    "created": "2026-11-26T21:13:59.349000+0000",
+    "score": "4",
+    "depth": "3",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8ijblimnkw/"
+   },
+   "text": "my understanding of the current state is \"generally usable, but not recommended\"",
+   "html": "\n        <div id=\"t1_19t8ijblimnkw-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      my understanding of the current state is \"generally usable, but not recommended\"\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8iomt9t42r",
+    "parentid": "t1_19t8ijblimnkw",
+    "postid": "t3_1y6b8yu",
+    "author": "Normal_Charge_2821",
+    "created": "2026-11-26T21:17:17.826000+0000",
+    "score": "1",
+    "depth": "4",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8iomt9t42r/"
+   },
+   "text": "thanks",
+   "html": "\n        <div id=\"t1_19t8iomt9t42r-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      thanks\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8iempfs44l",
+    "postid": "t3_1y6b8yu",
+    "author": "Bulky-Priority6824",
+    "created": "2026-11-26T21:11:04.045000+0000",
+    "score": "4",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8iempfs44l/"
+   },
+   "text": "This was already posted earlier today.",
+   "html": "\n        <div id=\"t1_19t8iempfs44l-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      This was already posted earlier today.&nbsp;\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8iq8kv9vj9",
+    "parentid": "t1_19t8iempfs44l",
+    "postid": "t3_1y6b8yu",
+    "author": "Big_Importance_4265",
+    "created": "2026-11-26T21:18:17.786000+0000",
+    "score": "4",
+    "depth": "1",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8iq8kv9vj9/"
+   },
+   "text": "I believe OP is from the ISTA team",
+   "html": "\n        <div id=\"t1_19t8iq8kv9vj9-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      I believe OP is from the ISTA team\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8it156uz1f",
+    "parentid": "t1_19t8iq8kv9vj9",
+    "postid": "t3_1y6b8yu",
+    "author": "Bulky-Priority6824",
+    "created": "2026-11-26T21:20:02.169000+0000",
+    "score": "2",
+    "depth": "2",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8it156uz1f/"
+   },
+   "text": "Aye okay",
+   "html": "\n        <div id=\"t1_19t8it156uz1f-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      Aye okay&nbsp;\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8mfb2bq9r9",
+    "postid": "t3_1y6b8yu",
+    "author": "crusaderky",
+    "created": "2026-11-26T22:41:10.169000+0000",
+    "score": "2",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8mfb2bq9r9/"
+   },
+   "text": "A few questions:\n\nhow do they compare to Unsloth?\n\nhow do they compare to .strata quants?\n\nwhat did KLD do to hurt you?",
+   "html": "\n        <div id=\"t1_19t8mfb2bq9r9-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      A few questions:\n    </p><ul>\n        <li>\n      <p>\n      how do they compare to Unsloth?\n    </p>\n    </li><li>\n      <p>\n      how do they compare to .strata quants?\n    </p>\n    </li><li>\n      <p>\n      what did KLD do to hurt you?\n    </p>\n    </li>\n      </ul>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8o9oxx6let",
+    "parentid": "t1_19t8mfb2bq9r9",
+    "postid": "t3_1y6b8yu",
+    "author": "Positive-Resource922",
+    "created": "2026-11-26T23:22:30.792000+0000",
+    "score": "1",
+    "depth": "1",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8o9oxx6let/"
+   },
+   "text": "We’ll leave the comparison to the community. We also wrote an article about KLD on X. Feel free to check it out: https://x.com/mhelcig/status/2115515450356539696",
+   "html": "\n        <div id=\"t1_19t8o9oxx6let-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      We’ll leave the comparison to the community. We also wrote an article about KLD on X. Feel free to check it out: <a rpl=\"\" class=\"relative pointer-events-auto a\n  \n  \n  \n  \n  underline\n  \n  cursor-pointer\" href=\"https://x.com/mhelcig/status/2115515450356539696\" rel=\"noopener nofollow ugc\" target=\"_blank\">https://x.com/mhelcig/status/2115515450356539696</a>\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8iuztpodeo",
+    "postid": "t3_1y6b8yu",
+    "author": "zxspectrun",
+    "created": "2026-11-26T21:21:15.534000+0000",
+    "score": "1",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8iuztpodeo/"
+   },
+   "text": "Thank you sr! you are one of the best ✌🏻",
+   "html": "\n        <div id=\"t1_19t8iuztpodeo-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      Thank you sr! you are one of the best ✌🏻\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8jcycok9up",
+    "postid": "t3_1y6b8yu",
+    "author": "jacek2023",
+    "created": "2026-11-26T21:32:26.609000+0000",
+    "score": "1",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8jcycok9up/"
+   },
+   "text": "I like the direction",
+   "html": "\n        <div id=\"t1_19t8jcycok9up-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      I like the direction\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8lnhmfgusk",
+    "postid": "t3_1y6b8yu",
+    "author": "jackyintokyo",
+    "created": "2026-11-26T22:23:50.701000+0000",
+    "score": "0",
+    "depth": "0",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8lnhmfgusk/"
+   },
+   "text": "The jump that stands out is IQ2_S to Q2_K_XL: 94.3% to 98.0% of base for only 0.8 GB more. That is the tradeoff that actually matters in practice - going below 3 bits saves a little memory and a little weight-streaming time per token, but you pay for it in quality, and the middle options are usually the sweet spot. Keeping the embedding in BF16 is also the right call; embeddings are the first thing that falls apart when you quantize aggressively.",
+   "html": "\n        <div id=\"t1_19t8lnhmfgusk-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      The jump that stands out is IQ2_S to Q2_K_XL: 94.3% to 98.0% of base for only 0.8 GB more. That is the tradeoff that actually matters in practice - going below 3 bits saves a little memory and a little weight-streaming time per token, but you pay for it in quality, and the middle options are usually the sweet spot. Keeping the embedding in BF16 is also the right call; embeddings are the first thing that falls apart when you quantize aggressively.\n    </p>\n    </div>\n      "
+  },
+  {
+   "attrs": {
+    "thingid": "t1_19t8oh7eqmxuq",
+    "parentid": "t1_19t8lnhmfgusk",
+    "postid": "t3_1y6b8yu",
+    "author": "StupidScaredSquirrel",
+    "created": "2026-11-26T23:27:11.529000+0000",
+    "score": "1",
+    "depth": "1",
+    "permalink": "/r/LocalLLaMA/comments/1y6b8yu/comment/19t8oh7eqmxuq/"
+   },
+   "text": "Shut up clanker",
+   "html": "\n        <div id=\"t1_19t8oh7eqmxuq-post-rtjson-content\" class=\"py-0 xs:mx-xs mx-2xs max-w-full scalable-text [--emote-size:20px]\" dir=\"auto\">\n      <p>\n      Shut up clanker\n    </p>\n    </div>\n      "
+  }
+ ],
+ "status": 200
+}

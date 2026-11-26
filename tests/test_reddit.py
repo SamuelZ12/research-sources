@@ -19,6 +19,9 @@ SEARCH = json.loads((FIXTURES / "reddit_search.json").read_text())
 THREAD = json.loads((FIXTURES / "reddit_thread.json").read_text())
 READ_STATES = json.loads((FIXTURES / "reddit_read_states.json").read_text())
 COMMENT_READ = json.loads((FIXTURES / "reddit_comment_read.json").read_text())
+# A live Ego page for a gallery post with a list, a table and a comment image (Nov 26 2026),
+# as the page script printed it: each body's HTML and the gallery's images.
+THREAD_HTML = json.loads((FIXTURES / "reddit_thread_html.json").read_text())
 BLOCK_TEXT = ("You've been blocked by network security. If you think you've been blocked by mistake, "
               "file a ticket below and we'll look into it. File a ticket")
 
@@ -685,3 +688,37 @@ def test_pin_omission_and_shortfall_notes_belong_to_the_thread(rsrc, remaining):
     if remaining < 3:
         notes.append(f"{post_id}: {remaining} of 3 readable top-level comments (all comments accounted for)")
     assert out["meta"]["notes"] == notes
+
+
+def test_read_renders_bodies_as_markdown_and_keeps_gallery_images_links_and_comment_images(rsrc):
+    code, out = rsrc(["read", "https://www.reddit.com/r/LocalLLaMA/comments/1y6b8yu/"], FakeEgo(printed(THREAD_HTML)))
+
+    assert code == 0
+    post, *comments = out["items"]
+    assert post["text"].startswith("![image](https://i.redd.it/vw5opchaq04i1.png)\n\n"
+                                   "![image](https://i.redd.it/p8tjh93bq04i1.png)\n\n"
+                                   "We have released Inkling-2-Mini quantized")
+    assert "**What's inside**\n\n- Four quantized GGUFs: IQ2_S" in post["text"]
+    assert "\n|---|---|" in post["text"]  # the results table
+    [pictured] = [c for c in comments if c["id"] == "t1_19t8ifk8pyehu"]
+    assert pictured["text"].endswith(
+        "![Comment Image](https://preview.redd.it/release-inkling-2-mini-gsq-rco-quants-v0-tv9pitxsv04i1.jpeg"
+        "?width=2752&format=pjpg&auto=webp&s=a23e4536ec6b1a8998bfa15fc885d06a5dcc9c85)")
+    assert not {"html", "gallery"} & {key for item in out["items"] for key in item["raw"]}
+
+
+def test_a_gallery_slide_caption_follows_its_image(rsrc):
+    thread = json.loads(json.dumps(THREAD_HTML))
+    thread["post"]["gallery"][1]["caption"] = "Rack city"
+    code, out = rsrc(["read", "https://www.reddit.com/r/LocalLLaMA/comments/1y6b8yu/"], FakeEgo(printed(thread)))
+
+    assert code == 0 and "![image](https://i.redd.it/p8tjh93bq04i1.png)\nRack city\n\n" in out["items"][0]["text"]
+
+
+def test_a_body_whose_html_renders_to_nothing_keeps_its_on_screen_text(rsrc):
+    thread = json.loads(json.dumps(THREAD_HTML))
+    thread["post"].update(html="<div> </div>", gallery=[], text="Shown on screen")
+    thread["post"]["attrs"]["post-type"] = "text"
+    code, out = rsrc(["read", "https://www.reddit.com/r/LocalLLaMA/comments/1y6b8yu/"], FakeEgo(printed(thread)))
+
+    assert code == 0 and out["items"][0]["text"] == "Shown on screen"

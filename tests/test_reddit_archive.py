@@ -295,3 +295,50 @@ def test_empty_more_marker_and_reddit_tombstone(run):
     tombstone = next(item for item in out["items"] if item["id"] == "t1_jy5va23")
     assert tombstone["text"] == "[removed]" and tombstone["author"] is None
     assert "collapsed parts of the tree" in " ".join(out["meta"]["notes"])
+
+
+def test_archive_post_shows_its_gallery_images_above_the_body(run):
+    post = json.loads(POST)
+    row = post["data"][0]
+    row.update(is_gallery=True, is_self=False, url="https://www.reddit.com/gallery/1641krf",
+               gallery_data={"items": [{"media_id": "a1"}, {"media_id": "b2"}, {"media_id": "gone"}]},
+               media_metadata={"a1": {"s": {"u": "https://preview.redd.it/a1.png?width=10&amp;s=x"}},
+                               "b2": {"s": {"gif": "https://i.redd.it/b2.gif"}}})
+    code, out, _ = run(["reddit", "read", POST_URL, "--comments", "0"], response(post))
+    text = out["items"][0]["text"]
+    assert code == 0 and text.startswith(
+        "![image](https://preview.redd.it/a1.png?width=10&s=x)\n\n![image](https://i.redd.it/b2.gif)\n\n[image]\n\n")
+    assert text.endswith(row["selftext"].strip())
+
+
+@pytest.mark.parametrize("hint, url, shown", [
+    ("link", "https://arxiv.org/abs/2509.24372", "[link](https://arxiv.org/abs/2509.24372)"),
+    ("image", "https://i.redd.it/x.jpeg", "![image](https://i.redd.it/x.jpeg)"),
+    ("hosted:video", "https://v.redd.it/abc", "[video](https://v.redd.it/abc)"),
+])
+def test_archive_post_shows_its_link_image_or_video(run, hint, url, shown):
+    post = json.loads(POST)
+    post["data"][0].update(post_hint=hint, url=url, is_self=False)
+    code, out, _ = run(["reddit", "read", POST_URL, "--comments", "0"], response(post))
+    assert code == 0 and out["items"][0]["text"].startswith(shown + "\n\n")
+
+
+def test_archive_gallery_keeps_slide_captions_links_and_videos():
+    gallery = [{"url": "https://i.redd.it/a.png", "caption": "Before", "link": "https://example.com/a_(1)"},
+               {"url": "https://v.redd.it/b.mp4?x=1", "caption": None, "link": None}]
+    assert reddit_archive.post_media(None, "https://www.reddit.com/gallery/1", gallery, "") == (
+        "![image](https://i.redd.it/a.png)\nBefore\n[link](<https://example.com/a_(1)>)\n\n"
+        "[video](https://v.redd.it/b.mp4?x=1)")
+
+
+def test_a_post_without_a_known_permalink_still_shows_its_link():
+    assert reddit_archive.post_media("link", "https://arxiv.org/abs/1", None, "") == "[link](https://arxiv.org/abs/1)"
+    assert reddit_archive.post_media("link", "https://www.reddit.com/r/a/comments/1/x/", None,
+                                     "https://reddit.com/r/a/comments/1/x") == ""
+
+
+def test_archive_native_video_without_a_hint_is_a_video(run):
+    post = json.loads(POST)
+    post["data"][0].update(post_hint=None, is_self=False, is_video=True, url="https://v.redd.it/abc")
+    code, out, _ = run(["reddit", "read", POST_URL, "--comments", "0"], response(post))
+    assert code == 0 and out["items"][0]["text"].startswith("[video](https://v.redd.it/abc)\n\n")

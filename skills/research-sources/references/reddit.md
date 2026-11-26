@@ -20,7 +20,7 @@ For handpicked threads, search first and use `reddit read` on your choices.
 
 ## Read
 
-`read` returns the post first, then comments in page order with `raw.attrs.depth` and `raw.attrs.parentid`. Replies that Reddit folded behind "more replies" are not included. A pinned comment is kept, marked `raw.pinned: true`.
+`read` returns the post first, then comments in page order with `raw.attrs.depth` and `raw.attrs.parentid`. Post and comment `text` is Markdown that keeps link addresses, images, lists, quotes, code and tables. A post's gallery images, image, video or link address comes first in its `text`, as `![image](URL)`, `[video](URL)` or `[link](URL)`. Replies that Reddit folded behind "more replies" are not included. A pinned comment is kept, marked `raw.pinned: true`.
 
 Pass a comment's `url` to read the post, the linked comment, and its visible ancestors and replies. The linked comment has `raw.linked: true`, its ID is in `input.comment_id`, and `meta.notes` names the focus. `--comments` counts the linked comment. With `--comments 0`, the post and linked comment are still returned.
 

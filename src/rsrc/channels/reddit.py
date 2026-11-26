@@ -21,6 +21,7 @@ from shutil import which
 from urllib.parse import urlencode, urljoin, urlsplit, quote
 
 from rsrc import checks, proc
+from rsrc.html_markdown import to_markdown
 from rsrc import envelope as env
 from rsrc.channels import reddit_archive
 from rsrc.http import Client, NetworkError
@@ -471,12 +472,38 @@ def _load(ctx, input_: dict) -> tuple[dict | None, tuple[str, str] | None, dict]
             page = json.loads(line[len(MARKER):])
         except ValueError:
             page = None
+    if result.code == 0 and isinstance(page, dict):
+        _render(page)
     if result.code != 0 or not isinstance(page, dict):
         tail = output_tail(result, MARKER)
         message = f"ego-browser exited with code {result.code}" if result.code else "ego-browser printed no result"
         return None, ("upstream_error", f"{message}: {tail}" if tail else message), \
             env.attempt(BACKEND, "upstream_error", ms=ms)
     return page, None, env.attempt(BACKEND, "ok", page.get("loads"), ms)
+
+
+def _render(node) -> None:
+    """Replace each post or comment's on-screen text with its body rendered from HTML as Markdown,
+    which keeps link and image addresses, lists, quotes, code and tables, with a post's images or
+    link above its body. A body whose HTML renders to nothing keeps its on-screen text."""
+    if isinstance(node, list):
+        for child in node:
+            _render(child)
+        return
+    if not isinstance(node, dict):
+        return
+    if isinstance(node.get("attrs"), dict) and "html" in node:
+        html, gallery = node.pop("html"), node.pop("gallery", None)
+        text = (to_markdown(html, BASE + "/") if isinstance(html, str) else "") or node.get("text")
+        if isinstance(gallery, list):
+            attrs = node["attrs"]
+            media = reddit_archive.post_media(attrs.get("post-type"), _absolute(attrs.get("content-href")),
+                                              gallery, _absolute(attrs.get("permalink")))
+            text = "\n\n".join(part for part in (media, text) if part)
+        node["text"] = text or None
+    for child in node.values():
+        if isinstance(child, (list, dict)):
+            _render(child)
 
 
 def _finish_abandoned(ctx, name):
