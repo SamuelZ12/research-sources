@@ -1,6 +1,14 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a read-only command-line tool that lets an AI agent read eleven sources that web search covers poorly: X, Reddit, Hacker News, YouTube transcripts, GitHub, LinkedIn posts, Bluesky, Product Hunt, App Store reviews, Polymarket odds, and Ashby job boards. Every command prints one JSON object in the same shape, so the agent can tell real results from an empty search, a rate limit, or a block page. It needs no API keys.
+`rsrc` is a command-line tool that lets an AI agent read X, Reddit, Hacker News, YouTube transcripts, GitHub, LinkedIn posts, Bluesky, Product Hunt, App Store reviews, Polymarket odds and Ashby job boards. Web search covers these sites poorly. `rsrc` is free, needs no API keys, and reports a blocked page as a failure instead of a result.
+
+- **Finds what web search misses.** In a five-topic test, an agent with an early `rsrc` cited at least four URLs per topic that web search alone did not.
+- **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 16 times faster than Agent-Reach and last30days.
+- **Honest.** A login wall, a CAPTCHA page or the wrong post is an error, never a result. `rsrc` had no false success in 408 test runs.
+- **No API keys.** Nine sources and X post reads need no login. X search and Reddit search use your own session.
+- **One output shape.** Every command prints one JSON object with the same fields. No Python dependencies.
+
+The [measurements](docs/comparisons.md) have the method and limits behind each number.
 
 ```console
 $ rsrc x read https://x.com/karpathy/status/1886192184808149383 | jq -c '.items[0] | [.author, .engagement.likes, .text[:56]]'
@@ -10,26 +18,7 @@ $ rsrc hn search "zqxvkpwj" > /dev/null; echo $?
 66
 ```
 
-Both outputs were recorded on 2026-11-25. The first command read an X post without a login. The second searched Hacker News for a word with no matches. An empty search exits `66`, not `0`.
-
-`rsrc` is early software with one maintainer, tested on macOS only. The license is [MIT](LICENSE).
-
-## Why use it
-
-- **No API keys.** Nine sources and X post reads need no login. X search needs your own X session for now. Reddit search needs [Ego Lite](https://lite.ego.app/), a Chromium browser for agents.
-- **Failures are not results.** `rsrc` rejects a login wall, a CAPTCHA page, or a different post than the one you asked for, and the output says why. On a rate limit, the command stops instead of retrying.
-- **One output shape.** Eleven sources share one JSON envelope with 10 error codes and 4 exit codes.
-- **No Python dependencies.** `rsrc` uses the standard library only. The tests run offline.
-- **An agent skill ships with it.** [`SKILL.md`](skills/research-sources/SKILL.md) tells an agent which command answers which question and what to do on each error code.
-- **Measured.** In a five-topic comparison, a research agent with an early version of `rsrc` cited at least four URLs per topic that the same agent with web search alone did not. See the [method and limits](docs/comparisons.md).
-
-## How it compares
-
-Use [last30days](https://github.com/mvanhorn/last30days-skill) when you want a finished brief. It searches many sites, scores the results and writes the report. Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach) when you need its longer site list, which includes Chinese platforms such as Bilibili and Xiaohongshu.
-
-`rsrc` does less. It gives an agent that already has web search each site's own results in one shape, and it reports a failure as a failure.
-
-On 2026-11-25 the three tools ran 34 lookups in two sessions about 16 hours apart. Signed in, `rsrc` passed all 204 runs and answered 2 to 16 times faster on the X and Reddit lookups that another tool also passed. Agent-Reach was faster on GitHub issue search, and in 12 of 12 runs it reported success for a LinkedIn link that led to a not-found page or a sign-up page. The [full table and its limits](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups) list every result, including the four lookups that a new `rsrc` install fails without a login.
+The second search found nothing, so it exits `66`, not `0`.
 
 ## Install
 
@@ -40,111 +29,57 @@ uv tool install git+https://github.com/SamuelZ12/research-sources
 rsrc check hn polymarket
 ```
 
-The check sends one request to Hacker News and one to Polymarket. Read `meta.sources` in its output for each outcome.
+The check sends one request to each source and prints the outcome under `meta.sources`.
 
-Seven sources need nothing more. Four need extra setup for some commands:
-
-| Source | Extra setup |
-|---|---|
-| YouTube | `yt-dlp` with its `yt-dlp-ejs` scripts. `youtube read` also needs `deno` 2.3.0 or newer |
-| GitHub | A logged-in [GitHub CLI](https://cli.github.com/), only for private repositories and higher rate limits |
-| Reddit | Ego Lite, for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
-| X | Your own X session, only for `x search`. FxTwitter, the public service `rsrc` searches X through, has had search down since 2026-11-19 |
-
-On a Mac with Homebrew, `brew install yt-dlp deno gh` covers YouTube and GitHub. Homebrew's `yt-dlp` includes the scripts.
-
-## Give it to your agent
-
-`rsrc` is built for an agent to run. The [`research-sources` skill](skills/research-sources/SKILL.md) is the agent's manual. It maps questions to commands, explains each output field, and says when to stop. Install it with the [skills CLI](https://skills.sh/), which asks you which agents get the skill:
+Then give your agent the [skill](skills/research-sources/SKILL.md), which says which command answers which question and what to do on each error:
 
 ```sh
 npx skills add SamuelZ12/research-sources
 ```
 
-Without Node.js, copy the `skills/research-sources` folder into the folder your agent loads skills from. Then ask a question the skill covers, such as "Summarize this X post and its replies" or "What is Hacker News saying about Claude Code this month?"
+Without Node.js, copy the `skills/research-sources` folder into the folder your agent loads skills from. Then ask something like "What is Hacker News saying about Claude Code this month?"
 
-## Commands
+## Sources
 
-| Source | Commands |
-|---|---|
-| X | `x search`, `x read`, `x replies`, `x timeline` |
-| Reddit | `reddit search`, `reddit read` |
-| Hacker News | `hn search`, `hn read` |
-| YouTube | `youtube search`, `youtube read` (details and transcript) |
-| GitHub | `gh repo`, `gh search`, `gh issues` |
-| LinkedIn | `linkedin read` (public post and comments) |
-| Bluesky | `bluesky search`, `bluesky read`, `bluesky replies`, `bluesky timeline` |
-| Product Hunt | `producthunt search`, `producthunt read`, `producthunt leaderboard` |
-| App Store | `appstore search`, `appstore read` (listing and reviews) |
-| Polymarket | `polymarket search` |
-| Ashby | `ashby search`, `ashby read` |
-| All | `check` |
+| Source | Commands | Extra setup |
+|---|---|---|
+| X | `x read`, `x replies`, `x timeline`, `x search` | [Your own X session](docs/x-session.md), for `x search` only |
+| Reddit | `reddit read`, `reddit search` | [Ego Lite](https://lite.ego.app/), for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
+| Hacker News | `hn search`, `hn read` | None |
+| YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
+| GitHub | `gh repo`, `gh search`, `gh issues` | None. A logged-in [GitHub CLI](https://cli.github.com/) adds private repositories and higher rate limits |
+| LinkedIn | `linkedin read` (public post and comments) | None |
+| Bluesky | `bluesky search`, `bluesky read`, `bluesky replies`, `bluesky timeline` | None |
+| Product Hunt | `producthunt search`, `producthunt read`, `producthunt leaderboard` | None |
+| App Store | `appstore search`, `appstore read` (listing and reviews) | None |
+| Polymarket | `polymarket search` | None |
+| Ashby | `ashby search`, `ashby read` | None |
 
-Each command starts with `rsrc`, as in `rsrc gh repo OWNER/REPO`. Add `--help` to a command to list its flags. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
+Each command starts with `rsrc`, and `--help` lists its flags. On a Mac with Homebrew, `brew install yt-dlp deno gh` covers YouTube and GitHub. X and Reddit commands can act as your own account, so keep their volume low. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
 
 ## Output
 
-Every command prints exactly one JSON object on stdout, on success and on failure. There is no other output format.
+Every command prints one JSON object on stdout, on success and on failure. Exit `0` means at least one item, and `66` means none. Exit `2` means bad arguments or setup. Exit `1` means a runtime failure with a code such as `rate_limited`, `blocked` or `not_found`. The [output reference](docs/output.md) has the full shape and every error code.
 
-```jsonc
-{
-  "ok": true,
-  "channel": "x",
-  "action": "read",
-  "input": {"posts": ["https://x.com/karpathy/status/1886192184808149383"]},
-  "backend": "fxtwitter",
-  "items": [
-    {
-      "id": "1886192184808149383",
-      "url": "https://x.com/karpathy/status/1886192184808149383",
-      "title": null,
-      "author": "karpathy",
-      "published_at": "2025-02-02T23:17:15Z",
-      "text": "There's a new kind of coding I call \"vibe coding\", where…",
-      "source": "fxtwitter",
-      "engagement": {"likes": 38005, "reposts": 3837, "replies": 1501, "quotes": 2702, "views": 8305723},
-      "raw": { /* the backend's own record */ }
-    }
-  ],
-  "meta": {
-    "attempts": [{"backend": "fxtwitter", "outcome": "ok", "requests": 1, "ms": 193}],
-    "sources": {},             // `check` only: one outcome per source
-    "rejected": [],            // items dropped as a block page or the wrong post
-    "failed": [],              // inputs of a multi-input command that could not be read
-    "truncated": null,         // "request_cap" when a request limit stopped the command early
-    "notes": []
-  },
-  "error": null                // or {"code": "…", "message": "…"}
-}
-```
+## How it compares
 
-Every item has the same nine fields. Unavailable fields are `null`.
+- **Want a finished brief?** Use [last30days](https://github.com/mvanhorn/last30days-skill). It searches many sites, scores the results and writes the report.
+- **Need Chinese platforms such as Bilibili and Xiaohongshu?** Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach), which has a longer site list. It was also faster on GitHub issue search.
+- **Already have web search?** Use `rsrc`. It adds each site's own results in one shape and does nothing else.
 
-| Exit | Meaning | `error.code` |
-|---|---|---|
-| `0` | No error, at least one item | none |
-| `66` | No error, zero items | none |
-| `2` | Bad arguments or setup | `usage`, `config` |
-| `1` | Runtime failure. Items read so far stay in `items` | `auth_failed`, `rate_limited`, `blocked`, `url_mismatch`, `not_found`, `upstream_error`, `network_error`, `timeout` |
+On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 hours apart. Agent-Reach reported success on 13 of 120 runs that returned a not-found page, a sign-up page or no text. The [full table](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups) has every result, including the four lookups a new `rsrc` install fails without a login.
 
-## Signed-in sources
+## Limits
 
-X and Reddit commands can act as your own account. Keep their volume low.
-
-- **X search.** Use the X account signed in to Ego Lite, a cookie pair in `~/.config/rsrc/x.env`, or Google Chrome through `rsrc x connect`. The Chrome route is experimental. `x timeline` can use the same session. [X with your own session](docs/x-session.md) has the setup for each route.
-- **Reddit.** `rsrc` loads Reddit pages in Ego Lite. When Ego Lite is signed in to Reddit, the commands act as that account.
-
-## What it does not do
-
-- **No writes.** `rsrc` never posts, likes, follows or trades.
-- **No merging or ranking across sources.** Each list is that site's own results in that site's order.
-- **No caching of results.** Every command asks the source again.
-- **No web search.** `rsrc` covers what web search misses. Pair it with one.
-- **No guarantees about the sources.** FxTwitter, X's web search, Reddit's pages, the Arctic Shift archive and YouTube through `yt-dlp` are not official APIs. They can change or block without notice. When one does, `rsrc` fails with an error code instead of an empty result. You are responsible for following each site's terms.
+- **Read-only.** `rsrc` never posts, likes, follows or trades.
+- **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
+- **Not a web search.** Pair it with one.
+- **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
+- **Early software.** One maintainer, tested on macOS only.
 
 ## Contributing
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) has the setup, the rules a change must keep, and the manual Chrome tests.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the setup and the rules a change must keep.
 
 ## License
 
