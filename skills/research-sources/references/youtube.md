@@ -12,7 +12,7 @@
 
 ## Read
 
-`youtube read` takes one video and about 5 to 15 s. Pass a URL or the 11-character ID. For an ID that starts with `-`, pass the URL.
+`youtube read` takes one video and a few seconds. Pass a URL or the 11-character ID. For an ID that starts with `-`, pass the URL.
 
 It returns views, likes and comment count, and the whole description in `raw.description`. `text` holds the transcript and nothing else, cut to `--words` words (default 5,000). Each line covers about 20 seconds and starts with the time it begins, as `[MM:SS]` (`[H:MM:SS]` from an hour on). Cite that time with a quote: `https://youtu.be/ID?t=MmSs`.
 
@@ -22,7 +22,7 @@ Exit `0` does not mean there is a transcript. Before you quote transcript words,
 
 | `status` | Meaning |
 |---|---|
-| `ok` | Whole transcript in `text`. `source` says where it came from: `youtube-uploaded` (captions the uploader supplied), `youtube-automatic` (YouTube's speech recognition) or `local-qwen-asr` (on-device speech recognition). The last two are machine recognition and get names and terms wrong. Say so when you quote them. `local-qwen-asr` is rare: it runs only for a video of at most 10 minutes with no captions at all whose language YouTube states, and it can add up to a minute and a half. `language` is the original language. |
+| `ok` | Whole transcript in `text`. `source` says where it came from: `youtube-uploaded` (captions the uploader supplied), `youtube-automatic` (YouTube's speech recognition) or `local-qwen-asr` (on-device speech recognition, experimental: needs vidscribe's model already downloaded). The last two are machine recognition and get names and terms wrong. Say so when you quote them. `local-qwen-asr` is rare: it runs only for a video of at most 10 minutes with no captions at all whose language YouTube states, and it can add up to a minute and a half. `language` is the original language. |
 | `partial` | Transcript present but cut off after `words` words. The same `source` and `language` rules apply. A `meta.notes` line `transcript cut to N of M words (--words)` gives the full length. Rerun with a larger `--words` (at most 40000) to read further. If `inference_truncated` is true, recognition itself stopped early and a larger `--words` will not help. |
 | anything else | No transcript. `text` is `null` and the value is the reason (`original_caption_unavailable`, `ambiguous_original_language`, `media_duration_limit`, `vidscribe_missing`, …), repeated in `meta.notes`. The video's details are still valid, and the video may still contain speech. Cite the video, not its words. |
 

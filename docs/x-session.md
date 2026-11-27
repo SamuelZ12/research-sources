@@ -56,4 +56,3 @@ Set `RSRC_X_SEARCH` in the environment or in `~/.config/rsrc/x.env` to choose th
 
 Search tries the next backend only after `upstream_error` or `network_error`, within the same `--max-requests` budget. An empty result, a rate limit, or a cookie error ends the search. `meta.attempts` lists the backends that made requests in order. The result comes from the last backend that ran, unless it also failed with one of those two codes: then the first backend's error and posts are kept. `meta.notes` has the error of each other backend that ran. Pass `--backend fxtwitter` or `--backend x-graphql` to use only that backend for one search.
 
-`RSRC_X_FALLBACK=x-graphql`, the earlier fallback setting, now stops the command with `config`: replace that line with `RSRC_X_SEARCH=fxtwitter,x-graphql`.

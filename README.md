@@ -3,8 +3,8 @@
 `rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube and [three more](#sources).
 
 - **Finds what web search misses.** In a five-topic test, an agent with an early `rsrc` cited at least four URLs per topic that web search alone did not.
-- **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 16 times faster than Agent-Reach and last30days.
-- **Honest.** A login wall, a CAPTCHA page or the wrong post is an error, never a result. `rsrc` had no false success in 408 test runs.
+- **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 12 times faster than Agent-Reach.
+- **Honest.** A login wall, a CAPTCHA page or the wrong post is an error, never a result. `rsrc` had no false success in 264 test runs on its six sources.
 - **Free.** No API keys. Only X search and Reddit search need your own session.
 
 The [measurements](docs/comparisons.md) have the method and limits behind each number.
@@ -43,7 +43,7 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 | X | `x read`, `x thread`, `x replies`, `x timeline`, `x search` | [Your own X session](docs/x-session.md), for `x search` only |
 | Reddit | `reddit read`, `reddit search` | [Ego Lite](https://lite.ego.app/), for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
 | Hacker News | `hn search`, `hn read` | None |
-| YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
+| YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` and `check youtube` |
 | LinkedIn | `linkedin read` (public post and comments) | None |
 | App Store | `appstore search`, `appstore read` (listing and reviews) | None |
 
@@ -59,15 +59,15 @@ Every command prints one JSON object with the same fields on stdout, on success 
 - **Need Chinese platforms such as Bilibili and Xiaohongshu?** Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach), which has a longer site list.
 - **Already have web search?** Use `rsrc`. It adds each site's own results in one shape and does nothing else.
 
-On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 hours apart. Agent-Reach reported success on 13 of 120 runs that returned a not-found page, a sign-up page or no text. The [full table](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups) has every result, including the four lookups a new `rsrc` install fails without a login.
+On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 hours apart; 12 of the lookups were on sources `rsrc` has since dropped. On LinkedIn, Agent-Reach reported success on 12 runs that returned a not-found page or a sign-up page. The [full table](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups) has every result, including the four lookups a new `rsrc` install fails without a login.
 
 ## Limits
 
 - **Read-only.** `rsrc` never posts, likes, follows or trades.
 - **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
 - **Not a web search.** Pair it with one.
-- **Only what web search misses.** For GitHub, use the [GitHub CLI](https://cli.github.com/) (`gh`). Web search already returns Polymarket odds, Bluesky posts and Product Hunt launch rankings from those sites' own pages, and a plain page fetch reads Ashby job boards and postings.
-- **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
+- **Only what web search misses.** For GitHub, use the [GitHub CLI](https://cli.github.com/) (`gh`). For other sites, use web search or a page fetch.
+- **Unofficial routes.** `rsrc` reads X, Reddit, YouTube, LinkedIn and the App Store without their official APIs. X, Reddit and LinkedIn restrict automated access in their terms, and X or Reddit can limit an account that `rsrc` uses. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
 - **Early software.** One maintainer. Live sources have been tested on macOS only.
 
 ## Contributing
@@ -76,4 +76,4 @@ On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 h
 
 ## License
 
-[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger). Its notice is in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).
+[MIT](LICENSE). The request shape for X's web search is ported from @steipete/bird v0.8.0 (MIT, Copyright (c) 2025 Peter Steinberger). bird is no longer published. Its notice is in [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).

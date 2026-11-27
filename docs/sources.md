@@ -27,13 +27,13 @@ This page has the full command syntax, what each source needs, and what each sou
 
 On a Mac with Homebrew: `brew install yt-dlp deno`.
 
-Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) and `ffmpeg`. The skill uses them to read the videos and GIFs attached to X posts, and `youtube read` tries `vidscribe` on a short video that has no captions at all.
+Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) and `ffmpeg`. The skill uses them to read the videos and GIFs attached to X posts, and `youtube read` tries `vidscribe` on a short video that has no captions at all. That fallback is experimental: it has not been tested live, and it works only once vidscribe's Qwen3-ASR model is downloaded, since `rsrc` runs it offline.
 
 ## `check`
 
 `rsrc check hn appstore` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0.
 
-A bare `rsrc check` probes the default channels: a public LinkedIn post, HN's front page, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+A bare `rsrc check` probes the default channels: a public LinkedIn post, HN's front page, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit; without Ego Lite, it reads one archived Reddit thread from Arctic Shift instead. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 ## X
 

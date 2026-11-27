@@ -35,7 +35,7 @@ def register(subparsers) -> None:
     parser.add_argument("channels", nargs="*", type=_channel_name, metavar="CHANNEL",
                         help=f"channels to check: {', '.join(NAMES)} (default: all)")
     parser.add_argument("--live-x", action="store_true",
-                        help=f"also read one public post ({LIVE_X_POST}) and, when fxtwitter is in the search order, "
+                        help=f"also read one public post (ID {LIVE_X_POST}, jack's first) and, when fxtwitter is in the search order, "
                              "run one FxTwitter search (no login; 1 request for the read, up to 4 when it "
                              "has to retry, and 1 for the search)")
     parser.add_argument("--live-reddit", action="store_true",
@@ -121,6 +121,9 @@ def probe_x(ctx, live: bool, attempts: list) -> tuple[str, dict]:
     searching = f"search via {labels[order[0]]}"
     if len(order) > 1:
         searching += f", then {labels[order[1]]} on upstream_error or network_error"
+    if order[0] == "fxtwitter" and not live:
+        searching += ("; FxTwitter's public search is unchecked and has been unavailable at times: "
+                      "--live-x tests it, and docs/x-session.md sets up search with your own X session")
     if order == ("x-chrome",):
         raw["x_graphql"] = "unchecked"
         text = searching + "; Chrome endpoint reachable"
