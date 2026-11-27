@@ -44,6 +44,8 @@ FxTwitter's timeline also answers 404 for real accounts. Its `upstream_error` ca
 
 Read `backend`, `meta.attempts` and `meta.notes` to see what answered or failed.
 
+If `x search` or `x timeline` stops at its request cap, the CLI puts a `warning` before `items` and prints it on stderr. Report that the results are partial and give the returned post count, even if `ok` is true. Zero posts on a capped run does not establish that none matched. A limit is a maximum, not a count of all matches.
+
 - With a Chrome connection, `x search` and `x timeline` use `x-chrome`.
 - Without a Chrome connection or a search order, a configured cookie pair selects `x-graphql`. With neither cookie, search uses public `fxtwitter`. A partial pair is `config`.
 - When public search fails and the user has X signed in to Ego Lite, use `rsrc x search --backend x-browser "Claude Code" --limit 10`. It searches inside that browser without exporting cookies. It needs at least two requests and runs one browser X command at a time. `RSRC_X_SEARCH=x-browser` makes it the default. Select it alone.

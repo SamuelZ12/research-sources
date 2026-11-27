@@ -49,6 +49,11 @@ def build_parser() -> Parser:
 
 
 def print_envelope(envelope: dict) -> None:
+    if warning := envelope.get("warning"):
+        try:
+            os.write(2, (warning + "\n").encode("utf-8"))
+        except OSError:
+            pass  # The JSON still carries the warning if the stderr reader closed its pipe.
     line = json.dumps(envelope, ensure_ascii=False)
     # Valid JSON, but str.splitlines() and some readers treat these as line breaks.
     for char in ("\u2028", "\u2029", "\u0085"):

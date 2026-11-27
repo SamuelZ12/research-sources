@@ -30,7 +30,7 @@ def elapsed_ms(started: float) -> int:
     return round((time.monotonic() - started) * 1000)
 
 
-def envelope(channel, action, input, backend, items=(), *, meta=None, error=None) -> dict:
+def envelope(channel, action, input, backend, items=(), *, meta=None, error=None, warning=None) -> dict:
     merged = {"attempts": [], "sources": {}, "rejected": [], "failed": [], "truncated": None, "notes": []}
     if meta:
         unknown = set(meta) - set(META_KEYS)
@@ -39,6 +39,7 @@ def envelope(channel, action, input, backend, items=(), *, meta=None, error=None
         merged.update(meta)
     return {
         "ok": error is None,
+        **({"warning": warning} if warning else {}),
         "channel": channel,
         "action": action,
         "input": input,

@@ -128,6 +128,12 @@ def run_connect(args, ctx):
     return env.envelope(CHANNEL, "connect", {}, "x-chrome", [env.item(id="x-chrome", source="x-chrome", text=note)])
 
 
+def cap_warning(action, count, limit):
+    posts = "post" if count == 1 else "posts"
+    bound = f" (limit {limit})" if limit is not None else ""
+    return f"Partial X {action}: returned {count} {posts}{bound}; request cap reached."
+
+
 def run_search(args, ctx) -> dict:
     input = {"query": args.query, "since": _iso(args.since), "until": _iso(args.until),
              "window_days": args.window_days, "per_window": args.per_window or args.limit or 20, "top": args.top,
@@ -158,7 +164,8 @@ def run_search(args, ctx) -> dict:
     if (not args.backend and order == (FX_BACKEND,) and result["outcome"] in FALLBACK_ON):
         result["error"]["message"] += ". Public X search is unavailable. " + browser_remedy(args)
     return env.envelope(CHANNEL, "search", input, result["backend"], result["items"], meta=meta,
-                        error=result["error"])
+                        error=result["error"], warning=cap_warning("search", len(result["items"]), args.limit)
+                        if meta.get("truncated") == "request_cap" else None)
 
 
 def browser_remedy(args):
@@ -423,7 +430,7 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
     if posts and not account and not error:
         meta["notes"] = [f"none of the {len(posts)} posts is by @{handle} (reposts only), so there is no account item"]
     return env.envelope(CHANNEL, "timeline", input, backend, [account, *posts] if account else posts,
-                        meta=meta, error=error)
+                        meta=meta, error=error, warning=cap_warning("timeline", len(posts), limit) if capped else None)
 
 
 # --- mapping -------------------------------------------------------------------

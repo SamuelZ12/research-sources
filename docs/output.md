@@ -34,6 +34,8 @@ Every command prints exactly one JSON object on stdout, on success and on failur
 }
 ```
 
+When `x search` or `x timeline` reports `meta.truncated: "request_cap"`, a `warning` appears before `items`. The same line goes to stderr, so it remains visible with `| jq` or `> results.json`. For example: `Partial X search: returned 6 posts (limit 42); request cap reached.` Use `meta.truncated == "request_cap"` in scripts. The warning does not change the exit code. A capped result with zero posts does not establish that no posts matched.
+
 Every item has the same nine fields. Unavailable fields are `null`.
 
 | Exit | Meaning | `error.code` |

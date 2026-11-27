@@ -209,6 +209,47 @@ def test_request_cap_is_ok_and_truncated(run):
     assert [u.partition("?")[0] for u in fake.urls] == [f"https://x.com/i/api/graphql/{QUERY_IDS[0]}/SearchTimeline"]
 
 
+@pytest.mark.parametrize(("action", "target", "fixture", "rows", "limit", "expected"), [
+    ("search", "q", "x_fx_search_latest.json", 6, 42, "Partial X search: returned 6 posts (limit 42); request cap reached."),
+    ("search", "q", "x_fx_search_latest.json", 6, None, "Partial X search: returned 6 posts; request cap reached."),
+    ("timeline", "mitchellh", "x_fx_timeline.json", 4, 200, "Partial X timeline: returned 4 posts (limit 200); request cap reached."),
+    ("search", "q", "x_fx_search_latest.json", 6, 6, None),
+    ("timeline", "mitchellh", "x_fx_timeline.json", 4, 4, None),
+])
+def test_request_cap_warning_in_json_and_stderr(capfd, action, target, fixture, rows, limit, expected):
+    recorded = load(fixture)
+    recorded["results"] = recorded["results"][:rows]
+    fake = FakeTransport(fx=[(200, recorded)])
+    options = ["--limit", str(limit)] if limit else []
+    ctx = cli.Context(transport=fake, environ={}, sleep=lambda _: None)
+    code = cli.main(["x", action, target, "--backend", "fxtwitter", "--max-requests", "1", *options], ctx)
+    stdout, stderr = capfd.readouterr()
+    result = json.loads(stdout)
+    assert code == 0 and result["ok"] and len(fake.urls) == 1
+    assert len(result["items"]) == rows + (action == "timeline")
+    if expected:
+        assert result["warning"] == expected and stderr.strip() == expected
+        assert stdout.index('"warning"') < stdout.index('"items"')
+    else:
+        assert "warning" not in result and not stderr
+
+
+@pytest.mark.parametrize("cap", [1, 2])
+def test_empty_search_warns_only_if_a_date_window_went_unchecked(capfd, cap):
+    empty = {"code": 200, "results": []}
+    fake = FakeTransport(fx=[(200, empty)] * cap)
+    ctx = cli.Context(transport=fake, environ={}, sleep=lambda _: None)
+    code = cli.main(["x", "search", "q", "--backend", "fxtwitter", "--max-requests", str(cap),
+                     "--since", "2026-11-01", "--until", "2026-11-15", "--limit", "42"], ctx)
+    stdout, stderr = capfd.readouterr()
+    result = json.loads(stdout)
+    assert code == 66 and not result["items"] and len(fake.urls) == cap
+    if cap == 1:
+        assert result["warning"] == stderr.strip() == "Partial X search: returned 0 posts (limit 42); request cap reached."
+    else:
+        assert "warning" not in result and not stderr
+
+
 def test_bad_date_range_is_usage_with_zero_requests(run):
     fake = FakeTransport()
     code, env, _ = run(["search", "q", "--since", "2026-11-05", "--until", "2026-11-01"], fake)
