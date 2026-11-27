@@ -1,28 +1,34 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a command-line tool that lets an AI agent read X, Reddit, Hacker News, YouTube transcripts, GitHub, LinkedIn posts, Bluesky, Product Hunt, App Store reviews, Polymarket odds and Ashby job boards. Web search covers these sites poorly. `rsrc` is free, needs no API keys, and reports a blocked page as a failure instead of a result.
+`rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube, GitHub and [six more](#sources).
 
 - **Finds what web search misses.** In a five-topic test, an agent with an early `rsrc` cited at least four URLs per topic that web search alone did not.
 - **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 16 times faster than Agent-Reach and last30days.
 - **Honest.** A login wall, a CAPTCHA page or the wrong post is an error, never a result. `rsrc` had no false success in 408 test runs.
-- **No API keys.** Nine sources and X post reads need no login. X search and Reddit search use your own session.
-- **One output shape.** Every command prints one JSON object with the same fields. No Python dependencies.
+- **Free.** No API keys. Only X search and Reddit search need your own session.
 
 The [measurements](docs/comparisons.md) have the method and limits behind each number.
 
 ```console
-$ rsrc x read https://x.com/karpathy/status/1886192184808149383 | jq -c '.items[0] | [.author, .engagement.likes, .text[:56]]'
-["karpathy",38005,"There's a new kind of coding I call \"vibe coding\", where"]
-
-$ rsrc hn search "zqxvkpwj" > /dev/null; echo $?
-66
+$ rsrc x read https://x.com/karpathy/status/1886192184808149383 | jq
+{
+  "ok": true,
+  "channel": "x",
+  "items": [
+    {
+      "author": "karpathy",
+      "text": "There's a new kind of coding I call \"vibe coding\", where you fully give in to the vibes, ...",
+      "engagement": { "likes": 38010, "reposts": 3837, ... },
+      ...
+    }
+  ],
+  ...
+}
 ```
-
-The second search found nothing, so it exits `66`, not `0`.
 
 ## Install
 
-You need Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
+You need Python 3.11 or newer and [uv](https://docs.astral.sh/uv/). `rsrc` has no other Python dependencies.
 
 ```sh
 uv tool install git+https://github.com/SamuelZ12/research-sources
@@ -59,7 +65,7 @@ Each command starts with `rsrc`, and `--help` lists its flags. On a Mac with Hom
 
 ## Output
 
-Every command prints one JSON object on stdout, on success and on failure. Exit `0` means at least one item, and `66` means none. Exit `2` means bad arguments or setup. Exit `1` means a runtime failure with a code such as `rate_limited`, `blocked` or `not_found`. The [output reference](docs/output.md) has the full shape and every error code.
+Every command prints one JSON object with the same fields on stdout, on success and on failure. Exit `0` means at least one item, and `66` means none. Exit `2` means bad arguments or setup. Exit `1` means a runtime failure with a code such as `rate_limited`, `blocked` or `not_found`. The [output reference](docs/output.md) has the full shape and every error code.
 
 ## How it compares
 
