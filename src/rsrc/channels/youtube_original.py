@@ -144,8 +144,8 @@ def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]
     the header, note and style blocks, cue numbers, and the timings' settings. Tags are removed,
     except that a voice tag `<v Ann>` becomes `Ann: `; entities are decoded and whitespace
     collapsed. With `scrolling` (YouTube's automatic captions repeat each line as it scrolls up), a
-    line identical to the line before it is dropped and keeps the start of the cue it first
-    appears in; a line said again later in the video is kept."""
+    repeated line keeps its first timestamp while its cues touch or overlap. After a gap it is
+    counted as speech again."""
     cues: list[tuple[float, str]] = []
     start = None
     end = last_line_end = -1.0
@@ -160,9 +160,11 @@ def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]
             line = _VOICE.sub(lambda m: " " + m[1].strip() + ": ", raw)
             line = " ".join(html.unescape(_TAG.sub("", line)).split())
             if line:
-                if not (scrolling and start <= last_line_end and cues and cues[-1][1] == line):
+                if scrolling and start <= last_line_end and cues and cues[-1][1] == line:
+                    last_line_end = max(last_line_end, end)
+                else:
                     cues.append((start, line))
-                last_line_end = end
+                    last_line_end = end
     return cues
 
 

@@ -801,6 +801,7 @@ def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query, e
     ("author:Skirano is:pr is:merged", [], ""), ("author:Skirano is:merged", [], ""),
     ('is:pr (STATE:"closed" OR is:open)', [], ""), ("is:pr -is:open", [], ""),
     ("merged:>=2024-01-01", [], ""), ("is:pr closed:2024-12-05", [], ""),
+    ("author:Skirano -is:merged", [], ""), ('is:issue reason:"not planned"', [], ""),
     ('is:pr "is:merged"', [], " state:open"), ("is:pr is:merged", ["--state", "open"], " state:open"),
 ])
 def test_query_state_controls_issue_search_unless_flag_is_explicit(rsrc, public, query, flags, extra):

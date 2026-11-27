@@ -456,8 +456,9 @@ def test_read_is_a_metadata_run_then_a_run_for_the_chosen_track(rsrc, environ):
 
 
 def test_read_keeps_repeated_speech_after_a_caption_gap(rsrc):
-    vtt = ("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nTry again.\n\n"
+    vtt = ("WEBVTT\n\n00:00:01.000 --> 00:00:10.000\nTry again.\n\n"
            "00:00:02.000 --> 00:00:03.000\nTry again.\n\n"
+           "00:00:04.000 --> 00:00:05.000\nTry again.\n\n"
            "00:00:32.000 --> 00:00:33.000\nTry again.\n")
     code, out = rsrc(["read", DUBBED], FakeRunner(ok(META_DUBBED), caption_run(vtt)))
     [item] = out["items"]

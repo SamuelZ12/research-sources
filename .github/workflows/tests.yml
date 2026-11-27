@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
@@ -24,4 +28,8 @@ jobs:
           version: '0.13.7'
           enable-cache: false
       - run: uv sync --locked
-      - run: uv run --offline --no-sync pytest -q
+      - name: Test with loopback networking only
+        run: |
+          sudo ip netns add rsrc-tests
+          sudo ip -n rsrc-tests link set lo up
+          sudo ip netns exec rsrc-tests sudo -u "$(id -un)" env PATH="$PATH" .venv/bin/python -m pytest -q

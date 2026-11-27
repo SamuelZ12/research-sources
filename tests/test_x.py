@@ -118,6 +118,7 @@ def test_search_dates_are_echoed_as_iso_strings(run):
     {"search_timeline": {"timeline": {"instructions": []}}},
     {"search_timeline": {"timeline": {"instructions": [{"type": "Unknown"}]}}},
     {"search_timeline": {"timeline": {"instructions": [{"entries": [None]}]}}},
+    {"search_timeline": {"timeline": {"instructions": [{"entry": {"content": {"cursorType": "Bottom", "value": {"x": 1}}}}]}}},
     {"search_timeline": {"timeline": {"instructions": [{"entries": [{"content": {"cursorType": "Top", "value": "c"}},
                                                                     {"content": {"unrecognized": True}}]}]}}},
 ])
@@ -126,6 +127,15 @@ def test_unrecognized_search_page_is_not_an_empty_result(run, query_data):
     code, env, _ = run([*GQL, "q"], FakeTransport(x=[(200, bad)]))
     assert code == 1 and env["error"]["code"] == "upstream_error"
     assert env["meta"]["attempts"][0]["outcome"] == "upstream_error"
+
+
+def test_terminal_search_page_preserves_earlier_posts(run):
+    end = page()
+    end["data"]["search_by_raw_query"]["search_timeline"]["timeline"]["instructions"] = [
+        {"type": "TimelineTerminateTimeline", "direction": "Bottom"}]
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, end)])
+    code, env, _ = run([*GQL, "q", "--per-window", "40"], fake)
+    assert code == 0 and env["error"] is None and len(env["items"]) == 20
 
 
 def test_missing_search_page_preserves_earlier_posts(run):

@@ -26,7 +26,7 @@ _OWNER_REPO = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/(?!\.{1,2}$)
 _QUERY_TOKENS = re.compile(r'(?:"(?:\\.|[^"\\])*"|[^\s()"])+')
 _ISSUE_TYPE = re.compile(r'-?(?:(?:is|type):("?)(?:issue|pr)\1|is:("?)pull-request\2)', re.I)
 _MERGE_FILTER = re.compile(r'is:("?)(?:merged|unmerged)\1|merged:.+', re.I)
-_STATE_FILTER = re.compile(r'(?:is|state):("?)(?:open|closed)\1|closed:.+', re.I)
+_STATE_FILTER = re.compile(r'(?:is|state):("?)(?:open|closed)\1|(?:closed|reason):.+', re.I)
 
 
 def register(subparsers) -> None:
@@ -47,7 +47,8 @@ def register(subparsers) -> None:
                         help="use is:pr in the query to return pull requests")
     issues.add_argument("--repo", metavar="OWNER/REPO", help="search only this repository")
     issues.add_argument("--limit", type=int, default=30, help=f"issues, 1-{MAX_LIMIT} (default %(default)s)")
-    issues.add_argument("--state", choices=("open", "closed", "all"), help="issue state (default: open unless the query specifies a state)")
+    issues.add_argument("--state", choices=("open", "closed", "all"),
+                        help="issue state (default: open unless the query specifies a state)")
     issues.set_defaults(run=run_issues, action="issues")
 
     for command in (repo, issues):
@@ -346,7 +347,8 @@ def run_issues(args, ctx) -> dict:
 
 
 def _has_issue_type(query: str) -> bool:
-    return any(_ISSUE_TYPE.fullmatch(t) or _MERGE_FILTER.fullmatch(t) for t in _QUERY_TOKENS.findall(query))
+    return any(_ISSUE_TYPE.fullmatch(t) or _MERGE_FILTER.fullmatch(t.removeprefix("-"))
+               for t in _QUERY_TOKENS.findall(query))
 
 
 def _check_query(query: str, limit: int) -> str | None:

@@ -289,16 +289,22 @@ def parse_page(data) -> tuple[list[dict], str | None]:
     for instruction in instructions:
         if not isinstance(instruction, dict):
             raise SearchError("X returned an invalid search instruction")
-        if instruction.get("type") == "TimelineAddEntries" and instruction.get("entries") == []:
+        kind = instruction.get("type")
+        if ((kind == "TimelineAddEntries" and instruction.get("entries") == []) or
+                (kind == "TimelineTerminateTimeline" and instruction.get("direction") == "Bottom")):
             empty_page = True
         # Later pages may deliver the Bottom cursor in a TimelineReplaceEntry's single `entry`.
         entries = (instruction.get("entries") or []) + ([instruction["entry"]] if instruction.get("entry") else [])
         for entry in entries:
             content = entry.get("content") or {}
-            if content.get("cursorType") in ("Top", "Bottom") and content.get("value"):
-                empty_page = True
-                if content["cursorType"] == "Bottom":
-                    cursor = content["value"]
+            if content.get("cursorType") in ("Top", "Bottom"):
+                value = content.get("value")
+                if value is not None and not isinstance(value, str):
+                    raise SearchError("X returned an invalid search cursor")
+                if value:
+                    empty_page = True
+                    if content["cursorType"] == "Bottom":
+                        cursor = value
                 continue
             saw_non_cursor = True
             for result in _entry_results(content):
