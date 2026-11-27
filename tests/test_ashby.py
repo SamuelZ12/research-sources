@@ -53,6 +53,20 @@ def test_read(run, args):
     assert "descriptionHtml" in out["items"][0]["raw"]
 
 
+@pytest.mark.parametrize(("query", "expected"), [
+    ("united kingdom", ["role-0"]), ("London", ["role-0"]),
+    ("United States", ["role-1"]), ("massachusetts", ["role-1"]), ("Japan", []),
+])
+def test_location_filter_includes_primary_and_secondary_addresses(run, query, expected):
+    board = json.loads(BOARD)
+    board["jobs"][0]["address"] = {"postalAddress": {"addressCountry": "United Kingdom", "addressLocality": "London"}}
+    board["jobs"][1]["secondaryLocations"][0]["address"] = {
+        "postalAddress": {"addressCountry": "United States", "addressRegion": "Massachusetts"}}
+    code, out = run("search", "quartz", "--location", query, body=json.dumps(board).encode())
+    assert code == (0 if expected else 66)
+    assert [item["id"] for item in out["items"]] == expected
+
+
 def test_read_paid_role_with_secondary_locations_and_one_team(run):
     board = json.loads(BOARD)
     job = board["jobs"][1]

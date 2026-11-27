@@ -361,7 +361,6 @@ def test_read_lists_comments_depth_first_in_the_apis_order(rsrc):
         ("50151883", 2), ("50171449", 3), ("50153465", 2), ("50149933", 1)]
     assert ids_and_depths(out) == list(depth_first(json.loads(ITEM)))
     assert len(out["items"]) == 129 and ("50151773", 7) in ids_and_depths(out)
-    assert out["meta"]["notes"] == []
 
 
 def test_read_maps_a_comment(rsrc):
@@ -394,9 +393,9 @@ def test_read_raw_item_lists_direct_child_ids_instead_of_the_subtree(rsrc):
 
 
 @pytest.mark.parametrize("flags, last_id, note", [
-    ([], "50151125", "50 of 128 comments returned"),
-    (["--comments", "3"], "50153167", "3 of 128 comments returned"),
-    (["--comments", "127"], "50175712", "127 of 128 comments returned"),
+    ([], "50151125", "50 of 128 readable comments returned from Algolia's fetched tree."),
+    (["--comments", "3"], "50153167", "3 of 128 readable comments returned from Algolia's fetched tree."),
+    (["--comments", "127"], "50175712", "127 of 128 readable comments returned from Algolia's fetched tree."),
 ])
 def test_read_cuts_the_comments_and_says_so(rsrc, flags, last_id, note):
     code, out = rsrc(["read", "50148855", *flags], FakeTransport((200, ITEM)))
@@ -408,17 +407,18 @@ def test_read_cuts_the_comments_and_says_so(rsrc, flags, last_id, note):
 
 
 @pytest.mark.parametrize("comments", ["128", "200", "250", "500", "1000"])
-def test_read_with_no_more_comments_than_asked_has_no_note(rsrc, comments):
+def test_read_scopes_the_total_even_when_every_fetched_comment_fits(rsrc, comments):
     code, out = rsrc(["read", "50148855", "--comments", comments], FakeTransport((200, ITEM)))
 
-    assert code == 0 and len(out["items"]) == 129 and out["meta"]["notes"] == []
+    assert code == 0 and len(out["items"]) == 129
+    assert out["meta"]["notes"] == ["128 of 128 readable comments returned from Algolia's fetched tree."]
 
 
 def test_read_comments_0_returns_the_story_alone(rsrc):
     code, out = rsrc(["read", "50148855", "--comments", "0"], FakeTransport((200, ITEM)))
 
     assert code == 0 and [i["id"] for i in out["items"]] == ["50148855"]
-    assert out["meta"]["notes"] == ["0 of 128 comments returned"]
+    assert out["meta"]["notes"] == ["0 of 128 readable comments returned from Algolia's fetched tree."]
 
 
 def test_read_poll_matches_results_by_id_with_one_extra_get(rsrc):
@@ -529,7 +529,7 @@ def test_read_skips_a_comment_without_text_and_keeps_its_replies(rsrc):
     code, out = rsrc(["read", "50148855", "--comments", "3"], FakeTransport(answer(tree)))
 
     assert ids_and_depths(out) == [("50148855", 0), ("50153167", 3), ("50149686", 2), ("50151883", 2)]
-    assert out["meta"]["notes"] == ["3 of 126 comments returned"]  # the two skipped are not counted
+    assert out["meta"]["notes"] == ["3 of 126 readable comments returned from Algolia's fetched tree."]  # the two skipped are not counted
     assert out["items"][0]["raw"]["item"]["children"][0] == 50149524  # raw still names the skipped child
 
 
