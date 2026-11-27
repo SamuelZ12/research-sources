@@ -1,6 +1,6 @@
 # Reddit
 
-`reddit` loads real reddit.com pages in a background Ego Lite tab, because Reddit blocks every non-browser client. Ego Lite must be running. The commands act as the Reddit account signed in to Ego Lite when there is one, so keep volume low: per question, at most 3 searches and 5 thread reads.
+`reddit` loads real reddit.com pages in a background tab of your own Ego Lite browser. Ego Lite must be running. The commands act as the Reddit account signed in to Ego Lite when there is one, so keep volume low: per question, at most 3 searches and 5 thread reads.
 
 Cite thread or comment URLs from `items` only. A comment's `url` is its permalink.
 
