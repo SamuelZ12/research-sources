@@ -51,6 +51,8 @@ def test_post_urls_and_bare_ids_resolve(arg):
 
 @pytest.mark.parametrize("arg", [
     "hello", "https://x.com/bkdgiffug", "1", "https://x.com/i/article/2097761142995308544",
+    "https://example.org/archive/x.com/alice/status/2117770299454177696",
+    "https://example.org/?url=x.com/alice/article/2117770299454177696",
     "https://x.com/alice/article/123abc", "https://notx.com/alice/article/2117770299454177696",
     "https://x.com/alice/article/\uff11\uff12\uff13", "\uff11\uff12\uff13",
 ])

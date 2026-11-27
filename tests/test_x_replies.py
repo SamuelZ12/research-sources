@@ -51,6 +51,21 @@ def test_replies_are_tied_to_the_root_and_exclude_it(run):
     assert all(r["source"] == "fxtwitter" for r in lines)
 
 
+def test_rejects_another_conversation_even_when_no_replies(run):
+    for rows in (conversation()["replies"], []):
+        code, lines, env = run(["1886192184808149383"], FakeFx([(200, conversation() | {"replies": rows})]))
+        assert code == 1 and env["error"]["code"] == "url_mismatch" and not lines
+
+
+def test_wrong_parent_on_a_later_page_keeps_only_verified_replies(run):
+    first = extra_page("101", cursor="more")
+    second = extra_page("102")
+    second["replies"][0]["replying_to"]["status"] = "999"
+    code, lines, env = run([ROOT], FakeFx([(200, first), (200, second)]))
+    assert code == 1 and env["error"]["code"] == "url_mismatch"
+    assert [r["id"] for r in lines] == ["101"]
+
+
 def test_reply_with_a_photo_lists_it_in_media(run):
     page = extra_page("1")
     page["replies"][0]["media"] = {"all": [{"type": "photo", "url": "https://pbs.twimg.com/media/r.jpg"}]}

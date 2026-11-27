@@ -132,15 +132,21 @@ def test_limit_above_the_maximum_is_a_usage_error(run):
     assert fake.urls == []
 
 
+def test_refuses_another_accounts_timeline(run):
+    code, env = run(["karpathy", "--limit", "2"], FakeFx([(200, only_page())]))
+    assert code == 1 and env["error"]["code"] == "url_mismatch" and not env["items"]
+
+
 def test_failure_after_a_page_of_reposts_does_not_blame_reposts(run):
-    first = {"code": 200, "results": [status("3", "someoneelse")], "cursor": {"bottom": "c1"}}
+    first = {"code": 200, "results": [status("3", "someoneelse", reposted_by={"screen_name": "mitchellh"})], "cursor": {"bottom": "c1"}}
     code, env = run(["mitchellh"], FakeFx([(200, first), *[(500, {})] * 3]))
     assert code == 1 and env["error"]["code"] == "upstream_error" and len(env["items"]) == 1
     assert env["meta"]["notes"] == []
 
 
 def test_account_is_matched_case_insensitively_past_a_leading_repost(run):
-    data = {"code": 200, "results": [status("3", "someoneelse"), status("2", "MitchellH", likes=7)]}
+    data = {"code": 200, "results": [status("3", "someoneelse", reposted_by={"screen_name": "mitchellh"}),
+                                     status("2", "MitchellH", likes=7)]}
     code, env = run(["mitchellh", "--limit", "2"], FakeFx([(200, data)]))
     account, repost, own = env["items"]
     assert code == 0 and account["author"] == "MitchellH" and account["id"] == "id-MitchellH"
@@ -149,7 +155,8 @@ def test_account_is_matched_case_insensitively_past_a_leading_repost(run):
 
 
 def test_reposts_only_returns_the_posts_without_an_account_item(run):
-    data = {"code": 200, "results": [status("3", "someoneelse"), status("2", "another")]}
+    data = {"code": 200, "results": [status("3", "someoneelse", reposted_by={"screen_name": "mitchellh"}),
+                                     status("2", "another", reposted_by={"screen_name": "MitchellH"})]}
     code, env = run(["mitchellh", "--limit", "2"], FakeFx([(200, data)]))
     assert code == 0 and [i["author"] for i in env["items"]] == ["someoneelse", "another"]
     assert env["meta"]["notes"] == ["none of the 2 posts is by @mitchellh (reposts only), so there is no account item"]

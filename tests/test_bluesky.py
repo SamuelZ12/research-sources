@@ -99,6 +99,12 @@ def test_url_discussion_without_keywords(run):
     assert parse_qs(calls[0].query)["q"] == ["*"]
 
 
+def test_no_visible_replies_when_optional_array_is_omitted(run):
+    data = recorded("labeled_link")
+    code, out, calls = run(["replies", data["thread"]["post"]["uri"]], (200, data))
+    assert code == 66 and not out["items"] and len(calls) == 1
+
+
 def test_inaccessible_replies_and_wrong_parent(run):
     data = recorded("thread")
     thread = data["thread"]

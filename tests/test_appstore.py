@@ -27,6 +27,14 @@ def run(capsys, argv, *responses):
     return code, json.loads(capsys.readouterr().out)
 
 
+def test_recent_reviews_sort_by_instant_with_fractional_seconds(capsys):
+    page = recording("rss")
+    for row, seconds in zip(page["feed"]["entry"], ("52.900", "52")):
+        row["updated"]["label"] = f"2026-11-20T10:25:{seconds}-07:00"
+    code, out = run(capsys, ["read", "874139669", "--limit", "2"], recording("app"), page)
+    assert code == 0 and [r["id"] for r in out["items"][1:]] == ["14813499075", "14813319268"]
+
+
 def test_search(capsys):
     catalog = recording("app")
     catalog["results"][0].update(description="Send private messages.", releaseNotes="Fixed a bug.")
