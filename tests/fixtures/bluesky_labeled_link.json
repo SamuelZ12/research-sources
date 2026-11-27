@@ -1,0 +1,58 @@
+{
+  "thread": {
+    "$type": "app.bsky.feed.defs#threadViewPost",
+    "post": {
+      "uri": "at://did:plc:tzluf62raajjzpgxgjvt4jt2/app.bsky.feed.post/3n37osfznz3z2",
+      "author": {
+        "handle": "shkspr.mobi",
+        "did": "did:plc:tzluf62raajjzpgxgjvt4jt2"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "## OGP Image Format Support on Major Sites and Apps\n\nshkspr.mobi/blog/2026/11…\n\nI've built a quick tool to see which image formats are supported on sites that allow Open Graph Protocol link previews.\n\nAs I've whinged about before, Facebook have all-but abandoned […] \n\n[Original post on shkspr.mobi]",
+        "facets": [
+          {
+            "$type": "app.bsky.richtext.facet",
+            "features": [
+              {
+                "$type": "app.bsky.richtext.facet#link",
+                "uri": "https://shkspr.mobi/blog/2026/11/ogp-image-format-support-on-major-sites-and-apps/"
+              }
+            ],
+            "index": {
+              "byteEnd": 303,
+              "byteStart": 271
+            }
+          },
+          {
+            "$type": "app.bsky.richtext.facet",
+            "features": [
+              {
+                "$type": "app.bsky.richtext.facet#link",
+                "uri": "https://shkspr.mobi/blog/2026/11/ogp-image-format-support-on-major-sites-and-apps/"
+              }
+            ],
+            "index": {
+              "byteEnd": 80,
+              "byteStart": 53
+            }
+          },
+          {
+            "$type": "app.bsky.richtext.facet",
+            "features": [
+              {
+                "$type": "app.bsky.richtext.facet#link",
+                "uri": "https://shkspr.mobi/blog/2022/11/is-open-graph-protocol-dead/"
+              }
+            ],
+            "index": {
+              "byteEnd": 264,
+              "byteStart": 233
+            }
+          }
+        ],
+        "createdAt": "2026-11-26T12:34:04.000Z"
+      }
+    }
+  }
+}

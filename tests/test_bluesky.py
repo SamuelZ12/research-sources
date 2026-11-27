@@ -124,6 +124,17 @@ def test_link_facet_offsets_count_utf8_bytes(run):
     assert "https://bsky.app/settings/beta" in out["items"][0]["text"]
 
 
+def test_read_keeps_linked_words_and_original_post_text(run):
+    thread = recorded("labeled_link")
+    post = thread["thread"]["post"]
+    code, out, _ = run(["read", post["uri"]], (200, thread))
+    item, = out["items"]
+    assert code == 0
+    assert "[Facebook have all-but abandoned](https://shkspr.mobi/blog/2022/11/is-open-graph-protocol-dead/)" in item["text"]
+    assert item["raw"]["text"] == post["record"]["text"]
+    assert "\n\nhttps://shkspr.mobi/blog/2026/11/ogp-image-format-support-on-major-sites-and-apps/\n\n" in item["text"]
+
+
 def test_feed_failure_preserves_profile_and_stops(run):
     code, out, urls = run(["timeline", "atproto.com"], (200, recorded("profile")), (403, b""))
     assert code == 1 and len(urls) == 2 and out["error"]["code"] == "blocked"

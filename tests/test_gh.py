@@ -99,6 +99,15 @@ def test_repo_returns_one_item_with_stats_release_and_readme_head(rsrc):
     assert out["meta"]["notes"] == []
 
 
+def test_repo_without_subscriber_count_does_not_substitute_stars(rsrc):
+    record = json.loads(REPO)
+    record.pop("subscribers_count")
+    record["watchers_count"] = record["stargazers_count"]
+    code, out = rsrc(["repo", "--backend", "gh", "example-org/example-cli"],
+                     FakeGh(ok(json.dumps(record)), ok(README), NOT_FOUND))
+    assert code == 0 and "watchers" not in out["items"][0]["engagement"]
+
+
 def test_repo_drops_the_temporary_clone_credential(rsrc):
     record = {**json.loads(REPO), "private": True, "temp_clone_token": "SENTINEL-CLONE-CREDENTIAL"}
     fake = FakeGh(ok(json.dumps(record)), ok(README), ok(RELEASE))
@@ -172,7 +181,7 @@ def test_search_maps_repositories(rsrc):
     assert first["url"] == "https://github.com/example-org/example-cli"
     assert first["author"] == "example-org"
     assert first["published_at"] == "2026-11-03T12:30:00Z"
-    assert first["engagement"] == {"stars": 1234, "forks": 56, "open_issues": 17, "watchers": 1234}
+    assert first["engagement"] == {"stars": 1234, "forks": 56, "open_issues": 17}
     assert first["raw"] == json.loads(SEARCH_REPOS)[0]
     assert second["text"] is None  # empty description
     assert out["meta"]["attempts"][0]["outcome"] == "ok"

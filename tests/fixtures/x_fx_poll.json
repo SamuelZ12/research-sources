@@ -1,0 +1,28 @@
+{
+  "status": {
+    "id": "1604617643973124097",
+    "url": "https://x.com/elonmusk/status/1604617643973124097",
+    "text": "Should I step down as head of Twitter? I will abide by the results of this poll.",
+    "poll": {
+      "ends_at": "2022-12-19T11:20:32Z",
+      "time_left_en": "Final results",
+      "total_votes": 17502391,
+      "choices": [
+        {
+          "label": "Yes",
+          "count": 10063044,
+          "percentage": 57.5
+        },
+        {
+          "label": "No",
+          "count": 7439347,
+          "percentage": 42.5
+        }
+      ]
+    },
+    "created_timestamp": 1671405633,
+    "author": {
+      "screen_name": "elonmusk"
+    }
+  }
+}

@@ -395,6 +395,24 @@ def test_read_article_id_link_asks_for_the_post_without_requests(run):
     assert "read the post that links to the article" in env["error"]["message"]
 
 
+def test_read_returns_poll_results_and_keeps_the_question_verbatim(run):
+    data = load("x_fx_poll.json")
+    code, out, _ = run(["read", data["status"]["id"]], FakeTransport(fx=[(200, data)]))
+    item, = out["items"]
+    assert code == 0 and item["raw"]["poll"] == data["status"]["poll"]
+    assert item["raw"]["text"] == data["status"]["text"]
+    assert all(s in item["text"] for s in ("Final results", "17,502,391 votes", "Yes: 57.5%", "No: 42.5%"))
+
+
+def test_unreported_poll_numbers_are_not_invented(run):
+    data = load("x_fx_poll.json")
+    data["status"]["poll"] = {"choices": [{"label": "Yes"}, {"label": "No"}]}
+    code, out, _ = run(["read", data["status"]["id"]], FakeTransport(fx=[(200, data)]))
+    item, = out["items"]
+    assert code == 0 and "Yes: result unavailable" in item["text"]
+    assert "%" not in item["text"] and "Final results" not in item["text"]
+
+
 def test_read_article_url_returns_the_article_from_the_publishing_post(run):
     fake = FakeTransport(fx=[(200, load("x_fx_article.json"))])
     code, env, _ = run(["read", "https://x.com/pmarca/article/2097762851788398971"], fake)
