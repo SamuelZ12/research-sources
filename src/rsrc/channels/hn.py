@@ -111,7 +111,17 @@ def run_read(args, ctx) -> dict:
         meta["notes"] = [f"{returned} of {total} comments returned"]
     error = None
     if root.get("type") == "poll":
-        items[0]["raw"]["poll"], error = _poll_results(ctx, root, attempts)
+        poll, error = _poll_results(ctx, root, attempts)
+        items[0]["raw"]["poll"] = poll
+        lines = [items[0]["text"]] if items[0]["text"] else []
+        lines.append({"ok": "Poll results:", "partial": "Partial poll results:",
+                      "unavailable": "Poll results unavailable."}[poll["status"]])
+        for option in poll["options"]:
+            if option["text"]:
+                points = option["points"]
+                score = "score unavailable" if points is None else f"{points} point{'s' if points != 1 else ''}"
+                lines.append(f"- {option['text']}: {score}")
+        items[0]["text"] = "\n".join(lines)
     return env.envelope(CHANNEL, "read", input_, BACKEND, items, meta=meta, error=error)
 
 

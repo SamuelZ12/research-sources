@@ -430,6 +430,7 @@ def test_read_poll_matches_results_by_id_with_one_extra_get(rsrc):
     assert root["id"] == "3746692" and root["engagement"] == {"points": 2423}
     poll = root["raw"]["poll"]
     assert poll["status"] == "ok"
+    assert "Actionscript: 106 points" in root["text"] and "Ada: 28 points" in root["text"]
     options = poll["options"]
     assert len(options) == 37 and [option["id"] for option in options] == root["raw"]["item"]["options"]
     assert options[:2] == [
@@ -454,6 +455,8 @@ def test_read_poll_keeps_hidden_scores_and_missing_labels_unknown(rsrc, hidden):
     assert code == 0 and len(out["items"]) == 2
     poll = out["items"][0]["raw"]["poll"]
     assert poll["status"] == "partial"
+    assert "Partial poll results" in out["items"][0]["text"]
+    assert "Actionscript: score unavailable" in out["items"][0]["text"]
     assert poll["options"][:2] == [
         {"id": 3746693, "text": "Actionscript", "points": None},
         {"id": 3746694, "text": None, "points": None},
@@ -513,6 +516,7 @@ def test_read_poll_without_option_ids_reports_unavailable_without_requesting_the
 
     assert code == 0 and len(out["items"]) == 2
     assert out["items"][0]["raw"]["poll"] == {"status": "unavailable", "options": []}
+    assert "Poll results unavailable." in out["items"][0]["text"]
     assert len(transport.urls) == 1
 
 
