@@ -1,7 +1,4 @@
-"""Hacker News via the keyless Algolia HN API: `search` (stories) and `read` (one item and its comments).
-
-One request per command, through `rsrc.http.Client`. No cookie, no key, no retry.
-"""
+"""Hacker News threads via Algolia, with one public page request per poll."""
 
 import argparse
 import json
@@ -12,7 +9,8 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from rsrc import envelope as env
-from rsrc.http import Client, HttpError, NotFound, raise_refusal
+from rsrc.html_markdown import VOID
+from rsrc.http import Client, HttpError, NotFound, raise_refusal, single_hop_transport, urllib_transport
 
 CHANNEL = "hn"
 BACKEND = "algolia"
@@ -24,6 +22,7 @@ MAX_COMMENTS = 1000
 
 _ID = re.compile(r"[0-9]{1,15}")
 _BLANK = re.compile(r"[\x00-\x20\x7f]")  # urlsplit silently drops tabs and newlines inside a URL
+_DISPLAY_NONE = re.compile(r"(?:^|;)\s*display\s*:\s*none\s*(?:!\s*important\s*)?(?:;|$)", re.I)
 
 
 def register(subparsers) -> None:
@@ -40,7 +39,7 @@ def register(subparsers) -> None:
     search.add_argument("--limit", type=int, default=30, help=f"stories, 1-{MAX_LIMIT} (default 30)")
     search.set_defaults(run=run_search, action="search")
 
-    read = actions.add_parser("read", help="one story or comment, then the comments below it")
+    read = actions.add_parser("read", help="one story, poll, or comment, then the comments below it")
     read.add_argument("item", metavar="URL_OR_ID", help="news.ycombinator.com item URL, or the numeric ID")
     read.add_argument("--comments", type=int, default=50,
                       help=f"comments, 0-{MAX_COMMENTS}, depth-first in posting order, not ranked (default 50)")
@@ -110,7 +109,10 @@ def run_read(args, ctx) -> dict:
     returned = len(items) - 1
     if returned < total:
         meta["notes"] = [f"{returned} of {total} comments returned"]
-    return env.envelope(CHANNEL, "read", input_, BACKEND, items, meta=meta)
+    error = None
+    if root.get("type") == "poll":
+        items[0]["raw"]["poll"], error = _poll_results(ctx, root, attempts)
+    return env.envelope(CHANNEL, "read", input_, BACKEND, items, meta=meta, error=error)
 
 
 def parse_item(value: str) -> str | None:
@@ -233,6 +235,108 @@ def _node_item(node: dict, depth: int, text: str | None) -> dict:
         # The subtree would repeat every item below this one; the direct child IDs keep the structure.
         raw={"item": {**node, "children": [child["id"] for child in node["children"]]}, "depth": depth},
     )
+
+
+def _poll_results(ctx, root: dict, attempts: list) -> tuple[dict, dict | None]:
+    ids = root.get("options")
+    if not isinstance(ids, list) or not ids or not all(_is_int(i) and i > 0 for i in ids):
+        return {"status": "unavailable", "options": []}, None
+
+    options = [{"id": i, "text": None, "points": None} for i in ids]
+    transport = single_hop_transport if ctx.transport is urllib_transport else ctx.transport
+    client = Client(min_interval=1, max_requests=1, transport=transport)
+    started = time.monotonic()
+    item_id = str(root["id"])
+    try:
+        status, body = client.request("GET", DISCUSSION + item_id)
+        raise_refusal(status, b"", "Hacker News poll page")
+        if status != 200:
+            raise HttpError(f"Hacker News poll page answered HTTP {status}")
+        page = _PollPage({str(i) for i in ids})
+        try:
+            page.feed(body.decode(errors="replace"))
+            page.close()
+        except (AssertionError, ValueError):
+            raise HttpError("Hacker News poll page contained malformed HTML") from None
+        if page.item_id != item_id:
+            raise HttpError(f"Hacker News poll page did not contain submission {item_id}")
+    except HttpError as e:
+        attempts.append(env.attempt("hackernews", e.code, client.requests_made, env.elapsed_ms(started)))
+        return {"status": "unavailable", "options": options}, env.error(e.code, str(e))
+
+    for option in options:
+        key = str(option["id"])
+        text = " ".join("".join(page.labels.get(key, [])).split())
+        score = "".join(page.scores.get(key, [])).strip()
+        match = re.fullmatch(r"([0-9]{1,15})\s+points?", score)
+        option["text"] = text or None
+        option["points"] = int(match[1]) if text and match else None
+    scored = sum(option["points"] is not None for option in options)
+    status = "unavailable"
+    if scored:
+        status = "ok" if scored == len(options) else "partial"
+    attempts.append(env.attempt("hackernews", "ok", client.requests_made, env.elapsed_ms(started)))
+    return {"status": status, "options": options}, None
+
+
+class _PollPage(HTMLParser):
+    def __init__(self, option_ids: set[str]):
+        super().__init__(convert_charrefs=True)
+        self.option_ids = option_ids
+        self.item_id = None
+        self.labels: dict[str, list[str]] = {}
+        self.scores: dict[str, list[str]] = {}
+        self._label_id = None
+        self._capture: tuple[str, list[str]] | None = None
+        self._capture_depth = 0
+        self._hidden: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if self._hidden or "hidden" in attrs or _DISPLAY_NONE.search(attrs.get("style") or ""):
+            if tag not in VOID:
+                self._hidden.append(tag)
+            return
+        if self._capture:
+            if tag == self._capture[0]:
+                self._capture_depth += 1
+            if tag in ("br", "p"):
+                self._capture[1].append(" ")
+            return
+        classes = set((attrs.get("class") or "").split())
+        node_id = attrs.get("id") or ""
+        if tag == "tr":
+            if {"athing", "submission"} <= classes:
+                self.item_id = node_id
+            self._label_id = node_id if classes == {"athing"} and node_id in self.option_ids else None
+        elif tag == "td" and self._label_id and "comment" in classes:
+            self._capture = (tag, self.labels.setdefault(self._label_id, []))
+        elif tag == "span" and classes == {"score"} and node_id.startswith("score_"):
+            option_id = node_id.removeprefix("score_")
+            if option_id in self.option_ids:
+                self._capture = (tag, self.scores.setdefault(option_id, []))
+
+    def handle_endtag(self, tag):
+        if self._hidden:
+            for index in range(len(self._hidden) - 1, -1, -1):
+                if self._hidden[index] == tag:
+                    del self._hidden[index:]
+                    break
+            return
+        if self._capture:
+            if tag == "p":
+                self._capture[1].append(" ")
+            if self._capture[0] == tag:
+                if self._capture_depth:
+                    self._capture_depth -= 1
+                else:
+                    self._capture = None
+        if tag == "tr":
+            self._label_id = None
+
+    def handle_data(self, data):
+        if self._capture and not self._hidden:
+            self._capture[1].append(data)
 
 
 def _iso(day: date | None) -> str | None:

@@ -443,8 +443,10 @@ def test_read_poll_matches_results_by_id_with_one_extra_get(rsrc):
     ]
 
 
-def test_read_poll_keeps_hidden_scores_and_missing_labels_unknown(rsrc):
-    page = (POLL_PAGE.replace(b'id="score_3746693">106 points', b'id="score_3746693">')
+@pytest.mark.parametrize("hidden", [b"hidden", b'style="display: none"'])
+def test_read_poll_keeps_hidden_scores_and_missing_labels_unknown(rsrc, hidden):
+    page = (POLL_PAGE.replace(b'<span class="comhead"><span class="score" id="score_3746693">',
+                              b'<span class="comhead" ' + hidden + b'><span class="score" id="score_3746693">')
             .replace(b'<tr class="athing" id="3746694">', b'<tr class="athing" id="9999999">')
             .replace(b'id="score_3746718">3240 points', b'id="score_3746718">0 points'))
     code, out = rsrc(["read", "3746692"], FakeTransport((200, POLL), (200, page)))
@@ -457,6 +459,17 @@ def test_read_poll_keeps_hidden_scores_and_missing_labels_unknown(rsrc):
         {"id": 3746694, "text": None, "points": None},
     ]
     assert {"id": 3746718, "text": "Python", "points": 0} in poll["options"]
+
+
+def test_read_poll_keeps_visible_text_across_html_tags(rsrc):
+    page = (POLL_PAGE.replace(b">Actionscript</font>", b">Action<i>script</i><br>3</font>")
+            .replace(b'id="score_3746693">106 points', b'id="score_3746693"><span>106</span>&nbsp;points'))
+    code, out = rsrc(["read", "3746692"], FakeTransport((200, POLL), (200, page)))
+
+    assert code == 0 and out["ok"]
+    poll = out["items"][0]["raw"]["poll"]
+    assert poll["status"] == "ok"
+    assert poll["options"][0] == {"id": 3746693, "text": "Actionscript 3", "points": 106}
 
 
 def test_read_poll_reports_unavailable_when_no_scores_are_visible(rsrc):
@@ -474,6 +487,7 @@ def test_read_poll_reports_unavailable_when_no_scores_are_visible(rsrc):
     ((429, b"Too Many Requests"), "rate_limited"),
     ((403, b"Forbidden"), "blocked"),
     ((200, b"<html>maintenance</html>"), "upstream_error"),
+    ((200, b"<![unrecognized]>"), "upstream_error"),
     ((200, POLL_PAGE.replace(b'class="athing submission" id="3746692"',
                              b'class="athing submission" id="9999999"')), "upstream_error"),
     (TimeoutError("timed out"), "network_error"),

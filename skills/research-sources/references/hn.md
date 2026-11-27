@@ -1,6 +1,6 @@
 # Hacker News
 
-`hn` asks the Algolia Hacker News API directly: one request, about a second, no login.
+`hn` sends one request to the Algolia Hacker News API. Reading a poll with option IDs adds one request to its public Hacker News page. Both requests work without a login.
 
 ## Search
 
@@ -19,3 +19,7 @@ An item's `url` is the Hacker News discussion. The linked article is `raw.url` o
 - Posting order is not a ranking, and Hacker News publishes no comment scores. Weigh a comment by what it says, whatever its position.
 - Comments without text (deleted) are left out.
 - `meta.notes` says `N of M comments returned` when `--comments` cut the thread short.
+
+For a poll, the first item's `raw.poll.options` lists the choices in Algolia's option ID order. Each choice has `id`, `text`, and `points`. Missing labels and scores are `null`. A published zero stays zero. Choices are available even with `--comments 0`.
+
+`raw.poll.status` is `ok` when every choice has a label and score, `partial` when some do, and `unavailable` when none do. If the page request fails, the command reports the error and keeps the Algolia thread in `items`. The command makes no retries or per-choice requests.
