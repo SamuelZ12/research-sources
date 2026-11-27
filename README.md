@@ -9,22 +9,13 @@
 
 The [measurements](docs/comparisons.md) have the method and limits behind each number.
 
-```console
-$ rsrc x read https://x.com/karpathy/status/1886192184808149383 | jq
-{
-  "ok": true,
-  "channel": "x",
-  "items": [
-    {
-      "author": "karpathy",
-      "text": "There's a new kind of coding I call \"vibe coding\", where you fully give in to the vibes, ...",
-      "engagement": { "likes": 38010, "reposts": 3837, ... },
-      ...
-    }
-  ],
-  ...
-}
+```sh
+rsrc x read https://x.com/karpathy/status/1886192184808149383
+rsrc hn search "vibe coding"
+rsrc youtube read https://youtu.be/7xTGNNLPyMI
 ```
+
+Each command prints one JSON object with the text, author, date and engagement of each item.
 
 ## Install
 
