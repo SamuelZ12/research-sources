@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from rsrc.channels.x import search
-from rsrc.http import AuthError, HttpError, RateLimited
+from rsrc.http import HttpError
 
 
 class TimelineBlocked(HttpError):

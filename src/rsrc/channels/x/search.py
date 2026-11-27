@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from rsrc.channels.x.record import legacy_media, make_record, to_int
-from rsrc.http import AuthError, HttpError, RateLimited
+from rsrc.http import AuthError, Blocked, HttpError, RateLimited
 
 API = "https://x.com/i/api/graphql"
 QUERY_IDS = ("6AAys3t42mosm_yTI_QENg", "M1jEez78PEfVfbQLvlWMvQ", "5h0kNbk3ii97rmfY6CdgAA", "Tp1sewRU1AsZpBWhqCZicQ")
@@ -265,12 +265,16 @@ def fetch_page(client, cookies, query, product="Latest", cursor=None, query_id=Q
     data = _json(raw) if status in (400, 422) else None
     if data and _validation_failed(data):
         raise SearchError(f"HTTP {status}: query ID {query_id} rejected", query_id_rejected=True)
+    if data and data.get("errors"):
+        check_graphql_codes(data["errors"])
     check_status(status, b"")  # never echo the body: this request carries the session cookies
     data = _json(raw)
     if data.get("errors"):
         check_graphql_codes(data["errors"])
-        message = ", ".join(e.get("message", "unknown error") for e in data["errors"])
-        raise SearchError(message, query_id_rejected=_validation_failed(data))
+        message = ", ".join(str(e.get("message", "unknown error")) for e in data["errors"] if isinstance(e, dict))
+        for secret in cookies:  # X's own text, with the session values taken out in case it quotes them
+            message = message.replace(secret, "<redacted>")
+        raise SearchError(message or "X returned an error", query_id_rejected=_validation_failed(data))
     try:
         return parse_page(data)
     except (KeyError, AttributeError, TypeError, ValueError):
@@ -433,6 +437,8 @@ def check_graphql_codes(errors) -> None:
         raise RateLimited("X rate limited this account")
     if codes & {"32", "89", "215"}:
         raise AuthError("X rejected the configured session")
+    if "326" in codes:
+        raise Blocked("X locked this account")
 
 
 def _json(raw: bytes) -> dict:

@@ -846,9 +846,12 @@ def test_fxtwitter_first_keeps_its_error_when_the_session_fails_too(run, environ
     assert env["meta"]["notes"] == ["x-graphql was tried next and failed: HTTP 500"]
 
 
-@pytest.mark.parametrize(("code_", "expected"), [(88, "rate_limited"), (32, "auth_failed"), (215, "auth_failed")])
-def test_session_stop_codes_in_a_200_skip_the_fallback(run, environ, code_, expected):
-    fake = FakeTransport(x=[(200, {"errors": [{"code": code_, "message": "stop"}]})], fx=[(200, load("x_fx_search_latest.json"))])
+@pytest.mark.parametrize(("status", "code_", "expected"), [
+    (200, 88, "rate_limited"), (200, 32, "auth_failed"), (200, 215, "auth_failed"), (200, 326, "blocked"),
+    (400, 215, "auth_failed"),
+])
+def test_session_stop_codes_skip_the_fallback(run, environ, status, code_, expected):
+    fake = FakeTransport(x=[(status, {"errors": [{"code": code_, "message": "stop"}]})], fx=[(200, load("x_fx_search_latest.json"))])
     code, env, _ = run(["search", "q", "--max-requests", "2"], fake, env=environ | SESSION_FIRST)
     assert code == 1 and env["error"]["code"] == expected
     assert [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
@@ -856,7 +859,7 @@ def test_session_stop_codes_in_a_200_skip_the_fallback(run, environ, code_, expe
 
 def test_session_errors_never_echo_the_response_body(run, environ):
     leak = b"auth_token=TOKENSENTINEL ct0=CSRFSENTINEL"
-    for response in [(500, leak), (200, b"<html>" + leak)]:
+    for response in [(500, leak), (200, b"<html>" + leak), (200, {"errors": [{"message": leak.decode()}]})]:
         fake = FakeTransport(x=[response])
         code, env, _ = run(["search", "q", "--max-requests", "1"], fake, env=environ | SESSION_FIRST)
         assert code == 1 and "SENTINEL" not in json.dumps(env)
