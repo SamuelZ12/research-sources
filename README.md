@@ -15,7 +15,7 @@ rsrc hn search "vibe coding"
 rsrc youtube read https://youtu.be/7xTGNNLPyMI
 ```
 
-Each command prints one JSON object with the text, author, date and engagement of each item.
+Each command prints one JSON object with the text, author, date and engagement of each item. The [output reference](docs/output.md) shows a full example.
 
 ## Install
 
