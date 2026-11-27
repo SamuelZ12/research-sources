@@ -72,7 +72,7 @@ On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 h
 - **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
 - **Not a web search.** Pair it with one.
 - **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
-- **Early software.** One maintainer, tested on macOS only.
+- **Early software.** One maintainer. Live sources have been tested on macOS only.
 
 ## Contributing
 
