@@ -13,6 +13,7 @@ ROOT = "https://itunes.apple.com"
 NATIVE = ROOT + "/WebObjects/MZStore.woa/wa/"
 APP_PATH = re.compile(r"/([a-z]{2})/app/(?:[^/]+/)?id([0-9]+)/?")
 SORT = {"recent": 4, "helpful": 1}
+DISPLAY_KIND = {"software": 11, "mac-software": 30}
 HEADERS = {"X-Apple-Store-Front": ",32"}  # JSON storefront format; cc selects the country
 
 
@@ -105,7 +106,7 @@ def catalog(client, country, *, term=None, app_id=None, limit=25):
         if (url.scheme != "https" or url.netloc != "apps.apple.com" or not match
                 or match.groups() != (country, ident) or app_id and ident != app_id):
             raise Mismatch("App Store listing has a different ID or storefront")
-        if row["kind"] != "software":
+        if row["kind"] not in DISPLAY_KIND:
             raise ValueError
         raw = {k: row.get(k) for k in ("primaryGenreName", "version",
                                        "currentVersionReleaseDate")}
@@ -154,9 +155,12 @@ def rss(client, app, page, sort):
         if (link.netloc != "itunes.apple.com" or link.path != f"/{country}/review"
                 or parse_qs(link.query).get("id") != [ident]):
             raise Mismatch("Review links to a different app or storefront")
+        version = r.get("im:version", {}).get("label")
+        if version is not None and not isinstance(version, str):
+            raise ValueError
         items.append(review(app, r["id"]["label"], r["title"]["label"], r["author"]["name"]["label"],
                             r["updated"]["label"], r["content"]["label"], r["im:rating"]["label"],
-                            r["im:voteSum"]["label"], r["im:voteCount"]["label"], string(r["im:version"]["label"])))
+                            r["im:voteSum"]["label"], r["im:voteCount"]["label"], (version or "").strip() or None))
     return items
 
 
@@ -167,14 +171,14 @@ def native_count(client, app, params):
     if (str(data["adamId"]) != app["id"] or scope.get("cc") != [params["cc"]]
             or scope.get("id") != [app["id"]]):
         raise Mismatch("Apple review count identifies a different app or storefront")
-    if data["kindId"] != 11 or data["userReviewsRowUrl"] != NATIVE + "userReviewsRow":
+    if data["kindId"] != params["displayable-kind"] or data["userReviewsRowUrl"] != NATIVE + "userReviewsRow":
         raise ValueError
     return number(data["totalNumberOfReviews"])
 
 
-def read_reviews(client, app, args, items, meta):
+def read_reviews(client, app, display_kind, args, items, meta):
     country = app["raw"]["country"]
-    params = {"cc": country, "id": app["id"], "displayable-kind": 11, "sort": SORT[args.sort]}
+    params = {"cc": country, "id": app["id"], "displayable-kind": display_kind, "sort": SORT[args.sort]}
     seen = set()
     page, offset, total = 1, 0, None
     meta["notes"].append("Apple's public review window can lag and completeness is unverified.")
@@ -271,9 +275,11 @@ def run(args, ctx):
                 apps = close
             if len(apps) != 1:
                 raise Mismatch("Lookup returned multiple apps for one ID")
-            apps[0]["text"] = listing_text(rows[apps[0]["id"]])
-            items.append(apps[0])
-            read_reviews(client, apps[0], args, items, meta)
+            app = apps[0]
+            row = rows[app["id"]]
+            app["text"] = listing_text(row)
+            items.append(app)
+            read_reviews(client, app, DISPLAY_KIND[row["kind"]], args, items, meta)
     except CapReached:
         meta["truncated"] = "request_cap"
         meta["notes"].append(f"Request cap reached after {cap} calls; returned {max(0, len(items) - 1)} of "

@@ -231,18 +231,26 @@ def read(client, product, launch, notes):
                         row["latest_launch_at"] if row else None, engagement)
 
 
-def leaderboard(client, period, limit):
+def leaderboard(client, period, limit, notes):
     data = tool(client, "get_product_leaderboard", date=period, limit=limit)
     window = data["period"]
     if window["date"] != period:
         raise Failure("url_mismatch", "Product Hunt returned a different leaderboard period")
-    items = []
-    for rank, row in enumerate(rows(data)[:limit], 1):
+    items, gaps = [], []
+    previous = 0
+    for row in rows(data)[:limit]:
         post, = row["launches"]
+        rank = post["rank"]
         local = datetime.fromisoformat(post["launched_at"]).astimezone(ZoneInfo(ZONE)).date().isoformat()
-        if type(post["rank"]) is not int or post["rank"] != rank or not window["launched_after"] <= local <= window["launched_before"]:
+        if type(rank) is not int or rank <= previous or not window["launched_after"] <= local <= window["launched_before"]:
             raise HttpError("Product Hunt returned an inconsistent launch rank or date")
+        if rank > previous + 1:
+            first, last = previous + 1, rank - 1
+            gaps.append(str(first) if first == last else f"{first}-{last}")
         items.append(launch_item(post, {"rank": rank, "period": window, "product": row}, {}))
+        previous = rank
+    if gaps:
+        notes.append(f"Ranks missing from Product Hunt's response: {', '.join(gaps)}.")
     return items
 
 
@@ -263,7 +271,7 @@ def run(args, ctx):
         if action == "read":
             items = [read(client, product, launch, notes)]
         elif action == "leaderboard":
-            items = leaderboard(client, inputs["date"], args.limit)
+            items = leaderboard(client, inputs["date"], args.limit, notes)
         else:
             found = search_rows(client, args.query, args.limit)
             items = [product_item(r, r, r["latest_launch_at"],

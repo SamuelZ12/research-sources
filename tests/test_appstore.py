@@ -169,6 +169,14 @@ def test_empty_rss_confirmed_by_count_or_filled_from_rows(capsys):
     assert out["items"][0]["raw"]["storefront_review_count"] == 1
 
 
+def test_xcode_reviews_from_native_mac_storefront(capsys):
+    feed = json.loads(json.dumps(recording("empty_feed")).replace("324715238", "497799835"))
+    code, out = run(capsys, ["read", "497799835", "--limit", "1"], recording("xcode"), feed,
+                    recording("xcode_count"), recording("xcode_rows"))
+    assert code == 0 and out["items"][1]["id"] == "14827314337"
+    assert out["items"][0]["raw"]["storefront_review_count"] == 3907
+
+
 def test_native_count_or_row_from_wrong_country(capsys):
     a, f = recording("wiki"), recording("empty_feed")
     for extra in [[recording("zero")], [wiki_count(1), {"userReviewList": []}]]:

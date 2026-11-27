@@ -139,7 +139,16 @@ def test_board_keeps_reported_ranks_when_a_launch_is_missing(capsys):
     assert code == 0 and out["error"] is None
     assert [(item["title"], item["raw"]["rank"]) for item in out["items"]] == [
         ("Flux", 1), ("DaysAround", 2), ("Ultracite v7", 3), ("Still", 4), ("NoteTabs", 6)]
-    assert any("5" in note for note in out["meta"]["notes"])
+    assert out["meta"]["notes"] == ["Ranks missing from Product Hunt's response: 5."]
+
+
+def test_board_notes_leading_range_without_renumbering(capsys):
+    reply = recording("board_gap")
+    data = reply["result"]["structuredContent"]["data"]
+    data["results"] = data["results"][-1:]
+    code, out, _ = command(capsys, ["leaderboard", "--date", "2026-01-03"], reply)
+    assert code == 0 and out["items"][0]["raw"]["rank"] == 6
+    assert out["meta"]["notes"] == ["Ranks missing from Product Hunt's response: 1-5."]
 
 
 @pytest.mark.parametrize("rank", [3, 4])
