@@ -7,9 +7,7 @@ from types import SimpleNamespace
 from rsrc import checks, chrome, proc
 from rsrc import envelope as env
 from rsrc.channels import appstore, ashby, linkedin
-from rsrc.channels import bluesky
 from rsrc.channels import hn as hnc
-from rsrc.channels import producthunt
 from rsrc.channels import reddit as rc
 from rsrc.channels import reddit_archive
 from rsrc.channels import x as xc
@@ -18,7 +16,7 @@ from rsrc.channels.x import auth, connection, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
-NAMES = ("x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin")
+NAMES = ("x", "reddit", "hn", "youtube", "appstore", "ashby", "linkedin")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
@@ -29,8 +27,8 @@ YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to Yo
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
-                                   description="By default check all nine channels. Probe HN, Bluesky search, "
-                                               "Product Hunt search, the App Store catalog and an Ashby board, and read YouTube "
+                                   description="By default check all seven channels. Probe HN, "
+                                               "the App Store catalog and an Ashby board, and read YouTube "
                                                "metadata with yt-dlp. X setup and Ego Lite "
                                                "are checked locally unless their live flag is set. Without Ego Lite, "
                                                "Reddit check verifies one archived thread.")
@@ -64,14 +62,12 @@ def run(args, ctx) -> dict:
     names = list(dict.fromkeys(args.channels)) or list(NAMES)
     input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
     probes = {"linkedin": lambda attempts: probe_linkedin(ctx, attempts),
-              "bluesky": lambda attempts: bluesky.probe(ctx, attempts, _Failed),
               "x": lambda attempts: probe_x(ctx, args.live_x, attempts),
               "ashby": lambda attempts: probe_ashby(ctx, attempts),
               "appstore": lambda attempts: probe_appstore(ctx, attempts),
               "reddit": lambda attempts: probe_reddit(ctx, args.live_reddit, attempts),
               "hn": lambda attempts: probe_hn(ctx, attempts),
-              "youtube": lambda attempts: probe_youtube(ctx, attempts),
-              "producthunt": lambda attempts: probe_producthunt(ctx, attempts)}
+              "youtube": lambda attempts: probe_youtube(ctx, attempts)}
     items, sources, attempts, failures = [], {}, [], []
     for name in names:
         try:
@@ -300,17 +296,6 @@ def probe_youtube(ctx, attempts: list) -> tuple[str, dict]:
     vidscribe = "found" if found["vidscribe"] else "not found (no speech recognition for videos without captions)"
     return (f"yt-dlp {found['yt_dlp_version'] or 'of unknown version'} read video {YOUTUBE_VIDEO} without a warning "
             f"(1 request, no key); deno found; vidscribe {vidscribe}"), found
-
-def probe_producthunt(ctx, attempts):
-    result = producthunt.run(SimpleNamespace(action="search", query="linear", limit=1, max_requests=1), ctx)
-    attempts.extend(result["meta"]["attempts"])
-    if result["error"]:
-        raise _Failed(result["error"]["code"], result["error"]["message"])
-    if not result["items"]:
-        attempts[-1]["outcome"] = "upstream_error"
-        raise _Failed("upstream_error", "Product Hunt returned no products for its probe")
-    return "Product Hunt MCP answered an anonymous product search", {"product": result["items"][0]["id"]}
-
 
 def probe_appstore(ctx, attempts):
     args = SimpleNamespace(action="search", query="Wikipedia", country="us", limit=1)

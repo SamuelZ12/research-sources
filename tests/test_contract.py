@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from rsrc import cli, proc
-from rsrc.channels import appstore, ashby, bluesky, check, hn, linkedin, producthunt, reddit, x, youtube
+from rsrc.channels import appstore, ashby, check, hn, linkedin, reddit, x, youtube
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
@@ -15,8 +15,6 @@ HTTP_COMMANDS = {
     linkedin: ["linkedin", "read", check.LINKEDIN_POST],
     hn: ["hn", "search", "q"],
     appstore: ["appstore", "search", "q"],
-    bluesky: ["bluesky", "search", "q"],
-    producthunt: ["producthunt", "search", "q"],
     ashby: ["ashby", "search", "quartz"],
 }
 NOT_HTTP = {
@@ -77,13 +75,6 @@ CAPPED_COMMANDS = {
     ("x", "timeline", "x-chrome"): ["x", "timeline", "jack", "--backend", "x-chrome"],
     ("x", "timeline"): ["x", "timeline", "jack", "--backend", "fxtwitter"],
     ("x", "timeline", "x-graphql"): ["x", "timeline", "jack", "--backend", "x-graphql"],
-    ("bluesky", "search"): ["bluesky", "search", "q"],
-    ("bluesky", "read"): ["bluesky", "read", "at://bsky.app/app.bsky.feed.post/3l6oveex3ii2l"],
-    ("bluesky", "replies"): ["bluesky", "replies", "at://bsky.app/app.bsky.feed.post/3l6oveex3ii2l"],
-    ("bluesky", "timeline"): ["bluesky", "timeline", "bsky.app"],
-    ("producthunt", "search"): ["producthunt", "search", "q"],
-    ("producthunt", "read"): ["producthunt", "read", "linear"],
-    ("producthunt", "leaderboard"): ["producthunt", "leaderboard", "--date", "2026-11-21"],
     ("appstore", "read"): ["appstore", "read", "874139669"],
 }
 
@@ -143,26 +134,16 @@ def twice(data, *path):
     return data
 
 
-def mcp(name):
-    data = twice(recorded(f"producthunt/{name}.json"), "result", "structuredContent", "data", "results")
-    return {**data, "id": 1}
-
-
 LIMITED_COMMANDS = {
     ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
     ("appstore", "search"): (["appstore", "search", "q"],
                              lambda: [{**twice(recorded("appstore/wiki.json"), "results"), "resultCount": 2}]),
-    ("bluesky", "search"): (["bluesky", "search", "q"], lambda: [twice(recorded("bluesky_search.json"), "posts")]),
-    ("producthunt", "search"): (["producthunt", "search", "q"], lambda: [mcp("search")]),
-    ("producthunt", "leaderboard"): (["producthunt", "leaderboard", "--date", "2026-11-21"], lambda: [mcp("board")]),
     ("ashby", "search"): (["ashby", "search", "quartz"], lambda: [recorded("ashby/board.json")]),
 }
 LIMIT_COUNTS_PART = {
     ("x", "search"): "unique posts across date windows; test_x_windows.py covers --limit",
     ("x", "replies"): "replies after the post itself",
     ("x", "timeline"): "posts after the account item",
-    ("bluesky", "replies"): "replies after the post itself",
-    ("bluesky", "timeline"): "posts after the profile item",
     ("appstore", "read"): "reviews after the app item",
     ("reddit", "search"): "posts; --with-comments adds comments",
 }

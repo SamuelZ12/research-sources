@@ -20,7 +20,6 @@ HN_PROBE_URL = "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage
 HN_FRONT_PAGE = json.dumps({"hits": json.loads(
     (Path(__file__).parent / "fixtures" / "hn_search.json").read_text())["hits"][:1]}).encode()
 APPLE_APP = (Path(__file__).parent / "fixtures/appstore/wiki.json").read_bytes()
-BLUESKY_PAGE = (Path(__file__).parent / "fixtures" / "bluesky_search.json").read_bytes()
 YOUTUBE_PROBE = ["yt-dlp", "--ignore-config", "--no-cookies-from-browser", "--retries", "0", "--extractor-retries", "0",
                  "--no-playlist", "--dump-single-json", "--skip-download",
                  "--extractor-args", "youtube:player_client=default,-tv_samsung",
@@ -116,25 +115,21 @@ def healthy_runner() -> FakeRunner:
 # all channels
 
 LINKEDIN_POST = (Path(__file__).parent / "fixtures/linkedin_post.html").read_bytes()
-PH_FIX = Path(__file__).parent / "fixtures" / "producthunt"
-PH_RESPONSE = (200, (PH_FIX / "search.json").read_bytes())
 
 
 def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, environ, tmp_path):
-    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST))
+    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST))
     code, out = rsrc([], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"]) == ("check", "check")
-    assert out["input"] == {"channels": ["x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
+    assert out["input"] == {"channels": ["x", "reddit", "hn", "youtube", "appstore", "ashby", "linkedin"], "live_x": False,
                             "live_reddit": False}
-    assert [i["id"] for i in out["items"]] == ["x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
+    assert [i["id"] for i in out["items"]] == ["x", "reddit", "hn", "youtube", "appstore", "ashby", "linkedin"]
     assert all(set(i) == set(ITEM_KEYS) and i["source"] == i["id"] for i in out["items"])
     assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok",
-                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
+                                      "youtube": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     assert transport.urls == [HN_PROBE_URL,
-                              "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=python&sort=latest&limit=1",
-                              check.producthunt.ENDPOINT,
                               "https://itunes.apple.com/search?entity=software&country=us&term=Wikipedia&limit=1",
                               "https://api.ashbyhq.com/posting-api/job-board/linear?includeCompensation=true", check.LINKEDIN_POST]
     assert [argv[0] for argv in runner.argvs] == ["ego-browser", "yt-dlp"]  # no `uv` run
@@ -147,7 +142,7 @@ def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, 
     assert x["raw"]["live"] is None
     assert "absent" in x["raw"]["query_id_cache"]["state"]
     assert [a["backend"] for a in out["meta"]["attempts"]] == ["ego-browser", "algolia",
-                                                               "yt-dlp", "api.bsky.app", "producthunt-mcp", "itunes", "ashby-posting-api", "linkedin-public"]
+                                                               "yt-dlp", "itunes", "ashby-posting-api", "linkedin-public"]
     assert_no_secret_in_files(tmp_path, Path(environ["RSRC_X_ENV"]))
 
 
@@ -169,7 +164,7 @@ def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
     code, out = rsrc(["community"], environ=environ, runner=runner, transport=transport)
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "usage" and "invalid channel 'community'" in out["error"]["message"]
-    assert out["error"]["message"].endswith("(choose from x, reddit, hn, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
+    assert out["error"]["message"].endswith("(choose from x, reddit, hn, youtube, appstore, ashby, linkedin)")
     assert runner.argvs == [] and transport.urls == []
 
 
@@ -267,11 +262,11 @@ def test_missing_cookies_leave_x_ok_and_name_the_unavailable_backend(rsrc, tmp_p
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
                "PATH": programs(tmp_path, "yt-dlp", "deno")}
     code, out = rsrc([], environ=environ, runner=healthy_runner(),
-                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
+                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok",
-                                      "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
+                                      "youtube": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     x = out["items"][0]
     assert "x-graphql unavailable: missing AUTH_TOKEN, CT0" in x["text"]
     assert x["raw"]["file_exists"] is False and x["raw"]["x_graphql"] == "unavailable"
@@ -426,9 +421,8 @@ def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
     assert out["error"]["code"] == "config" and out["error"]["message"].startswith("x: ")
     assert out["meta"]["sources"] == {"x": "config", "reddit": "upstream_error",
                                       "hn": "upstream_error", "youtube": "config",
-                                      "bluesky": "upstream_error", "producthunt": "upstream_error",
                                       "appstore": "upstream_error", "ashby": "upstream_error", "linkedin": "upstream_error"}
-    assert len(out["items"]) == 9
+    assert len(out["items"]) == 7
 
 
 def test_every_checked_channel_failing_with_runtime_error_exits_1(rsrc, environ):
@@ -560,6 +554,6 @@ def test_live_x_session_only_reads_the_public_post(rsrc, environ):
 def test_help_explains_default_live_probes(capsys):
     assert cli.main(["check", "--help"]) == 0
     help_text = " ".join(capsys.readouterr().out.split())
-    for probe in ("Bluesky search", "Product Hunt search", "App Store catalog", "YouTube metadata"):
+    for probe in ("App Store catalog", "YouTube metadata"):
         assert probe in help_text
     assert "GitHub" not in help_text

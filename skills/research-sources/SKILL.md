@@ -1,6 +1,6 @@
 ---
 name: research-sources
-description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
+description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Reddit and Hacker News, YouTube videos and transcripts, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
 ---
 
 # research-sources (`rsrc`)
@@ -26,10 +26,6 @@ Before your first command on a channel, read that channel's file. The files are 
 | One Hacker News thread, with up to 1000 comments | `rsrc hn read URL_OR_ID [--comments 50]` | `references/hn.md` |
 | YouTube videos on a topic | `rsrc youtube search QUERY [--limit 10]` | `references/youtube.md` |
 | One YouTube video: its details and its transcript | `rsrc youtube read URL_OR_ID [--words 5000]` | `references/youtube.md` |
-| Bluesky posts about a topic or linking to a page | `rsrc bluesky search QUERY [--author HANDLE] [--domain DOMAIN] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--top]` or `rsrc bluesky search --url URL` | `references/bluesky.md` |
-| A Bluesky post, its replies, or an account's recent feed | `rsrc bluesky read POST`, `rsrc bluesky replies POST [--limit N]`, `rsrc bluesky timeline HANDLE_OR_URL [--limit N]` | `references/bluesky.md` |
-| Product Hunt products, makers or a particular launch | `rsrc producthunt search QUERY [--limit N]`, `rsrc producthunt read URL_OR_SLUG` | `references/producthunt.md` |
-| Top Product Hunt launches for a period | `rsrc producthunt leaderboard [--date PERIOD] [--limit N]` | `references/producthunt.md` |
 | What a company is hiring for, and what a role involves | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, then `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` | `references/ashby.md` |
 | App Store listings and written reviews in a storefront | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` | `references/appstore.md` |
 | A public LinkedIn post and its comments | `rsrc linkedin read URL` | `references/linkedin.md` |
@@ -82,6 +78,6 @@ The channel's file lists the messages that change an action below. Check it befo
 - **YouTube.** `rate_limited` or `blocked` stops all `rsrc youtube`, search and `check youtube` included. A `source_blocked` transcript status counts as `blocked`.
 - **LinkedIn.** `blocked`, `rate_limited` or `auth_failed` stops LinkedIn access, including `check linkedin` and a bare `rsrc check`, which read a public post.
 - **Ashby.** `blocked` or `rate_limited` stops board reads and `check ashby`.
-- **Hacker News, Bluesky, Product Hunt and the App Store.** `rate_limited` stops the whole channel.
+- **Hacker News and the App Store.** `rate_limited` stops the whole channel.
 
-**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, public searches on Bluesky, Product Hunt and App Store, the HN front page, YouTube metadata through yt-dlp, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.
+**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, a public App Store search, the HN front page, YouTube metadata through yt-dlp, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.

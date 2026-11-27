@@ -1,6 +1,6 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube and [five more](#sources).
+`rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube and [three more](#sources).
 
 - **Finds what web search misses.** In a five-topic test, an agent with an early `rsrc` cited at least four URLs per topic that web search alone did not.
 - **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 16 times faster than Agent-Reach and last30days.
@@ -23,7 +23,7 @@ You need Python 3.11 or newer and [uv](https://docs.astral.sh/uv/). `rsrc` has n
 
 ```sh
 uv tool install git+https://github.com/SamuelZ12/research-sources
-rsrc check hn bluesky
+rsrc check hn appstore
 ```
 
 The check sends one request to each source and prints the outcome under `meta.sources`.
@@ -45,8 +45,6 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 | Hacker News | `hn search`, `hn read` | None |
 | YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
 | LinkedIn | `linkedin read` (public post and comments) | None |
-| Bluesky | `bluesky search`, `bluesky read`, `bluesky replies`, `bluesky timeline` | None |
-| Product Hunt | `producthunt search`, `producthunt read`, `producthunt leaderboard` | None |
 | App Store | `appstore search`, `appstore read` (listing and reviews) | None |
 | Ashby | `ashby search`, `ashby read` | None |
 
@@ -69,8 +67,7 @@ On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 h
 - **Read-only.** `rsrc` never posts, likes, follows or trades.
 - **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
 - **Not a web search.** Pair it with one.
-- **No GitHub.** The [GitHub CLI](https://cli.github.com/) (`gh`) already reads repositories, issues, pull requests and their comments.
-- **No prediction markets.** Web search returns Polymarket's own pages with current odds.
+- **Only what web search misses.** For GitHub, use the [GitHub CLI](https://cli.github.com/) (`gh`). Web search already returns Polymarket odds, Bluesky posts and Product Hunt launch rankings from those sites' own pages.
 - **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
 - **Early software.** One maintainer. Live sources have been tested on macOS only.
 
