@@ -1,4 +1,5 @@
 import json
+import re
 import types
 
 import pytest
@@ -132,7 +133,11 @@ def test_community_is_an_unknown_channel_and_nothing_runs(capsys, monkeypatch):
     message = envelope["error"]["message"]
     assert "invalid choice: 'community'" in message
     listed = message.split("choose from", 1)[1]
-    assert "community" not in listed
-    assert all(name in listed for name in ("x", "reddit", "hn", "youtube", "check"))
-    assert "gh" not in listed.replace(",", " ").split()
+    assert set(re.findall(r"'([^']+)'", listed)) == {"x", "reddit", "hn", "linkedin", "youtube", "appstore", "check"}
     assert calls == []
+
+
+def test_a_lone_surrogate_from_upstream_still_prints_valid_json(capsys):
+    cli.print_envelope({"text": "a\ud800b", "warning": "w\udfffx"})
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"text": "a\ud800b", "warning": "w\udfffx"}

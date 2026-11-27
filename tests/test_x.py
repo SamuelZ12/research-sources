@@ -648,8 +648,7 @@ def test_answer_from_x_that_mentions_a_network_error_is_upstream_error(run, resp
     # X answered, so the network worked: the code is not read out of X's wording.
     fake = FakeTransport(x=[response])
     code, env, _ = run([*GQL, "q"], fake)
-    assert code == 1 and env["error"]["code"] == "upstream_error"
-    assert "network error" in env["error"]["message"] and len(fake.urls) == 1
+    assert code == 1 and env["error"]["code"] == "upstream_error" and len(fake.urls) == 1
 
 
 # --- search: configured backend order -------------------------
@@ -820,10 +819,10 @@ def test_session_error_passes_remaining_request_to_fxtwitter(run, environ, fx_st
         assert env["backend"] == "fxtwitter" and env["error"] is None
         assert {item["source"] for item in env["items"]} == {"fxtwitter"}
         assert env["meta"]["truncated"] == "request_cap"
-        assert env["meta"]["notes"] == ["x-graphql was tried first and failed: HTTP 500: session outage"]
+        assert env["meta"]["notes"] == ["x-graphql was tried first and failed: HTTP 500"]
     else:  # nothing answered: the result is the first backend's, the fallback's failure is a note
         assert env["backend"] == "x-graphql" and env["items"] == []
-        assert env["error"] == {"code": "upstream_error", "message": "HTTP 500: session outage"}
+        assert env["error"] == {"code": "upstream_error", "message": "HTTP 500"}
         assert env["meta"]["notes"] == ["fxtwitter was tried next and failed: fxtwitter search: HTTP 404"]
     assert attempts(env) == [("x-graphql", "upstream_error", 1), ("fxtwitter", outcome, 1)]
     assert [urlsplit(u).hostname for u in fake.urls] == ["x.com", "api.fxtwitter.com"]
@@ -833,7 +832,7 @@ def test_session_first_keeps_its_posts_and_error_when_fxtwitter_fails_too(run, e
     fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (500, b"page two")], fx=[(404, b"")] * 3)
     code, env, _ = run(["search", "q", "--per-window", "100"], fake, env=environ | SESSION_FIRST)
     assert code == 1 and env["backend"] == "x-graphql" and env["error"]["code"] == "upstream_error"
-    assert "page two" in env["error"]["message"]
+    assert env["error"]["message"] == "HTTP 500"
     assert len(env["items"]) == len(parse_page(load("x_graphql_latest.json"))[0]) > 0
     assert attempts(env) == [("x-graphql", "upstream_error", 2), ("fxtwitter", "upstream_error", 3)]
     assert env["meta"]["notes"] == ["fxtwitter was tried next and failed: fxtwitter search: HTTP 404"]
@@ -844,7 +843,23 @@ def test_fxtwitter_first_keeps_its_error_when_the_session_fails_too(run, environ
     code, env, _ = run(["search", "q", "--max-requests", "4"], fake, env=environ | FX_FIRST)
     assert code == 1 and env["backend"] == "fxtwitter"
     assert env["error"] == {"code": "upstream_error", "message": "fxtwitter search: HTTP 404"}
-    assert env["meta"]["notes"] == ["x-graphql was tried next and failed: HTTP 500: session outage"]
+    assert env["meta"]["notes"] == ["x-graphql was tried next and failed: HTTP 500"]
+
+
+@pytest.mark.parametrize(("code_", "expected"), [(88, "rate_limited"), (32, "auth_failed"), (215, "auth_failed")])
+def test_session_stop_codes_in_a_200_skip_the_fallback(run, environ, code_, expected):
+    fake = FakeTransport(x=[(200, {"errors": [{"code": code_, "message": "stop"}]})], fx=[(200, load("x_fx_search_latest.json"))])
+    code, env, _ = run(["search", "q", "--max-requests", "2"], fake, env=environ | SESSION_FIRST)
+    assert code == 1 and env["error"]["code"] == expected
+    assert [urlsplit(u).hostname for u in fake.urls] == ["x.com"]
+
+
+def test_session_errors_never_echo_the_response_body(run, environ):
+    leak = b"auth_token=TOKENSENTINEL ct0=CSRFSENTINEL"
+    for response in [(500, leak), (200, b"<html>" + leak)]:
+        fake = FakeTransport(x=[response])
+        code, env, _ = run(["search", "q", "--max-requests", "1"], fake, env=environ | SESSION_FIRST)
+        assert code == 1 and "SENTINEL" not in json.dumps(env)
 
 
 def test_session_first_does_not_reach_fxtwitter_once_the_cap_is_used(run, environ):

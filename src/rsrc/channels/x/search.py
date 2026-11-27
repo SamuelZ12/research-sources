@@ -265,9 +265,10 @@ def fetch_page(client, cookies, query, product="Latest", cursor=None, query_id=Q
     data = _json(raw) if status in (400, 422) else None
     if data and _validation_failed(data):
         raise SearchError(f"HTTP {status}: query ID {query_id} rejected", query_id_rejected=True)
-    check_status(status, raw)
+    check_status(status, b"")  # never echo the body: this request carries the session cookies
     data = _json(raw)
     if data.get("errors"):
+        check_graphql_codes(data["errors"])
         message = ", ".join(e.get("message", "unknown error") for e in data["errors"])
         raise SearchError(message, query_id_rejected=_validation_failed(data))
     try:
@@ -420,12 +421,23 @@ def check_status(status: int, body: bytes) -> None:
         raise AuthError(f"HTTP {status}: X rejected the cookies; refresh AUTH_TOKEN/CT0 from a logged-in browser")
     if status == 429:
         raise RateLimited("HTTP 429: rate limited; stop and retry later")
-    raise HttpError(f"HTTP {status}: {body[:200].decode('utf-8', 'replace')}")
+    excerpt = body[:200].decode("utf-8", "replace")
+    raise HttpError(f"HTTP {status}: {excerpt}" if excerpt else f"HTTP {status}")
+
+
+def check_graphql_codes(errors) -> None:
+    """Raise for the GraphQL error codes that mean stop: a rate limit or a rejected session,
+    which X can send inside an HTTP 200."""
+    codes = {str(e.get("code")) for e in errors if isinstance(e, dict)}
+    if "88" in codes:
+        raise RateLimited("X rate limited this account")
+    if codes & {"32", "89", "215"}:
+        raise AuthError("X rejected the configured session")
 
 
 def _json(raw: bytes) -> dict:
     try:
         data = json.loads(raw)
     except ValueError:
-        raise HttpError(f"unexpected non-JSON response: {raw[:200].decode('utf-8', 'replace')}") from None
+        raise HttpError("X returned a non-JSON response") from None
     return data if isinstance(data, dict) else {}

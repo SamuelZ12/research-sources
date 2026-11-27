@@ -48,11 +48,7 @@ def timeline(client, cookies, handle, limit):
         try:
             doc = json.loads(raw)
             if doc.get("errors"):
-                codes = {str(e.get("code")) for e in doc["errors"]}
-                if "88" in codes:
-                    raise RateLimited("X rate limited this account")
-                if codes & {"32", "89", "215"}:
-                    raise AuthError("X rejected the configured session")
+                search.check_graphql_codes(doc["errors"])
                 raise TimelineBlocked(f"X rejected {name}; stop here")
             result = doc["data"]["user"]["result"]
             if not isinstance(result, dict):

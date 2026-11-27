@@ -51,13 +51,15 @@ def build_parser() -> Parser:
 def print_envelope(envelope: dict) -> None:
     if warning := envelope.get("warning"):
         try:
-            os.write(2, (warning + "\n").encode("utf-8"))
+            os.write(2, (warning + "\n").encode("utf-8", "backslashreplace"))
         except OSError:
             pass  # The JSON still carries the warning if the stderr reader closed its pipe.
     line = json.dumps(envelope, ensure_ascii=False)
     # Valid JSON, but str.splitlines() and some readers treat these as line breaks.
     for char in ("\u2028", "\u2029", "\u0085"):
         line = line.replace(char, f"\\u{ord(char):04x}")
+    # A lone surrogate from upstream JSON cannot be encoded as UTF-8; its \udXXX escape is valid JSON.
+    line = line.encode("utf-8", "backslashreplace").decode("utf-8")
     print(line, flush=True)
 
 
