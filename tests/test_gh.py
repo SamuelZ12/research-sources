@@ -507,8 +507,11 @@ def test_proc_run_timeout_kills_grandchildren(tmp_path):
 
 def _alive(pid: int) -> bool:
     try:
+        if sys.platform == "linux":
+            stat = Path(f"/proc/{pid}/stat").read_text()
+            return stat.rsplit(")", 1)[1].split()[0] != "Z"
         os.kill(pid, 0)
-    except ProcessLookupError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
     return True
 
@@ -797,6 +800,7 @@ def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query, e
 @pytest.mark.parametrize("query,flags,extra", [
     ("author:Skirano is:pr is:merged", [], ""), ("author:Skirano is:merged", [], ""),
     ('is:pr (STATE:"closed" OR is:open)', [], ""), ("is:pr -is:open", [], ""),
+    ("merged:>=2024-01-01", [], ""), ("is:pr closed:2024-12-05", [], ""),
     ('is:pr "is:merged"', [], " state:open"), ("is:pr is:merged", ["--state", "open"], " state:open"),
 ])
 def test_query_state_controls_issue_search_unless_flag_is_explicit(rsrc, public, query, flags, extra):

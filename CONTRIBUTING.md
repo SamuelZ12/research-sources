@@ -7,7 +7,7 @@ uv sync
 uv run pytest -q
 ```
 
-The tests also run the browser page scripts under Node.js, so install Node first.
+The tests also run the browser page scripts under Node.js, so install Node first. GitHub Actions runs the offline suite on pull requests and pushes to `main`.
 
 ## What a change must keep true
 

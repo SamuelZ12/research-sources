@@ -22,7 +22,8 @@ LIVE = ("is_live", "is_upcoming", "post_live")  # yt-dlp's live_status while a s
 _TAG = re.compile(r"</?(?:c|i|b|u|v|ruby|rt|lang)(?:[.\s][^<>]*)?>|<\d+:[\d:.]+>")
 _VOICE = re.compile(r"<v(?:\.[^\s<>]*)?[ \t]+([^\s<>][^<>]*)>")
 # A cue's timing line, WebVTT (`00:01.000`, hours optional) or SRT (`00:00:01,000`).
-_TIMING = re.compile(r"(?:(\d{1,4}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s+-->")
+_STAMP = r"(?:(\d{1,4}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})"
+_TIMING = re.compile(rf"{_STAMP}\s+-->\s+{_STAMP}")
 CHUNK_SECONDS = 20  # a transcript line spans about this long, so a quote can be found by its time
 _ONE_TAG = re.compile(r"[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*")  # one language tag, not a '+'-joined selection
 _LANGUAGE = re.compile(r"[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*")
@@ -132,6 +133,10 @@ def check_recognisable(info: dict, language: str) -> None:
         raise Unavailable("media_duration_limit")
 
 
+def _seconds(hours, minutes, seconds, fraction):
+    return int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds) + int(fraction.ljust(3, "0")) / 1000
+
+
 def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]]:
     """A WebVTT or SRT caption file as (start in seconds, spoken line) pairs, in order.
 
@@ -143,18 +148,21 @@ def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]
     appears in; a line said again later in the video is kept."""
     cues: list[tuple[float, str]] = []
     start = None
+    end = last_line_end = -1.0
     for raw in text.splitlines():
         timing = _TIMING.match(raw.lstrip(" \t"))
         if timing:
-            hours, minutes, seconds, millis = timing.groups()
-            start = int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds) + int(millis.ljust(3, "0")[:3]) / 1000
+            fields = timing.groups()
+            start, end = _seconds(*fields[:4]), _seconds(*fields[4:])
         elif not raw:
             start = None
         elif start is not None:
             line = _VOICE.sub(lambda m: " " + m[1].strip() + ": ", raw)
             line = " ".join(html.unescape(_TAG.sub("", line)).split())
-            if line and not (scrolling and cues and cues[-1][1] == line):
-                cues.append((start, line))
+            if line:
+                if not (scrolling and start <= last_line_end and cues and cues[-1][1] == line):
+                    cues.append((start, line))
+                last_line_end = end
     return cues
 
 

@@ -39,7 +39,7 @@ class FakeSearch:
         if cursor:
             entries.append({"content": {"cursorType": "Bottom", "value": cursor}})
         data = {"data": {"search_by_raw_query": {"search_timeline": {"timeline": {
-            "instructions": [{"entries": entries}]}}}}}
+            "instructions": [{"type": "TimelineAddEntries", "entries": entries}]}}}}}
         return 200, json.dumps(data).encode()
 
 

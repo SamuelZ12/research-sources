@@ -270,24 +270,44 @@ def fetch_page(client, cookies, query, product="Latest", cursor=None, query_id=Q
     if data.get("errors"):
         message = ", ".join(e.get("message", "unknown error") for e in data["errors"])
         raise SearchError(message, query_id_rejected=_validation_failed(data))
-    return parse_page(data)
+    try:
+        return parse_page(data)
+    except (KeyError, AttributeError, TypeError, ValueError):
+        raise SearchError("X returned malformed search results") from None
 
 
 def parse_page(data) -> tuple[list[dict], str | None]:
-    timeline = (((data.get("data") or {}).get("search_by_raw_query") or {}).get("search_timeline") or {}).get("timeline") or {}
+    try:
+        instructions = data["data"]["search_by_raw_query"]["search_timeline"]["timeline"]["instructions"]
+    except (KeyError, TypeError):
+        raise SearchError("X returned no search timeline") from None
+    if not isinstance(instructions, list):
+        raise SearchError("X returned invalid search instructions")
     records, seen, cursor = [], set(), None
-    for instruction in timeline.get("instructions") or []:
+    empty_page = False
+    saw_non_cursor = False
+    for instruction in instructions:
+        if not isinstance(instruction, dict):
+            raise SearchError("X returned an invalid search instruction")
+        if instruction.get("type") == "TimelineAddEntries" and instruction.get("entries") == []:
+            empty_page = True
         # Later pages may deliver the Bottom cursor in a TimelineReplaceEntry's single `entry`.
         entries = (instruction.get("entries") or []) + ([instruction["entry"]] if instruction.get("entry") else [])
         for entry in entries:
             content = entry.get("content") or {}
-            if content.get("cursorType") == "Bottom" and content.get("value"):
-                cursor = content["value"]
+            if content.get("cursorType") in ("Top", "Bottom") and content.get("value"):
+                empty_page = True
+                if content["cursorType"] == "Bottom":
+                    cursor = content["value"]
+                continue
+            saw_non_cursor = True
             for result in _entry_results(content):
                 record = to_record(result)
                 if record and record["id"] not in seen:
                     seen.add(record["id"])
                     records.append(record)
+    if not records and (not empty_page or saw_non_cursor):
+        raise SearchError("X returned no recognizable search results page")
     return records, cursor
 
 

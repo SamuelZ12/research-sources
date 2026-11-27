@@ -4,7 +4,7 @@ On github.com, `gh repo` and `gh issues --repo` try public reads first. With `ba
 
 `engagement.watchers` counts subscribers and appears only on a repo read that supplies it. GitHub's search field `raw.watchersCount` counts stars instead.
 
-`gh repo` returns stars, last push, the latest release, and the first 4,000 characters of the README. `gh issues` defaults to open issues. Pass `--repo OWNER/REPO` alone to list its issues, or put `is:pr` in the query to return pull requests. Pull requests have a `/pull/` URL and `raw.isPullRequest: true`.
+`gh repo` returns stars, last push, the latest release, and the first 4,000 characters of the README. `gh issues` defaults to open issues unless the query names a state. For example, `is:pr is:merged` searches merged pull requests without `--state all`. An explicit `--state open` or `--state closed` filters the query further. Pass `--repo OWNER/REPO` alone to list its issues, or put `is:pr` in the query to return pull requests. Pull requests have a `/pull/` URL and `raw.isPullRequest: true`.
 
 For pull requests, `raw.mergedAt` contains the merge timestamp or `null` if the REST response explicitly reports no merge. An absent field means the backend supplied no merge status. The `gh search issues` route on GitHub Enterprise omits this field.
 

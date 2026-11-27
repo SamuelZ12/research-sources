@@ -79,7 +79,7 @@ A video read selects original-language captions. It may fall back to a second yt
 
 On github.com, `gh repo` and `gh issues --repo` try public REST first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Pass `--backend gh` to use your login directly for private reads, permissions or signed search rankings.
 
-`gh issues --repo OWNER/REPO` lists the repository's open issues. Add `is:pr` to the query to search pull requests.
+`gh issues --repo OWNER/REPO` lists the repository's open issues. Add `is:pr` to the query to search pull requests. `is:pr is:merged` searches merged pull requests without adding the default open-state filter.
 
 A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
 

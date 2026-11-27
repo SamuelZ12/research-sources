@@ -117,6 +117,9 @@ def test_search_dates_are_echoed_as_iso_strings(run):
 @pytest.mark.parametrize("query_data", [None, {"search_timeline": {"timeline": {}}},
     {"search_timeline": {"timeline": {"instructions": []}}},
     {"search_timeline": {"timeline": {"instructions": [{"type": "Unknown"}]}}},
+    {"search_timeline": {"timeline": {"instructions": [{"entries": [None]}]}}},
+    {"search_timeline": {"timeline": {"instructions": [{"entries": [{"content": {"cursorType": "Top", "value": "c"}},
+                                                                    {"content": {"unrecognized": True}}]}]}}},
 ])
 def test_unrecognized_search_page_is_not_an_empty_result(run, query_data):
     bad = {"data": {"search_by_raw_query": query_data}}

@@ -25,6 +25,8 @@ ISSUE_FIELDS = ("repository,number,url,title,author,createdAt,updatedAt,closedAt
 _OWNER_REPO = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/(?!\.{1,2}$)[A-Za-z0-9._-]+")
 _QUERY_TOKENS = re.compile(r'(?:"(?:\\.|[^"\\])*"|[^\s()"])+')
 _ISSUE_TYPE = re.compile(r'-?(?:(?:is|type):("?)(?:issue|pr)\1|is:("?)pull-request\2)', re.I)
+_MERGE_FILTER = re.compile(r'is:("?)(?:merged|unmerged)\1|merged:.+', re.I)
+_STATE_FILTER = re.compile(r'(?:is|state):("?)(?:open|closed)\1|closed:.+', re.I)
 
 
 def register(subparsers) -> None:
@@ -45,8 +47,7 @@ def register(subparsers) -> None:
                         help="use is:pr in the query to return pull requests")
     issues.add_argument("--repo", metavar="OWNER/REPO", help="search only this repository")
     issues.add_argument("--limit", type=int, default=30, help=f"issues, 1-{MAX_LIMIT} (default %(default)s)")
-    issues.add_argument("--state", choices=("open", "closed", "all"), default="open",
-                        help="issue state (default %(default)s)")
+    issues.add_argument("--state", choices=("open", "closed", "all"), help="issue state (default: open unless the query specifies a state)")
     issues.set_defaults(run=run_issues, action="issues")
 
     for command in (repo, issues):
@@ -319,7 +320,10 @@ def run_search(args, ctx) -> dict:
 
 
 def run_issues(args, ctx) -> dict:
-    input_ = {"query": args.query, "repo": args.repo, "limit": args.limit, "state": args.state}
+    tokens = [t.removeprefix("-") for t in _QUERY_TOKENS.findall(args.query)]
+    query_has_state = any(_STATE_FILTER.fullmatch(t) or _MERGE_FILTER.fullmatch(t) for t in tokens)
+    state = args.state or ("all" if query_has_state else "open")
+    input_ = {"query": args.query, "repo": args.repo, "limit": args.limit, "state": state}
     if args.repo is not None and not _OWNER_REPO.fullmatch(args.repo):
         return env.usage(CHANNEL, "issues", f"--repo expects OWNER/REPO, got {args.repo!r}")
     if not args.query.strip() and not args.repo:
@@ -331,8 +335,8 @@ def run_issues(args, ctx) -> dict:
         argv.append("--include-prs")
     if args.repo:
         argv += ["--repo", args.repo]
-    if args.state != "all":
-        argv += ["--state", args.state]
+    if state != "all":
+        argv += ["--state", state]
     if args.query.strip():
         argv += ["--", args.query]
     # A public issue can belong to a private project or mention a team visible to the viewer.
@@ -342,7 +346,7 @@ def run_issues(args, ctx) -> dict:
 
 
 def _has_issue_type(query: str) -> bool:
-    return any(_ISSUE_TYPE.fullmatch(token) for token in _QUERY_TOKENS.findall(query))
+    return any(_ISSUE_TYPE.fullmatch(t) or _MERGE_FILTER.fullmatch(t) for t in _QUERY_TOKENS.findall(query))
 
 
 def _check_query(query: str, limit: int) -> str | None:
