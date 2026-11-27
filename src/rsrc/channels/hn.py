@@ -107,8 +107,7 @@ def run_read(args, ctx) -> dict:
                             error=env.error("url_mismatch", f"asked for item {item_id}, the API returned {returned_id}"))
     items, total = _thread(root, args.comments)
     returned = len(items) - 1
-    if returned < total:
-        meta["notes"] = [f"{returned} of {total} comments returned"]
+    meta["notes"] = [f"{returned} of {total} readable comments returned from Algolia's fetched tree."]
     error = None
     if root.get("type") == "poll":
         poll, error = _poll_results(ctx, root, attempts)

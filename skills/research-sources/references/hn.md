@@ -18,7 +18,7 @@ An item's `url` is the Hacker News discussion. The linked article is `raw.url` o
 
 - Posting order is not a ranking, and Hacker News publishes no comment scores. Weigh a comment by what it says, whatever its position.
 - Comments without text (deleted) are left out.
-- `meta.notes` says `N of M comments returned` when `--comments` cut the thread short.
+- `meta.notes` counts how many readable comments were returned out of those in Algolia's fetched tree. The tree can omit branches present on Hacker News, even when all fetched comments fit under `--comments`.
 
 For a poll, the first item's `text` includes the results or says what is unavailable. `raw.poll.options` lists the choices in Algolia's option ID order. Each choice has `id`, `text`, and `points`. Missing labels and scores are `null`. A published zero stays zero. Choices are available even with `--comments 0`.
 

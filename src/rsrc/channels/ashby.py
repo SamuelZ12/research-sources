@@ -24,7 +24,7 @@ def register(subparsers):
     search.add_argument("board", help="board name or jobs.ashbyhq.com URL")
     search.add_argument("--title", help="words in the title (all must match)")
     search.add_argument("--team", help="substring in team or department")
-    search.add_argument("--location", help="substring in primary or secondary location")
+    search.add_argument("--location", help="substring in a primary or secondary location label, city, region or country")
     search.add_argument("--since", type=date.fromisoformat, metavar="YYYY-MM-DD",
                         help="last published on or after this UTC date")
     search.add_argument("--limit", type=int, help="maximum roles to return (default: all)")
@@ -101,8 +101,17 @@ def posting(job, board):
     return env.item(id=role, title=job["title"], url=url, author=actual, published_at=stamp, source="ashby", raw=job)
 
 
-def locations(job):
-    return [job.get("location")] + [loc.get("location") for loc in job.get("secondaryLocations") or []]
+def locations(job, *, include_address=False):
+    for place in (job, *(job.get("secondaryLocations") or [])):
+        if isinstance(label := place.get("location"), str):
+            yield label
+        if include_address:
+            address = place.get("address")
+            postal = address.get("postalAddress") if isinstance(address, dict) else None
+            if isinstance(postal, dict):
+                for key in ("addressLocality", "addressRegion", "addressCountry"):
+                    if isinstance(value := postal.get(key), str):
+                        yield value
 
 
 def facts(job):
@@ -122,7 +131,7 @@ def matches(item, args):
     if any(word not in item["title"].casefold() for word in (args.title or "").casefold().split()):
         return False
     teams = [job.get("team"), job.get("department")]
-    for needle, values in ((args.team, teams), (args.location, locations(job))):
+    for needle, values in ((args.team, teams), (args.location, locations(job, include_address=True))):
         if needle and not any(needle.casefold() in (value or "").casefold() for value in values):
             return False
     return not args.since or bool(item["published_at"] and item["published_at"][:10] >= args.since.isoformat())
