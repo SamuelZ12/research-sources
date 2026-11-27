@@ -422,6 +422,19 @@ def test_unreported_poll_numbers_are_not_invented(run):
     assert "%" not in item["text"] and "Final results" not in item["text"]
 
 
+def test_fx_poll_does_not_publish_nonfinite_numbers_or_require_question_text(run):
+    data = load("x_fx_poll.json")
+    status = data["status"]
+    status["text"] = []
+    status["poll"].update(total_votes=1, choices=[{"label": "Yes", "percentage": float("inf"), "count": 1}])
+    status["quote"] = dict(status)
+    code, out, _ = run(["read", status["id"]], FakeTransport(fx=[(200, data)]))
+    item, = out["items"]
+    assert code == 0 and "1 votes" not in item["text"] and "Yes: 1 vote" in item["text"]
+    assert item["raw"]["quoted"]["poll"] == item["raw"]["poll"]
+    json.dumps(out, allow_nan=False)
+
+
 @pytest.mark.parametrize("fallback", [False, True])
 def test_poll_on_a_quoted_post_is_not_attributed_to_the_author(run, fallback):
     if fallback:

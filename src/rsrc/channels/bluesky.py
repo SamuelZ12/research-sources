@@ -84,15 +84,24 @@ def fetch(client, host, method, **params):
     return data
 
 
-def linked_text(label, uri):
+def linked_text(label, uri, *, after_bang=False):
+    if not isinstance(uri, str):
+        raise HttpError("invalid Bluesky link URI")
+    if not re.fullmatch(r"https?://[^\s<>\\]+", uri, re.I):
+        return label
     text = label.strip()
     if not text:
-        return label
+        return label + uri
     bare = uri.removeprefix("https://").removeprefix("http://")
     prefix = text.removesuffix("…").removesuffix("...")
-    shortened = (prefix != text and "." in prefix and not any(c.isspace() for c in prefix)
+    shortened = (prefix != text and ("." in prefix or prefix.startswith(("https://", "http://")))
                  and (bare.startswith(prefix) or uri.startswith(prefix)))
-    shown = uri if shortened or text in (uri, bare) else link(text, uri)
+    if shortened or text in (uri, bare):
+        shown = uri
+    elif after_bang:
+        shown = f"{text} (<{uri}>)"
+    else:
+        shown = link(text, uri)
     return label[:len(label) - len(label.lstrip())] + shown + label[len(label.rstrip()):]
 
 
@@ -105,7 +114,7 @@ def expanded_text(record):
                 start, stop = facet["index"]["byteStart"], facet["index"]["byteEnd"]
                 if not 0 <= start < stop <= end:
                     raise HttpError("invalid Bluesky link facet")
-                replacement = linked_text(data[start:stop].decode(), feature["uri"])
+                replacement = linked_text(data[start:stop].decode(), feature["uri"], after_bang=data[start-1:start] == b"!")
                 data = data[:start] + replacement.encode() + data[stop:]
                 end = start
                 break

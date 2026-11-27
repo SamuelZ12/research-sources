@@ -428,27 +428,29 @@ def _timeline_attempt(backend, handle, limit, remaining, ctx, input):
 
 # --- mapping -------------------------------------------------------------------
 
+def _votes(count: int) -> str:
+    return f"{count:,} vote" if count == 1 else f"{count:,} votes"
+
+
 def poll_text(poll: dict) -> str:
     details = []
-    if isinstance(poll.get("time_left_en"), str) and poll["time_left_en"].strip():
-        details.append(poll["time_left_en"].strip())
-    total = poll.get("total_votes")
-    if type(total) is int and total >= 0:
-        details.append(f"{total:,} votes")
+    if status := poll.get("time_left_en"):
+        details.append(status)
+    if (total := poll.get("total_votes")) is not None:
+        details.append(_votes(total))
     lines = ["Poll" + (": " + ", ".join(details) if details else "")]
-    choices = poll.get("choices")
-    if not isinstance(choices, list) or not choices:
+    if not poll["choices"]:
         return lines[0] + "\nChoices unavailable."
-    for choice in choices:
-        if not isinstance(choice, dict) or not isinstance(choice.get("label"), str) or not choice["label"].strip():
+    for choice in poll["choices"]:
+        if not choice.get("label"):
             lines.append("- Choice unavailable.")
             continue
         percentage, count = choice.get("percentage"), choice.get("count")
         values = []
-        if type(percentage) in (int, float) and 0 <= percentage <= 100:
+        if percentage is not None:
             values.append(f"{percentage}%")
-        if type(count) is int and count >= 0:
-            values.append(f"{count:,} votes")
+        if count is not None:
+            values.append(_votes(count))
         lines.append(f"- {choice['label']}: {', '.join(values) or 'result unavailable'}")
     return "\n".join(lines)
 
@@ -458,7 +460,8 @@ def to_item(record: dict) -> dict:
     article = record["article"]
     text = article["text"] if article else record["text"]
     if record.get("poll") is not None:
-        text = "\n\n".join(filter(None, [text, poll_text(record["poll"])]))
+        result = poll_text(record["poll"])
+        text = f"{text}\n\n{result}" if isinstance(text, str) and text else result
     return env.item(id=record["id"], url=record["url"], title=article["title"] if article else None,
                     author=record["author"], published_at=record["created_at"], text=text, source=record["source"],
                     engagement=counts or None, raw=record)

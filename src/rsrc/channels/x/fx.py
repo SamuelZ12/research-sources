@@ -363,6 +363,24 @@ def get_json(client, url, *, read_tombstone=False) -> tuple[dict | None, Failure
     return (data, None) if isinstance(data, dict) else (None, Failure("unexpected response"))
 
 
+def _fx_poll(poll) -> dict | None:
+    if not isinstance(poll, dict):
+        return None
+    fields = {k: poll[k] for k in ("ends_at", "time_left_en") if isinstance(poll.get(k), str)}
+    if type(total := poll.get("total_votes")) is int and total >= 0:
+        fields["total_votes"] = total
+    choices = []
+    for source in poll["choices"] if isinstance(poll.get("choices"), list) else []:
+        row = source if isinstance(source, dict) else {}
+        choice = {"label": row["label"] if isinstance(row.get("label"), str) else None}
+        if type(count := row.get("count")) is int and count >= 0:
+            choice["count"] = count
+        if type(pct := row.get("percentage")) in (int, float) and 0 <= pct <= 100:
+            choice["percentage"] = pct
+        choices.append(choice)
+    return {**fields, "choices": choices}
+
+
 def status_record(status: dict) -> dict:
     author = (status.get("author") or {}).get("screen_name")
     quote = status.get("quote") if isinstance(status.get("quote"), dict) else None
@@ -372,7 +390,7 @@ def status_record(status: dict) -> dict:
         url=status.get("url"),
         author=author,
         created_at=_iso_from_timestamp(timestamp) if timestamp else None,
-        text=status.get("text"),
+        text=status.get("text") if isinstance(status.get("text"), str) else None,
         likes=to_int(status.get("likes")),
         reposts=to_int(status.get("reposts")),
         replies=to_int(status.get("replies")),
@@ -382,8 +400,8 @@ def status_record(status: dict) -> dict:
         reply_to_id=(status.get("replying_to") or {}).get("status"),
         quoted={"id": quote.get("id"), "author": (quote.get("author") or {}).get("screen_name"),
                 "text": quote.get("text"), "media": fx_media(quote), "text_truncated": False,
-                **({"poll": quote["poll"]} if isinstance(quote.get("poll"), dict) else {})} if quote else None,
-        poll=status["poll"] if isinstance(status.get("poll"), dict) else None,
+                **({"poll": p} if (p := _fx_poll(quote.get("poll"))) is not None else {})} if quote else None,
+        poll=_fx_poll(status.get("poll")),
         media=fx_media(status),
         article=fx_article(status.get("article")),
         text_truncated=False,

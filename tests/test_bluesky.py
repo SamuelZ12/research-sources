@@ -135,6 +135,24 @@ def test_read_keeps_linked_words_and_original_post_text(run):
     assert "\n\nhttps://shkspr.mobi/blog/2026/11/ogp-image-format-support-on-major-sites-and-apps/\n\n" in item["text"]
 
 
+@pytest.mark.parametrize("before,label,uri,shown", [
+    ("!", "important", "https://example.org", "!important (<https://example.org>)"),
+    ("", " ", "https://example.org", " https://example.org"),
+    ("", "https://long-host…", "https://long-host.example.org", "https://long-host.example.org"),
+    ("", "read", "data:text/plain,hello", "read"),
+    ("", "path\\", "https://example.org", r"[path\\](https://example.org)"),
+])
+def test_link_facet_boundaries(run, before, label, uri, shown):
+    thread = recorded("thread")
+    post = thread["thread"]["post"]
+    record = post["record"]
+    record["text"] = before + label
+    record["facets"] = [{"index": {"byteStart": len(before.encode()), "byteEnd": len(record["text"].encode())},
+                         "features": [{"$type": "app.bsky.richtext.facet#link", "uri": uri}]}]
+    code, out, _ = run(["read", post["uri"]], (200, thread))
+    assert code == 0 and out["items"][0]["text"] == shown
+
+
 def test_feed_failure_preserves_profile_and_stops(run):
     code, out, urls = run(["timeline", "atproto.com"], (200, recorded("profile")), (403, b""))
     assert code == 1 and len(urls) == 2 and out["error"]["code"] == "blocked"
