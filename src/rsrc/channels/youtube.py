@@ -194,12 +194,14 @@ def run_search(args, ctx) -> dict:
         ytdlp.need("yt-dlp")
         result = ytdlp.run(["--flat-playlist", "--dump-json", "--extractor-args", "youtubetab:approximate_date",
                             f"ytsearch{args.limit}:{args.query}"], SEARCH_TIMEOUT)
-        records = _search_lines(result.stdout)
+        records, skipped = _search_lines(result.stdout)
     except _Failed as failure:
         return env.envelope(CHANNEL, "search", input_, BACKEND, meta={"attempts": [ytdlp.attempt(failure.code)]},
                             error=env.error(failure.code, failure.message))
     items = [_search_item(r) for r in records]
     notes = []
+    if skipped:
+        notes.append(f"Channel or playlist results skipped: {skipped}.")
     if any(item["published_at"] for item in items):
         notes.append("Search published_at dates are approximate, derived from the ages shown by YouTube.")
     attempts = [ytdlp.attempt("ok" if items else "no_results")]
@@ -253,9 +255,11 @@ def _channel_names(missing, ctx, attempts, notes):
     return error
 
 
-def _search_lines(stdout: str) -> list[dict]:
-    """The results yt-dlp printed, one JSON object per line, each video once, in its order."""
+def _search_lines(stdout: str) -> tuple[list[dict], int]:
+    """The videos yt-dlp printed, one JSON object per line, each once, in its order, and how many
+    channel or playlist results it skipped (yt-dlp tags those with the YoutubeTab extractor)."""
     records: dict[str, dict] = {}
+    skipped = 0
     for line in stdout.splitlines():
         if not line.strip():
             continue
@@ -263,11 +267,14 @@ def _search_lines(stdout: str) -> list[dict]:
             record = json.loads(line)
         except (ValueError, RecursionError):  # RecursionError: nesting too deep for the JSON parser
             record = None
+        if isinstance(record, dict) and record.get("ie_key") == "YoutubeTab":
+            skipped += 1
+            continue
         video_id = record.get("id") if isinstance(record, dict) else None
         if not isinstance(video_id, str) or not _VIDEO_ID.fullmatch(video_id):
             raise _Failed("upstream_error", "yt-dlp printed a search result that is not a video record")
         records.setdefault(video_id, record)
-    return list(records.values())
+    return list(records.values()), skipped
 
 
 def _search_item(record: dict) -> dict:

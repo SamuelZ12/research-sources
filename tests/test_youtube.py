@@ -278,6 +278,26 @@ def test_search_line_of_the_wrong_shape_fails_the_command(rsrc, stdout):
     assert (attempt["outcome"], attempt["requests"]) == ("upstream_error", 1)
 
 
+def test_search_skips_channel_and_playlist_results_and_says_so(rsrc):
+    # yt-dlp's "ytsearch3:karpathy" opened with Andrej Karpathy's channel (2026-11-27).
+    channel = {"_type": "url", "ie_key": "YoutubeTab", "id": "UCXUPKJO5MZQN11PqgIvyuvQ",
+               "url": "https://www.youtube.com/channel/UCXUPKJO5MZQN11PqgIvyuvQ", "title": "Andrej Karpathy"}
+    playlist = {"_type": "url", "ie_key": "YoutubeTab", "id": "PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ",
+                "url": "https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ"}
+    code, out = rsrc(["search", "karpathy"], FakeRunner(ok(lines(channel, result_line(), playlist))))
+
+    assert code == 0 and out["ok"] and out["error"] is None
+    assert [item["id"] for item in out["items"]] == ["abcdefghijk"]
+    assert "Channel or playlist results skipped: 2." in out["meta"]["notes"]
+
+
+def test_search_of_only_channels_is_no_results(rsrc):
+    channel = {"_type": "url", "ie_key": "YoutubeTab", "id": "UCXUPKJO5MZQN11PqgIvyuvQ"}
+    code, out = rsrc(["search", "karpathy"], FakeRunner(ok(lines(channel))))
+
+    assert code == 66 and out["ok"] and out["items"] == []
+
+
 def test_search_run_that_exits_non_zero_is_an_error_not_an_empty_result(rsrc):
     code, out = rsrc(["search", "q"], FakeRunner(proc.Result(1, "", "ERROR: something broke\n")))
 
