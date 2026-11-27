@@ -171,9 +171,13 @@ def post_items(page, identity):
     if not text or not author(post):
         raise http.HttpError("The public page lacks the post body or author.")
     raw = {"kind": "post", "type": post["@type"]}
-    for key in ("duration", "transcript"):
+    for key in ("duration", "transcript", "contentUrl", "embedUrl", "thumbnailUrl"):
         if string(post.get(key)):
             raw[key] = post[key]
+    for key, url_key in (("image", "url"), ("caption", "contentUrl")):
+        media = post.get(key)
+        if isinstance(media, dict) and string(media.get(url_key)):
+            raw[key] = media
     engagement = counts(post)
     items = [env.item(id=identity, url=url, author=author(post), text=text, title=string(post.get("headline")) or None,
                       published_at=timestamp(post), engagement=engagement, raw=raw, source="linkedin")]

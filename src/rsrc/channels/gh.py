@@ -394,10 +394,16 @@ def _public_issue(r):
         raise ValueError("not a GitHub issue or pull request")
     labels = [dict(id=label["node_id"], name=label["name"], color=label["color"], description=label["description"] or "")
               for label in r["labels"]]
-    return dict(repository={"name": repo.split("/")[1], "nameWithOwner": repo},
-                number=r["number"], url=r["html_url"], title=r["title"], author=_user(r["user"]),
-                createdAt=r["created_at"], updatedAt=r["updated_at"], closedAt=r["closed_at"] or "0001-01-01T00:00:00Z",
-                state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=pr)
+    record = dict(
+        repository={"name": repo.split("/")[1], "nameWithOwner": repo},
+        number=r["number"], url=r["html_url"], title=r["title"], author=_user(r["user"]),
+        createdAt=r["created_at"], updatedAt=r["updated_at"], closedAt=r["closed_at"] or "0001-01-01T00:00:00Z",
+        state=r["state"], body=r["body"] or "", commentsCount=r["comments"], labels=labels, isPullRequest=pr,
+    )
+    pull_request = r.get("pull_request")
+    if pr and isinstance(pull_request, dict) and "merged_at" in pull_request:
+        record["mergedAt"] = pull_request["merged_at"]
+    return record
 
 
 def _rest_search(gh, action, args, *, authenticated=False):
