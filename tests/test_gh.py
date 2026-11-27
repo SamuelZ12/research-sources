@@ -759,10 +759,29 @@ def test_issue_search_returns_explicit_pull_requests(rsrc, public, route, qualif
     assert item["id"] == "modelcontextprotocol/servers#180"
     assert item["url"] == "https://github.com/modelcontextprotocol/servers/pull/180"
     assert item["raw"]["isPullRequest"] is True
+    assert item["raw"]["mergedAt"] == "2024-12-05T12:19:25Z"
     urls = [call.full_url for call in calls] + [argv[-1] for argv in runner.argvs]
     assert [parse_qs(urlsplit(url).query)["q"] for url in urls] == [
         [f"( {query} ) repo:modelcontextprotocol/servers"]
     ] * (2 if route == "restart" else 1)
+
+
+@pytest.mark.parametrize("merge_fields", [{"merged_at": None}, {}], ids=["unmerged", "unknown"])
+def test_closed_pull_request_merge_status_can_be_null_or_unknown(rsrc, public, merge_fields):
+    response = json.loads((FIXTURES / "gh_public_prs.json").read_text())
+    pr = response["items"][0]["pull_request"]
+    del pr["merged_at"]
+    pr.update(merge_fields)
+    calls = public(json.dumps(response))
+    code, out = rsrc(["issues", "is:pr", "--repo", "modelcontextprotocol/servers",
+                      "--state", "closed", "--limit", "1"], FakeGh())
+    assert code == 0 and len(calls) == 1
+    [item] = out["items"]
+    assert item["raw"]["state"] == "closed"
+    if merge_fields:
+        assert item["raw"]["mergedAt"] is None
+    else:
+        assert "mergedAt" not in item["raw"]
 
 
 @pytest.mark.parametrize("query", ["is:issue", "type:issue", "label:docs OR (IS:ISSUE state:open)"])
@@ -770,6 +789,7 @@ def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query):
     calls = public((FIXTURES / "gh_public_issues.json").read_text())
     code, out = rsrc(["issues", query, "--repo", "python/cpython", "--limit", "1"], FakeGh())
     assert code == 0 and out["items"][0]["raw"]["isPullRequest"] is False
+    assert "mergedAt" not in out["items"][0]["raw"]
     assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [f"( {query} ) repo:python/cpython state:open"]
 
 

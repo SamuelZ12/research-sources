@@ -7,6 +7,7 @@ Item one contains the post text and available counts. Later items are public com
 - Quote the page's `published_at` when present.
 - Check `meta.notes` for a missing publication time and for the number of comments returned out of the reported total.
 - Video transcripts and durations, when supplied, are in `raw`.
+- Media links from the public page are in `raw` when supplied. Use `raw.image.url` for a post image and `raw.contentUrl`, `raw.embedUrl`, `raw.thumbnailUrl`, and `raw.caption.contentUrl` for video media. Signed links can expire.
 
 ## Errors on LinkedIn
 

@@ -34,6 +34,10 @@ def test_video_alias(capsys):
     assert post["author"] == "Aaru" and "7442325358646853632" in post["url"]
     assert post["id"] == "7442323735535202304" and post["text"].endswith("Squawk Box team.")
     assert post["raw"]["transcript"] and post["raw"]["duration"] == "PT12M19S"
+    assert post["raw"]["contentUrl"] == "https://media.example.test/video.mp4?expires=1700000000&format=mp4"
+    assert post["raw"]["embedUrl"] == "https://www.example.test/embed/video"
+    assert post["raw"]["thumbnailUrl"] == "https://media.example.test/thumbnail.jpg"
+    assert post["raw"]["caption"]["contentUrl"] == "https://media.example.test/captions.vtt?expires=1700000000"
     assert post["published_at"] == "2026-03-24T21:43:57.172Z"
     assert post["engagement"] == {"reactions": 450, "comments": 29}
     assert first["author"] == "Reader 1" and first["engagement"] == {"reactions": 8}
@@ -47,6 +51,7 @@ def test_social_post(capsys):
     assert code == 0 and calls == [URL]
     assert post["text"].endswith("https://pika.art/blog") and post["author"] == "Pika"
     assert post["published_at"] == "2024-06-05T23:03:12.908Z"
+    assert post["raw"]["image"] == {"@type": "ImageObject", "url": "https://media.example.test/post.jpg?width=1200"}
     assert out["items"][1]["raw"]["post_id"] == post["id"]
 
 
