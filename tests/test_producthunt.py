@@ -134,7 +134,23 @@ def test_forum_does_not_resolve_to_product(capsys):
     assert "forum discussions" in out["error"]["message"]
 
 
-@pytest.mark.parametrize("field,value", [("rank", 2), ("rank", True), ("launched_at", "2026-11-20T23:59:00-08:00"),
+def test_board_keeps_reported_ranks_when_a_launch_is_missing(capsys):
+    code, out, _ = command(capsys, ["leaderboard", "--date", "2026-01-03", "--limit", "5"], recording("board_gap"))
+    assert code == 0 and out["error"] is None
+    assert [(item["title"], item["raw"]["rank"]) for item in out["items"]] == [
+        ("Flux", 1), ("DaysAround", 2), ("Ultracite v7", 3), ("Still", 4), ("NoteTabs", 6)]
+    assert any("5" in note for note in out["meta"]["notes"])
+
+
+@pytest.mark.parametrize("rank", [3, 4])
+def test_board_rejects_reversed_and_duplicate_ranks(capsys, rank):
+    reply = recording("board_gap")
+    reply["result"]["structuredContent"]["data"]["results"][-1]["launches"][0]["rank"] = rank
+    code, out, _ = command(capsys, ["leaderboard", "--date", "2026-01-03"], reply)
+    assert code == 1 and out["items"] == [] and out["error"]["code"] == "upstream_error"
+
+
+@pytest.mark.parametrize("field,value", [("rank", 0), ("rank", True), ("launched_at", "2026-11-20T23:59:00-08:00"),
                                           ("url", "https://other.example/posts/altercontacts")])
 def test_board_rejects_wrong_launch(capsys, field, value):
     reply = recording("board")

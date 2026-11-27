@@ -1,0 +1,63 @@
+{
+  "feed": {
+    "id": {
+      "label": "https://itunes.apple.com/us/rss/customerreviews/page=1/id=497799835/sortby=mostrecent/json"
+    },
+    "link": [
+      {
+        "attributes": {
+          "rel": "self",
+          "href": "https://itunes.apple.com/us/rss/customerreviews/page=1/id=497799835/sortby=mostrecent/json"
+        }
+      }
+    ],
+    "entry": [
+      {
+        "author": {
+          "name": {
+            "label": "reviewer"
+          }
+        },
+        "updated": {
+          "label": "2026-11-23T21:19:06-07:00"
+        },
+        "im:rating": {
+          "label": "5"
+        },
+        "im:version": {
+          "label": "27.2"
+        },
+        "id": {
+          "label": "14827314337"
+        },
+        "title": {
+          "label": "Looks much better after update"
+        },
+        "content": {
+          "label": "Font and colors are well chosen; adds flair to app development.",
+          "attributes": {
+            "type": "text"
+          }
+        },
+        "link": {
+          "attributes": {
+            "rel": "related",
+            "href": "https://itunes.apple.com/us/review?id=497799835&type=Purple%20Software"
+          }
+        },
+        "im:voteSum": {
+          "label": "0"
+        },
+        "im:contentType": {
+          "attributes": {
+            "term": "Application",
+            "label": "Application"
+          }
+        },
+        "im:voteCount": {
+          "label": "0"
+        }
+      }
+    ]
+  }
+}

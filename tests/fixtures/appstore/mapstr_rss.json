@@ -1,0 +1,109 @@
+{
+  "feed": {
+    "id": {
+      "label": "https://itunes.apple.com/us/rss/customerreviews/page=1/id=917288465/sortby=mostrecent/json"
+    },
+    "link": [
+      {
+        "attributes": {
+          "rel": "self",
+          "href": "https://itunes.apple.com/us/rss/customerreviews/page=1/id=917288465/sortby=mostrecent/json"
+        }
+      }
+    ],
+    "entry": [
+      {
+        "author": {
+          "name": {
+            "label": "reviewer"
+          }
+        },
+        "updated": {
+          "label": "2026-11-11T02:47:40-07:00"
+        },
+        "im:rating": {
+          "label": "3"
+        },
+        "im:version": {
+          "label": "4.6.1"
+        },
+        "id": {
+          "label": "14776919824"
+        },
+        "title": {
+          "label": "Good but needs bug fixes"
+        },
+        "content": {
+          "label": "Hi! I’ve been using Mapstr for about three months now, although I enjoy the premise of saving places to my map and adding notes,tags, etc; I find that I’ve been having problems with the app as of lately. The main problem being that I often take the location I want to save from Google Maps so then I export it to my mapstr but when I go check the saved spot it saves the spot in a completely different place then where the spot is. For example I just tried to save a cafe in Monterrey, California; as I usually do I first saw it on Google Maps and then I export it into my mapstr, but when I went to check where it was it my map, I noticed it saved the cafe in a completely different place (San Diego airport). This has happened before with a cafe in Nepal which it saved in Bangladesh. Overall this type of bug in the app honestly has deferred me from using the app as of recently, as I dread having to check whether the spot was saved correctly and how to fix it myself. I really hope they fix this as I honestly really enjoyed the app before I noticed the problem!!!",
+          "attributes": {
+            "type": "text"
+          }
+        },
+        "link": {
+          "attributes": {
+            "rel": "related",
+            "href": "https://itunes.apple.com/us/review?id=917288465&type=Purple%20Software"
+          }
+        },
+        "im:voteSum": {
+          "label": "0"
+        },
+        "im:contentType": {
+          "attributes": {
+            "term": "Application",
+            "label": "Application"
+          }
+        },
+        "im:voteCount": {
+          "label": "0"
+        }
+      },
+      {
+        "author": {
+          "name": {
+            "label": "reviewer"
+          }
+        },
+        "updated": {
+          "label": "2026-07-26T11:28:32-07:00"
+        },
+        "im:rating": {
+          "label": "3"
+        },
+        "im:version": {
+          "label": ""
+        },
+        "id": {
+          "label": "14351344893"
+        },
+        "title": {
+          "label": "Updated Review"
+        },
+        "content": {
+          "label": "The developer asked me to update my review, based on their response. Initially, I did not get a response to several emails I had sent with questions and I only heard back when I left a review. They said they did not receive my emails. I sent them screenshots showing my emails sent to them. Didn’t get a response to that. Okay, now that they answered my questions: Can I have the icon for a location be both a color and an image by default so when I create new pins, then I don’t have to keep recreating the wheel. No plan to do this. Asked about a select all pins option (to make changes to pins) - don’t have but may at some point in the future. But my largest issue was when I was in the Palouse region (SW Washington) for one week, I had several instances where my pins completely disappeared from the map, and I had no idea where I was going and had to use street maps for navigation (like in the good old days). This is what their website says about offline maps: “If you're abroad or in an area without a network, your Map remains accessible even without an Internet connection”. I definitely did not experience that. I think to get true offline you need something more substantial than an app. Overall it is a bit better than the app I came from that lost pins of mine. I honestly say you should not trust any third party with your pins, back up on Google Maps or a spreadsheet. I learned that the hard way.",
+          "attributes": {
+            "type": "text"
+          }
+        },
+        "link": {
+          "attributes": {
+            "rel": "related",
+            "href": "https://itunes.apple.com/us/review?id=917288465&type=Purple%20Software"
+          }
+        },
+        "im:voteSum": {
+          "label": "0"
+        },
+        "im:contentType": {
+          "attributes": {
+            "term": "Application",
+            "label": "Application"
+          }
+        },
+        "im:voteCount": {
+          "label": "0"
+        }
+      }
+    ]
+  }
+}

@@ -79,6 +79,22 @@ def test_localized_reviews(capsys, country, title, limit):
     assert [item["id"] for item in out["items"]] == ["874139669", *ids]
 
 
+@pytest.mark.parametrize("limit", [1, 2])
+def test_mapstr_review_with_no_version_does_not_sink_page(capsys, limit):
+    code, out = run(capsys, ["read", "917288465", "--limit", str(limit)], recording("mapstr"), recording("mapstr_rss"))
+    assert code == 0 and out["error"] is None
+    assert [(r["id"], r["raw"]["version"]) for r in out["items"][1:]] == [
+        ("14776919824", "4.6.1"), ("14351344893", None)][:limit]
+
+
+def test_xcode_listing_and_review(capsys):
+    code, out = run(capsys, ["read", "497799835", "--limit", "1"], recording("xcode"), recording("xcode_rss"))
+    assert code == 0 and out["error"] is None
+    listing, review = out["items"]
+    assert (listing["title"], listing["id"], review["id"]) == ("Xcode", "497799835", "14827314337")
+    assert review["raw"]["app_id"] == listing["id"]
+
+
 def test_ambiguous_name_returns_choices_without_reading(capsys):
     r = recording("app")
     r["results"][0]["description"] = "Send private messages."

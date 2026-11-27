@@ -1,0 +1,19 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "kind": "mac-software",
+      "trackId": 497799835,
+      "trackViewUrl": "https://apps.apple.com/us/app/xcode/id497799835?mt=12&uo=4",
+      "trackName": "Xcode",
+      "artistName": "Apple",
+      "primaryGenreName": "Developer Tools",
+      "averageUserRating": 0,
+      "userRatingCount": 0,
+      "version": "27.2",
+      "currentVersionReleaseDate": "2026-10-30T00:02:26Z",
+      "formattedPrice": "Free",
+      "minimumOsVersion": "26.6"
+    }
+  ]
+}

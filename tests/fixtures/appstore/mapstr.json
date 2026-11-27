@@ -1,0 +1,19 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "kind": "software",
+      "trackId": 917288465,
+      "trackViewUrl": "https://apps.apple.com/us/app/mapstr-save-follow-places/id917288465?uo=4",
+      "trackName": "Mapstr – Save & Follow Places",
+      "artistName": "Hulab",
+      "primaryGenreName": "Travel",
+      "averageUserRating": 4.7301,
+      "userRatingCount": 2638,
+      "version": "4.6.1",
+      "currentVersionReleaseDate": "2026-11-02T13:31:37Z",
+      "formattedPrice": "Free",
+      "minimumOsVersion": "18.0"
+    }
+  ]
+}
