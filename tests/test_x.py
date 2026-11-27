@@ -114,6 +114,24 @@ def test_search_dates_are_echoed_as_iso_strings(run):
     assert env["meta"]["attempts"][0]["outcome"] == "no_results"
 
 
+@pytest.mark.parametrize("query_data", [None, {"search_timeline": {"timeline": {}}},
+    {"search_timeline": {"timeline": {"instructions": []}}},
+    {"search_timeline": {"timeline": {"instructions": [{"type": "Unknown"}]}}},
+])
+def test_unrecognized_search_page_is_not_an_empty_result(run, query_data):
+    bad = {"data": {"search_by_raw_query": query_data}}
+    code, env, _ = run([*GQL, "q"], FakeTransport(x=[(200, bad)]))
+    assert code == 1 and env["error"]["code"] == "upstream_error"
+    assert env["meta"]["attempts"][0]["outcome"] == "upstream_error"
+
+
+def test_missing_search_page_preserves_earlier_posts(run):
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, {})])
+    code, env, _ = run([*GQL, "q", "--per-window", "40"], fake)
+    assert code == 1 and env["error"]["code"] == "upstream_error"
+    assert len(env["items"]) == 20
+
+
 def test_search_out_of_window_drops_become_a_note(run):
     old = tweet("12", created_at="Mon Oct 05 10:00:00 +0000 2026")
     fake = FakeTransport(x=[(200, page(old, tweet("13", created_at="Mon Nov 02 10:00:00 +0000 2026")))])
@@ -126,9 +144,6 @@ def in_late_window(record):
     return "2026-10-29" <= record["created_at"][:10] < "2026-11-05"
 
 
-EMPTY_PAGE = {"data": {"search_by_raw_query": {"search_timeline": {"timeline": {"instructions": []}}}}}
-
-
 def test_windowed_search_keeps_every_in_window_post(run):
     fake = FakeTransport(x=[(200, load("x_graphql_latest.json"))])
     code, env, _ = run([*GQL, "q", "--since", "2026-10-08", "--until", "2026-11-05", "--window-days", "28"], fake)
@@ -139,7 +154,7 @@ def test_windowed_search_keeps_every_in_window_post(run):
 
 
 def test_recorded_posts_outside_their_window_are_dropped_and_counted(run):
-    fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, EMPTY_PAGE)])
+    fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, page())])
     code, env, _ = run([*GQL, "q", "--since", "2026-10-29", "--until", "2026-11-05"], fake)
     assert code == 0
     assert [i["raw"] for i in env["items"]] == [r for r in parse_page(load("x_graphql_latest.json"))[0]

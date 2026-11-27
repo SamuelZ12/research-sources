@@ -455,6 +455,16 @@ def test_read_is_a_metadata_run_then_a_run_for_the_chosen_track(rsrc, environ):
         {"backend": "yt-dlp", "outcome": "ok", "requests": 2, "ms": out["meta"]["attempts"][0]["ms"]}]
 
 
+def test_read_keeps_repeated_speech_after_a_caption_gap(rsrc):
+    vtt = ("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nTry again.\n\n"
+           "00:00:02.000 --> 00:00:03.000\nTry again.\n\n"
+           "00:00:32.000 --> 00:00:33.000\nTry again.\n")
+    code, out = rsrc(["read", DUBBED], FakeRunner(ok(META_DUBBED), caption_run(vtt)))
+    [item] = out["items"]
+    assert code == 0 and item["raw"]["transcript"]["status"] == "ok"
+    assert item["text"] == "[00:01] Try again.\n[00:32] Try again."
+
+
 def test_read_of_a_dubbed_video_asks_only_for_its_own_speech_recognition_track(rsrc):
     fake = read_dubbed()
 

@@ -784,13 +784,26 @@ def test_closed_pull_request_merge_status_can_be_null_or_unknown(rsrc, public, m
         assert "mergedAt" not in item["raw"]
 
 
-@pytest.mark.parametrize("query", ["is:issue", "type:issue", "label:docs OR (IS:ISSUE state:open)"])
-def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query):
+@pytest.mark.parametrize("query,extra", [("is:issue", " state:open"), ("type:issue", " state:open"),
+                                         ("label:docs OR (IS:ISSUE state:open)", "")])
+def test_issue_search_preserves_explicit_issue_qualifiers(rsrc, public, query, extra):
     calls = public((FIXTURES / "gh_public_issues.json").read_text())
     code, out = rsrc(["issues", query, "--repo", "python/cpython", "--limit", "1"], FakeGh())
     assert code == 0 and out["items"][0]["raw"]["isPullRequest"] is False
     assert "mergedAt" not in out["items"][0]["raw"]
-    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [f"( {query} ) repo:python/cpython state:open"]
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [f"( {query} ) repo:python/cpython{extra}"]
+
+
+@pytest.mark.parametrize("query,flags,extra", [
+    ("author:Skirano is:pr is:merged", [], ""), ("author:Skirano is:merged", [], ""),
+    ('is:pr (STATE:"closed" OR is:open)', [], ""), ("is:pr -is:open", [], ""),
+    ('is:pr "is:merged"', [], " state:open"), ("is:pr is:merged", ["--state", "open"], " state:open"),
+])
+def test_query_state_controls_issue_search_unless_flag_is_explicit(rsrc, public, query, flags, extra):
+    calls = public((FIXTURES / "gh_public_prs.json").read_text())
+    code, _ = rsrc(["issues", query, "--repo", "modelcontextprotocol/servers", "--limit", "1", *flags], FakeGh())
+    assert code == 0
+    assert parse_qs(urlsplit(calls[0].full_url).query)["q"] == [f"( {query} ) repo:modelcontextprotocol/servers{extra}"]
 
 
 def test_issue_search_ignores_type_qualifiers_in_quoted_text(rsrc, public):
