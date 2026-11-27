@@ -304,7 +304,7 @@ def _repo_item(data: dict, readme, release) -> dict:
         source="gh",
         engagement=_counts(stars=data.get("stargazers_count"), forks=data.get("forks_count"),
                            open_issues=data.get("open_issues_count"),
-                           watchers=data.get("subscribers_count", data.get("watchers_count"))),
+                           watchers=data.get("subscribers_count")),
         raw={"repo": data, "latest_release": release},
     )
 
@@ -481,7 +481,7 @@ def _search_repo_item(r: dict) -> dict:
         text=r.get("description") or None,
         source="gh",
         engagement=_counts(stars=r.get("stargazersCount"), forks=r.get("forksCount"),
-                           open_issues=r.get("openIssuesCount"), watchers=r.get("watchersCount")),
+                           open_issues=r.get("openIssuesCount")),
         raw=r,
     )
 

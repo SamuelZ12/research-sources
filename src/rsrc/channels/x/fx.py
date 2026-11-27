@@ -381,7 +381,9 @@ def status_record(status: dict) -> dict:
         lang=status.get("lang"),
         reply_to_id=(status.get("replying_to") or {}).get("status"),
         quoted={"id": quote.get("id"), "author": (quote.get("author") or {}).get("screen_name"),
-                "text": quote.get("text"), "media": fx_media(quote), "text_truncated": False} if quote else None,
+                "text": quote.get("text"), "media": fx_media(quote), "text_truncated": False,
+                **({"poll": quote["poll"]} if isinstance(quote.get("poll"), dict) else {})} if quote else None,
+        poll=status["poll"] if isinstance(status.get("poll"), dict) else None,
         media=fx_media(status),
         article=fx_article(status.get("article")),
         text_truncated=False,
@@ -589,6 +591,33 @@ def fx_media(status: dict) -> list[dict]:
     return [r for r in records if r]
 
 
+def _syndication_poll(data: dict) -> dict | None:
+    card = data.get("card")
+    if not isinstance(card, dict) or not isinstance(card.get("name"), str):
+        return None
+    match = re.fullmatch(r"poll([2-4])choice(?:_\w+)?", card["name"])
+    if not match:
+        return None
+    bindings = card.get("binding_values")
+    def field(key, kind="string_value"):
+        entry = bindings.get(key) if isinstance(bindings, dict) else None
+        return entry.get(kind) if isinstance(entry, dict) else None
+
+    choices = []
+    for n in range(1, int(match[1]) + 1):
+        label, count = field(f"choice{n}_label"), field(f"choice{n}_count")
+        choice = {"label": label if isinstance(label, str) else None}
+        if isinstance(count, str) and re.fullmatch(r"[0-9]{1,20}", count):
+            choice["count"] = int(count)
+        choices.append(choice)
+    poll = {"choices": choices}
+    if isinstance(ends := field("end_datetime_utc"), str):
+        poll["ends_at"] = ends
+    if field("counts_are_final", "boolean_value") is True:
+        poll["time_left_en"] = "Final results"
+    return poll
+
+
 def syndication_record(data: dict) -> dict:
     """Counts other than likes aren't provided. For a long post (one with a `note_tweet`) syndication
     sends only the first part of the text, so the record says `text_truncated`."""
@@ -604,7 +633,9 @@ def syndication_record(data: dict) -> dict:
         reply_to_id=data.get("in_reply_to_status_id_str"),
         quoted={"id": quoted.get("id_str"), "author": (quoted.get("user") or {}).get("screen_name"),
                 "text": _syndication_text(quoted), "media": legacy_media(quoted.get("mediaDetails")),
-                "text_truncated": bool(quoted.get("note_tweet"))} if quoted else None,
+                "text_truncated": bool(quoted.get("note_tweet")),
+                **({"poll": poll} if (poll := _syndication_poll(quoted)) is not None else {})} if quoted else None,
+        poll=_syndication_poll(data),
         media=legacy_media(data.get("mediaDetails")),
         text_truncated=bool(data.get("note_tweet")),
         source="syndication",

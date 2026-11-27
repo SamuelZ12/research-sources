@@ -1,0 +1,38 @@
+{
+  "id_str": "1604617643973124097",
+  "text": "Should I step down as head of Twitter? I will abide by the results of this poll.",
+  "created_at": "2022-12-18T23:20:33.000Z",
+  "lang": "en",
+  "user": {
+    "screen_name": "elonmusk"
+  },
+  "card": {
+    "name": "poll2choice_text_only",
+    "binding_values": {
+      "choice1_label": {
+        "string_value": "Yes",
+        "type": "STRING"
+      },
+      "choice2_label": {
+        "string_value": "No",
+        "type": "STRING"
+      },
+      "end_datetime_utc": {
+        "string_value": "2022-12-19T11:20:32Z",
+        "type": "STRING"
+      },
+      "counts_are_final": {
+        "boolean_value": true,
+        "type": "BOOLEAN"
+      },
+      "choice2_count": {
+        "string_value": "7439347",
+        "type": "STRING"
+      },
+      "choice1_count": {
+        "string_value": "10063044",
+        "type": "STRING"
+      }
+    }
+  }
+}

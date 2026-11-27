@@ -404,6 +404,15 @@ def test_read_returns_poll_results_and_keeps_the_question_verbatim(run):
     assert all(s in item["text"] for s in ("Final results", "17,502,391 votes", "Yes: 57.5%", "No: 42.5%"))
 
 
+def test_poll_when_only_syndication_answers(run):
+    poll = load("x_syndication_poll.json")
+    code, out, _ = run(["read", poll["id_str"]], FakeTransport(fx=[(500, b"")] * 3, syndication=[(200, poll)]))
+    item, = out["items"]
+    assert code == 0 and item["source"] == "syndication"
+    assert all(s in item["text"] for s in ("Final results", "Yes: 10,063,044 votes", "No: 7,439,347 votes"))
+    assert "%" not in item["text"]
+
+
 def test_unreported_poll_numbers_are_not_invented(run):
     data = load("x_fx_poll.json")
     data["status"]["poll"] = {"choices": [{"label": "Yes"}, {"label": "No"}]}
@@ -411,6 +420,23 @@ def test_unreported_poll_numbers_are_not_invented(run):
     item, = out["items"]
     assert code == 0 and "Yes: result unavailable" in item["text"]
     assert "%" not in item["text"] and "Final results" not in item["text"]
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_poll_on_a_quoted_post_is_not_attributed_to_the_author(run, fallback):
+    if fallback:
+        poll = load("x_syndication_poll.json")
+        main = load("x_syndication.json")
+        main["quoted_tweet"] = poll
+        fake = FakeTransport(fx=[(500, b"")] * 3, syndication=[(200, main)])
+    else:
+        main = load("x_fx_status.json")
+        main["status"]["quote"] = load("x_fx_poll.json")["status"]
+        fake = FakeTransport(fx=[(200, main)])
+    code, out, _ = run(["read", POST], fake)
+    item, = out["items"]
+    assert code == 0 and item["raw"]["poll"] is None and "Final results" not in item["text"]
+    assert item["raw"]["quoted"]["poll"]["choices"][0]["count"] == 10063044
 
 
 def test_read_article_url_returns_the_article_from_the_publishing_post(run):

@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 
 from rsrc import envelope as env
 from rsrc.http import CapReached, Client, HttpError, raise_refusal
+from rsrc.html_markdown import link
 
 PUBLIC = "public.api.bsky.app"
 SEARCH = "api.bsky.app"
@@ -83,6 +84,18 @@ def fetch(client, host, method, **params):
     return data
 
 
+def linked_text(label, uri):
+    text = label.strip()
+    if not text:
+        return label
+    bare = uri.removeprefix("https://").removeprefix("http://")
+    prefix = text.removesuffix("…").removesuffix("...")
+    shortened = (prefix != text and "." in prefix and not any(c.isspace() for c in prefix)
+                 and (bare.startswith(prefix) or uri.startswith(prefix)))
+    shown = uri if shortened or text in (uri, bare) else link(text, uri)
+    return label[:len(label) - len(label.lstrip())] + shown + label[len(label.rstrip()):]
+
+
 def expanded_text(record):
     data = record["text"].encode()
     end = len(data)
@@ -92,7 +105,8 @@ def expanded_text(record):
                 start, stop = facet["index"]["byteStart"], facet["index"]["byteEnd"]
                 if not 0 <= start < stop <= end:
                     raise HttpError("invalid Bluesky link facet")
-                data = data[:start] + feature["uri"].encode() + data[stop:]
+                replacement = linked_text(data[start:stop].decode(), feature["uri"])
+                data = data[:start] + replacement.encode() + data[stop:]
                 end = start
                 break
     return data.decode()
@@ -109,7 +123,7 @@ def post_item(post):
     if when.tzinfo is None:
         raise HttpError("Bluesky post timestamp has no timezone")
     embed = post.get("embed") or record.get("embed")
-    raw = {"display_name": actor.get("displayName"), "embed": embed,
+    raw = {"text": record["text"], "display_name": actor.get("displayName"), "embed": embed,
            "parent_uri": record.get("reply", {}).get("parent", {}).get("uri")}
     if embed:
         quote = embed.get("record", {})
