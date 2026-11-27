@@ -13,6 +13,8 @@ from rsrc.envelope import ITEM_KEYS
 FIXTURES = Path(__file__).parent / "fixtures"
 SEARCH = (FIXTURES / "hn_search.json").read_bytes()
 ITEM = (FIXTURES / "hn_item.json").read_bytes()  # story 50148855: 128 comments, up to 7 deep
+POLL = (FIXTURES / "hn_poll_item.json").read_bytes()
+POLL_PAGE = (FIXTURES / "hn_poll_page.html").read_bytes()
 
 
 def hit(object_id: str) -> dict:
@@ -417,6 +419,87 @@ def test_read_comments_0_returns_the_story_alone(rsrc):
 
     assert code == 0 and [i["id"] for i in out["items"]] == ["50148855"]
     assert out["meta"]["notes"] == ["0 of 128 comments returned"]
+
+
+def test_read_poll_matches_results_by_id_with_one_extra_get(rsrc):
+    transport = FakeTransport((200, POLL), (200, POLL_PAGE))
+    code, out = rsrc(["read", "3746692", "--comments", "0"], transport)
+
+    assert code == 0 and out["ok"] and out["error"] is None
+    [root] = out["items"]
+    assert root["id"] == "3746692" and root["engagement"] == {"points": 2423}
+    poll = root["raw"]["poll"]
+    assert poll["status"] == "ok"
+    options = poll["options"]
+    assert len(options) == 37 and [option["id"] for option in options] == root["raw"]["item"]["options"]
+    assert options[:2] == [
+        {"id": 3746693, "text": "Actionscript", "points": 106},
+        {"id": 3746694, "text": "Ada", "points": 28},
+    ]
+    assert {"id": 3746718, "text": "Python", "points": 3240} in options
+    assert transport.requests == [
+        ("GET", "https://hn.algolia.com/api/v1/items/3746692", None, None),
+        ("GET", "https://news.ycombinator.com/item?id=3746692", None, None),
+    ]
+
+
+def test_read_poll_keeps_hidden_scores_and_missing_labels_unknown(rsrc):
+    page = (POLL_PAGE.replace(b'id="score_3746693">106 points', b'id="score_3746693">')
+            .replace(b'<tr class="athing" id="3746694">', b'<tr class="athing" id="9999999">')
+            .replace(b'id="score_3746718">3240 points', b'id="score_3746718">0 points'))
+    code, out = rsrc(["read", "3746692"], FakeTransport((200, POLL), (200, page)))
+
+    assert code == 0 and len(out["items"]) == 2
+    poll = out["items"][0]["raw"]["poll"]
+    assert poll["status"] == "partial"
+    assert poll["options"][:2] == [
+        {"id": 3746693, "text": "Actionscript", "points": None},
+        {"id": 3746694, "text": None, "points": None},
+    ]
+    assert {"id": 3746718, "text": "Python", "points": 0} in poll["options"]
+
+
+def test_read_poll_reports_unavailable_when_no_scores_are_visible(rsrc):
+    page = POLL_PAGE.replace(b'class="score"', b'class="hidden"')
+    code, out = rsrc(["read", "3746692"], FakeTransport((200, POLL), (200, page)))
+
+    assert code == 0 and out["ok"]
+    poll = out["items"][0]["raw"]["poll"]
+    assert poll["status"] == "unavailable"
+    assert poll["options"][0] == {"id": 3746693, "text": "Actionscript", "points": None}
+    assert all(option["points"] is None for option in poll["options"])
+
+
+@pytest.mark.parametrize("response, expected", [
+    ((429, b"Too Many Requests"), "rate_limited"),
+    ((403, b"Forbidden"), "blocked"),
+    ((200, b"<html>maintenance</html>"), "upstream_error"),
+    ((200, POLL_PAGE.replace(b'class="athing submission" id="3746692"',
+                             b'class="athing submission" id="9999999"')), "upstream_error"),
+    (TimeoutError("timed out"), "network_error"),
+])
+def test_read_poll_returns_the_thread_when_the_page_fails(rsrc, response, expected):
+    transport = FakeTransport((200, POLL), response)
+    code, out = rsrc(["read", "3746692"], transport)
+
+    assert code == 1 and not out["ok"] and out["error"]["code"] == expected
+    assert ids_and_depths(out) == [("3746692", 0), ("3746808", 1)]
+    poll = out["items"][0]["raw"]["poll"]
+    assert poll["status"] == "unavailable"
+    assert poll["options"][0] == {"id": 3746693, "text": None, "points": None}
+    assert [a["outcome"] for a in out["meta"]["attempts"]] == ["ok", expected]
+    assert len(transport.urls) == 2
+
+
+def test_read_poll_without_option_ids_reports_unavailable_without_requesting_the_page(rsrc):
+    root = json.loads(POLL)
+    del root["options"]
+    transport = FakeTransport(answer(root))
+    code, out = rsrc(["read", "3746692"], transport)
+
+    assert code == 0 and len(out["items"]) == 2
+    assert out["items"][0]["raw"]["poll"] == {"status": "unavailable", "options": []}
+    assert len(transport.urls) == 1
 
 
 def test_read_skips_a_comment_without_text_and_keeps_its_replies(rsrc):
