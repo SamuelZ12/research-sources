@@ -1,8 +1,8 @@
 """Rendered HTML as Markdown, keeping what plain page text drops: link and image addresses, list
 markers, quotes, code blocks, tables, headings and emphasis.
 
-Used for HTML a site renders from its own Markdown or rich text (Reddit bodies, Ashby job
-descriptions). Pure and dependency-free: the standard library's HTMLParser builds a small tree.
+Used for HTML a site renders from its own Markdown or rich text (Reddit post and
+comment bodies). Pure and dependency-free: the standard library's HTMLParser builds a small tree.
 Text is not escaped, so it reads as the page showed it.
 """
 

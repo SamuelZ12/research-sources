@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from rsrc import cli, proc
-from rsrc.channels import appstore, ashby, check, hn, linkedin, reddit, x, youtube
+from rsrc.channels import appstore, check, hn, linkedin, reddit, x, youtube
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
@@ -15,7 +15,6 @@ HTTP_COMMANDS = {
     linkedin: ["linkedin", "read", check.LINKEDIN_POST],
     hn: ["hn", "search", "q"],
     appstore: ["appstore", "search", "q"],
-    ashby: ["ashby", "search", "quartz"],
 }
 NOT_HTTP = {
     x: "FxTwitter's 403 and 404 carry post states, and the signed routes report 401 and 403 as auth_failed",
@@ -138,7 +137,6 @@ LIMITED_COMMANDS = {
     ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
     ("appstore", "search"): (["appstore", "search", "q"],
                              lambda: [{**twice(recorded("appstore/wiki.json"), "results"), "resultCount": 2}]),
-    ("ashby", "search"): (["ashby", "search", "quartz"], lambda: [recorded("ashby/board.json")]),
 }
 LIMIT_COUNTS_PART = {
     ("x", "search"): "unique posts across date windows; test_x_windows.py covers --limit",

@@ -1,4 +1,4 @@
-"""HTML a site renders (Reddit bodies, Ashby descriptions) as Markdown that keeps addresses and structure."""
+"""HTML a site renders (Reddit bodies) as Markdown that keeps addresses and structure."""
 
 from rsrc.html_markdown import to_markdown
 

@@ -11,7 +11,6 @@ This page has the full command syntax, what each source needs, and what each sou
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID [--comments N]` (up to 1000 comments) |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
-| Ashby | `rsrc ashby search BOARD_OR_URL [--title WORDS] [--team TEAM] [--location PLACE] [--since YYYY-MM-DD] [--limit N]`, `rsrc ashby read JOB_URL` or `rsrc ashby read ROLE_ID --board BOARD` |
 | LinkedIn | `rsrc linkedin read URL` (public post and comments) |
 | All | `rsrc check [CHANNEL…] [--live-x] [--live-reddit]` |
 
@@ -22,7 +21,6 @@ This page has the full command syntax, what each source needs, and what each sou
 | `x` | Nothing for public reads. Search with Ego Lite, a cookie pair, or Google Chrome (`rsrc x connect`, experimental) while public search is unavailable |
 | `hn` | Nothing |
 | `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
-| `ashby` | Nothing. Reads one public employer board per request |
 | `appstore` | Nothing. Apple's public storefront review feed can lag by a day or two |
 | `linkedin` | Nothing |
 | `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH`, for search, share links and live thread reads. Without it, `reddit read` uses the Arctic Shift archive and needs nothing |
@@ -35,7 +33,7 @@ Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) 
 
 `rsrc check hn appstore` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0.
 
-A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear's Ashby board, HN's front page, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+A bare `rsrc check` probes the default channels: a public LinkedIn post, HN's front page, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 ## X
 
@@ -70,10 +68,6 @@ A video read selects original-language captions. It may fall back to a second yt
 ## App Store
 
 Read an iOS or Mac app by ID or URL to get the listing followed by written reviews, newest first by default (30). A URL selects its storefront unless you override it. An ambiguous name returns candidate apps and `usage`; rerun with an ID. Ratings are in `engagement.rating`. A review's version is null when Apple leaves it blank or supplies no version. Neither feed promises stability or complete coverage. Use the reviews as dated examples; their frequency and timing cannot establish prevalence or support real-time monitoring.
-
-## Ashby
-
-`rsrc ashby search linear --team Engineering` lists matching roles. Pass an item's URL to `rsrc ashby read` for its full description. Each command reads the board once. The [Ashby posting API](https://developers.ashbyhq.com/docs/public-job-posting-api) exposes current postings and their last publication dates. It supplies no closed-role history or applicant counts. For bulk ingestion, Ashby documents [partner feeds with employer opt-in](https://developers.ashbyhq.com/docs/dedicated-partner-job-feeds).
 
 ## LinkedIn
 

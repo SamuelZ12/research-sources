@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from rsrc import checks, chrome, proc
 from rsrc import envelope as env
-from rsrc.channels import appstore, ashby, linkedin
+from rsrc.channels import appstore, linkedin
 from rsrc.channels import hn as hnc
 from rsrc.channels import reddit as rc
 from rsrc.channels import reddit_archive
@@ -16,7 +16,7 @@ from rsrc.channels.x import auth, connection, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
-NAMES = ("x", "reddit", "hn", "youtube", "appstore", "ashby", "linkedin")
+NAMES = ("x", "reddit", "hn", "youtube", "appstore", "linkedin")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
@@ -27,8 +27,8 @@ YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to Yo
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
-                                   description="By default check all seven channels. Probe HN, "
-                                               "the App Store catalog and an Ashby board, and read YouTube "
+                                   description="By default check all six channels. Probe HN "
+                                               "and the App Store catalog, and read YouTube "
                                                "metadata with yt-dlp. X setup and Ego Lite "
                                                "are checked locally unless their live flag is set. Without Ego Lite, "
                                                "Reddit check verifies one archived thread.")
@@ -63,7 +63,6 @@ def run(args, ctx) -> dict:
     input_ = {"channels": names, "live_x": args.live_x, "live_reddit": args.live_reddit}
     probes = {"linkedin": lambda attempts: probe_linkedin(ctx, attempts),
               "x": lambda attempts: probe_x(ctx, args.live_x, attempts),
-              "ashby": lambda attempts: probe_ashby(ctx, attempts),
               "appstore": lambda attempts: probe_appstore(ctx, attempts),
               "reddit": lambda attempts: probe_reddit(ctx, args.live_reddit, attempts),
               "hn": lambda attempts: probe_hn(ctx, attempts),
@@ -307,16 +306,6 @@ def probe_appstore(ctx, attempts):
         attempts[-1]["outcome"] = "upstream_error"
         raise _Failed("upstream_error", "Apple returned no apps for Wikipedia")
     return "App Store catalog answered (1 request, no key)", {"app_id": answer["items"][0]["id"]}
-
-
-def probe_ashby(ctx, attempts):
-    args = SimpleNamespace(action="search", board="linear", title=None, team=None,
-                           location=None, since=None, limit=1)
-    answer = ashby.run(args, ctx)
-    attempts.extend(answer["meta"]["attempts"])
-    if answer["error"]:
-        raise _Failed(answer["error"]["code"], answer["error"]["message"])
-    return "Linear's public Ashby board answered", {"board": "linear"}
 
 
 LINKEDIN_POST = "https://www.linkedin.com/feed/update/urn:li:activity:7204256477832753153/"

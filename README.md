@@ -46,7 +46,6 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 | YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
 | LinkedIn | `linkedin read` (public post and comments) | None |
 | App Store | `appstore search`, `appstore read` (listing and reviews) | None |
-| Ashby | `ashby search`, `ashby read` | None |
 
 Each command starts with `rsrc`, and `--help` lists its flags. On a Mac with Homebrew, `brew install yt-dlp deno` covers YouTube. X and Reddit commands can act as your own account, so keep their volume low. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
 
@@ -67,7 +66,7 @@ On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 h
 - **Read-only.** `rsrc` never posts, likes, follows or trades.
 - **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
 - **Not a web search.** Pair it with one.
-- **Only what web search misses.** For GitHub, use the [GitHub CLI](https://cli.github.com/) (`gh`). Web search already returns Polymarket odds, Bluesky posts and Product Hunt launch rankings from those sites' own pages.
+- **Only what web search misses.** For GitHub, use the [GitHub CLI](https://cli.github.com/) (`gh`). Web search already returns Polymarket odds, Bluesky posts and Product Hunt launch rankings from those sites' own pages, and a plain page fetch reads Ashby job boards and postings.
 - **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
 - **Early software.** One maintainer. Live sources have been tested on macOS only.
 
