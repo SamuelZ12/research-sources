@@ -53,7 +53,7 @@ ARTICLE_BLOCK_PREFIX = {
 def parse_id(arg: str, *, status_only: bool = False) -> str | None:
     match = POST_URL_RE.search(arg)
     if match:
-        if status_only and (match.group("article") or not STATUS_URL_PREFIX_RE.fullmatch(arg, 0, match.start())):
+        if not STATUS_URL_PREFIX_RE.fullmatch(arg, 0, match.start()) or (status_only and match.group("article")):
             return None
         return match.group("id")
     return arg if BARE_ID_RE.match(arg) else None
@@ -222,6 +222,10 @@ def numbered_thread_total(records: list[dict]) -> int | None:
     return total
 
 
+class Mismatch(HttpError):
+    code = "url_mismatch"
+
+
 def replies(client, post_id, rank="likes", limit=100):
     """Yield up to `limit` replies to a post, following FxTwitter's conversation cursor.
 
@@ -234,11 +238,15 @@ def replies(client, post_id, rank="likes", limit=100):
         data, failure = fx_json(client, f"{FX_API}/conversation/{post_id}?{urlencode(params)}", "replies")
         if not data:
             raise failure.error(f"fxtwitter conversation {post_id}", missing=True)
+        if "status" in data and (not isinstance(data["status"], dict) or data["status"].get("id") != post_id):
+            raise Mismatch(f"FxTwitter returned a different conversation from {post_id}")
         added = 0
         for status in data["replies"]:
             record = status_record(status)
             if record["id"] in seen:
                 continue
+            if record["reply_to_id"] != post_id:
+                raise Mismatch(f"FxTwitter returned a reply that does not identify {post_id} as its parent")
             seen.add(record["id"])
             added += 1
             yield record
@@ -283,7 +291,13 @@ def timeline(client, handle, limit=20):
             added += 1
             reposter = status.get("reposted_by")
             reposter = reposter.get("screen_name") if isinstance(reposter, dict) else None
-            yield status_record(status) | ({"reposted_by": reposter} if reposter else {}), status
+            record = status_record(status)
+            owner = reposter if status.get("reposted_by") is not None else record["author"]
+            if not isinstance(owner, str) or owner.casefold() != handle.casefold():
+                raise Mismatch(f"FxTwitter returned a post not attributed to @{handle}'s timeline")
+            if reposter:
+                record["reposted_by"] = reposter
+            yield record, status
             if len(seen) >= limit:
                 return
         next_cursor = (data.get("cursor") or {}).get("bottom")

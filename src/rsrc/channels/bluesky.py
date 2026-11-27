@@ -187,6 +187,8 @@ def conversation(client, args, meta):
     items, unavailable = [], []
 
     def visit(node, parent, level):
+        if "replies" not in node:
+            return
         for child in entries(node, "replies"):
             if child["$type"] in (THREAD + "blockedPost", THREAD + "notFoundPost"):
                 unavailable.append(child["$type"])
@@ -198,7 +200,7 @@ def conversation(client, args, meta):
                 raise Failure("url_mismatch", "Bluesky returned a reply to a different post")
             reply["raw"]["depth"] = level
             items.append(reply)
-            if level < depth and len(items) < args.limit and "replies" in child:
+            if level < depth and len(items) < args.limit:
                 visit(child, reply["id"], level + 1)
             if len(items) >= args.limit:
                 break

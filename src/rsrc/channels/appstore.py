@@ -291,7 +291,7 @@ def run(args, ctx):
     except (ValueError, KeyError, TypeError, AttributeError, OverflowError):
         error = env.error("upstream_error", "Apple returned an unexpected listing or review format")
     if read and args.sort == "recent" and len(items) > 1 and items[1]["raw"]["kind"] == "review":
-        items[1:] = sorted(items[1:], key=lambda r: r["published_at"], reverse=True)
+        items[1:] = sorted(items[1:], key=lambda r: datetime.fromisoformat(r["published_at"]), reverse=True)
     outcome = error["code"] if error else "ok" if items else "no_results"
     meta["attempts"] = [env.attempt(BACKEND, outcome, client.requests_made, env.elapsed_ms(started))]
     return env.envelope("appstore", args.action, inputs, BACKEND, items, meta=meta, error=error)
