@@ -1,7 +1,7 @@
 [project]
 name = "research-sources"
 version = "0.1.0"
-description = "Read-only research sources (X, GitHub, Reddit, Hacker News, Polymarket, YouTube) for agents, as one JSON CLI"
+description = "Read-only research sources (X, Reddit, Hacker News, YouTube, LinkedIn, Bluesky and more) for agents, as one JSON CLI"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES"]

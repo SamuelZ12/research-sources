@@ -21,7 +21,7 @@ def test_error_rejects_unknown_code():
 
 
 def test_attempt_shape():
-    assert env.attempt("gh", "ok") == {"backend": "gh", "outcome": "ok", "requests": None, "ms": None}
+    assert env.attempt("algolia", "ok") == {"backend": "algolia", "outcome": "ok", "requests": None, "ms": None}
 
 
 def test_elapsed_ms_is_whole_milliseconds_since_the_start(monkeypatch):
@@ -30,7 +30,7 @@ def test_elapsed_ms_is_whole_milliseconds_since_the_start(monkeypatch):
 
 
 def test_envelope_keys_order_and_defaults():
-    e = env.envelope("gh", "search", {"q": "x"}, "gh")
+    e = env.envelope("hn", "search", {"q": "x"}, "algolia")
     assert list(e) == ["ok", "channel", "action", "input", "backend", "items", "meta", "error"]
     assert e["ok"] is True and e["items"] == [] and e["error"] is None
     assert list(e["meta"]) == list(env.META_KEYS)

@@ -1,11 +1,11 @@
 ---
 name: research-sources
-description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, GitHub repos and issues, Polymarket odds, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
+description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, Polymarket odds, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
 ---
 
 # research-sources (`rsrc`)
 
-`rsrc` is read-only. Web search covers everything else.
+`rsrc` is read-only. For GitHub, use the `gh` CLI. Web search covers everything else.
 
 Run `rsrc …`. If `rsrc` is not on PATH, ask the user to install it (`uv tool install git+https://github.com/SamuelZ12/research-sources`). `rsrc <channel> [<action>] --help` lists every flag.
 
@@ -27,9 +27,6 @@ Before your first command on a channel, read that channel's file. The files are 
 | Prediction markets on a topic, with current prices | `rsrc polymarket search QUERY [--limit 10]` | `references/polymarket.md` |
 | YouTube videos on a topic | `rsrc youtube search QUERY [--limit 10]` | `references/youtube.md` |
 | One YouTube video: its details and its transcript | `rsrc youtube read URL_OR_ID [--words 5000]` | `references/youtube.md` |
-| One GitHub repo | `rsrc gh repo OWNER/REPO` | `references/gh.md` |
-| Find repositories | `rsrc gh search QUERY [--limit 20]` | `references/gh.md` |
-| GitHub issues, or pull requests with `is:pr` | `rsrc gh issues [QUERY] [--repo OWNER/REPO] [--state open\|closed\|all] [--limit 30]` | `references/gh.md` |
 | Bluesky posts about a topic or linking to a page | `rsrc bluesky search QUERY [--author HANDLE] [--domain DOMAIN] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--top]` or `rsrc bluesky search --url URL` | `references/bluesky.md` |
 | A Bluesky post, its replies, or an account's recent feed | `rsrc bluesky read POST`, `rsrc bluesky replies POST [--limit N]`, `rsrc bluesky timeline HANDLE_OR_URL [--limit N]` | `references/bluesky.md` |
 | Product Hunt products, makers or a particular launch | `rsrc producthunt search QUERY [--limit N]`, `rsrc producthunt read URL_OR_SLUG` | `references/producthunt.md` |
@@ -50,7 +47,7 @@ Every command prints exactly one JSON object on stdout.
 - `meta.failed` (`x read`): `{"input", "code", "message"}` per post that could not be read. The other posts still came back. While at least one post comes back, `error` stays `null` and the exit is `0`. Only when every post fails does `error` carry the first failure (exit `1`, or `2` for `usage`). A rate limit overrides partial success: the command exits 1 and keeps the posts read so far.
 - `meta.rejected`: `{"url", "reason"}` items dropped as `blocked_page` or `url_mismatch`. Never quote them.
 - `meta.truncated: "request_cap"`: the request budget ran out. Check `error` and which items arrived before you use a partial answer.
-- `meta.notes`: upstream notes, for example `N post(s) outside their date window dropped` or a GitHub `renamed: A -> B`.
+- `meta.notes`: upstream notes, for example `N post(s) outside their date window dropped`.
 - On a failure midway, partial results stay in `items` and are usable.
 
 **Cite only URLs this tool returned in `items`.** An x.com URL from anywhere else (Grok, a web page, a summary) gets checked with `rsrc x read` before you quote or count it.
@@ -69,7 +66,7 @@ The channel's file lists the messages that change an action below. Check it befo
 | `error.code` | Action |
 |---|---|
 | `usage` | Fix the arguments from `error.message` and rerun once |
-| `config` | Stop that channel. Ask the user to apply the exact fix the message prints (for example a `chmod`, `gh auth login`, a missing program or cookie). Do not apply it yourself |
+| `config` | Stop that channel. Ask the user to apply the exact fix the message prints (for example a `chmod`, a missing program or cookie). Do not apply it yourself |
 | `auth_failed` | Stop that channel (scope below). Ask the user to sign in again on the route the channel's file names |
 | `rate_limited` | Stop that channel (scope below) for the rest of the session. Never retry or route around it |
 | `blocked` | Access was refused or the source returned a block page. Treat it as unreadable (scope below) |
@@ -84,9 +81,8 @@ The channel's file lists the messages that change an action below. Check it befo
 - **X.** Use the envelope's `backend` to identify which backend stopped. A stop from FxTwitter (`search`, `read`, `thread`, `replies` or `timeline`) ends all `rsrc x`. After a signed-in X backend stops, avoid that account on both search and timeline. `x read` and `x replies` may verify specific URLs, and never stand in for a search. `blocked` on `x read` or `check --live-x` covers that one post only.
 - **Reddit.** `rate_limited` or `blocked` stops all Reddit access: `rsrc reddit` and any Reddit page in Ego, which share the same browser and account.
 - **YouTube.** `rate_limited` or `blocked` stops all `rsrc youtube`, search and `check youtube` included. A `source_blocked` transcript status counts as `blocked`.
-- **GitHub.** A final `rate_limited` error stops the channel. A public limit recorded only in `meta.attempts` can precede a successful restart with the CLI login.
 - **LinkedIn.** `blocked`, `rate_limited` or `auth_failed` stops LinkedIn access, including `check linkedin` and a bare `rsrc check`, which read a public post.
 - **Ashby.** `blocked` or `rate_limited` stops board reads and `check ashby`.
 - **Hacker News, Polymarket, Bluesky, Product Hunt and the App Store.** `rate_limited` stops the whole channel.
 
-**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, public searches on Bluesky, Product Hunt, App Store and Polymarket, the HN front page, YouTube metadata through yt-dlp, GitHub access, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.
+**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, public searches on Bluesky, Product Hunt, App Store and Polymarket, the HN front page, YouTube metadata through yt-dlp, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.

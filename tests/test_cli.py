@@ -110,7 +110,7 @@ def test_unexpected_exception_gives_envelope_without_message(capsys):
 
 
 @pytest.mark.parametrize("argv,channel,action", [
-    (["check", "gh", "--bogus"], "check", "check"),
+    (["check", "hn", "--bogus"], "check", "check"),
 ])
 def test_usage_action_for_channels_without_action_word(capsys, monkeypatch, argv, channel, action):
     monkeypatch.setattr(cli, "CHANNELS", REAL_CHANNELS)
@@ -133,5 +133,6 @@ def test_community_is_an_unknown_channel_and_nothing_runs(capsys, monkeypatch):
     assert "invalid choice: 'community'" in message
     listed = message.split("choose from", 1)[1]
     assert "community" not in listed
-    assert all(name in listed for name in ("x", "gh", "reddit", "hn", "polymarket", "youtube", "check"))
+    assert all(name in listed for name in ("x", "reddit", "hn", "polymarket", "youtube", "check"))
+    assert "gh" not in listed.replace(",", " ").split()
     assert calls == []

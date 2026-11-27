@@ -12,8 +12,8 @@ The tests also run the browser page scripts under Node.js, so install Node first
 ## What a change must keep true
 
 - **Tests stay offline.** A guard in `tests/conftest.py` fails any test that opens a real network connection. New behaviour comes with a test built on a recorded answer in `tests/fixtures/`.
-- **Runtime dependencies stay empty.** Programs such as `gh` and `yt-dlp` are run as subprocesses, never imported.
-- **Stop requests on a rate-limited backend.** A GitHub repo read or repo-scoped issue search may restart once with the CLI login after a public limit. A signed limit ends the command.
+- **Runtime dependencies stay empty.** Programs such as `yt-dlp` and `ego-browser` are run as subprocesses, never imported.
+- **Stop requests on a rate-limited backend.**
 - **No secrets anywhere.** No cookie, token or account ID in source, fixtures, test output or commit messages. Run `gitleaks dir . --redact --no-banner` before you commit.
 - **A failure never becomes an `ok` result.** No `except` that swallows an error, and a page `rsrc` does not recognize fails instead of reading as empty.
 - **Fixtures hold public data only.** Before saving a recording, remove anything that identifies you: `yt-dlp`'s stream and caption addresses carry your IP address.

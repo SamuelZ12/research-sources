@@ -1,6 +1,6 @@
 # research-sources (`rsrc`)
 
-`rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube, GitHub and [six more](#sources).
+`rsrc` is a command-line tool that lets an AI agent read sites that web search covers poorly: X, Reddit, Hacker News, YouTube and [six more](#sources).
 
 - **Finds what web search misses.** In a five-topic test, an agent with an early `rsrc` cited at least four URLs per topic that web search alone did not.
 - **Fast.** Most lookups take under a second. On X and Reddit, `rsrc` was 2 to 16 times faster than Agent-Reach and last30days.
@@ -44,7 +44,6 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 | Reddit | `reddit read`, `reddit search` | [Ego Lite](https://lite.ego.app/), for search and live threads. Without it, `reddit read` uses the public [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive |
 | Hacker News | `hn search`, `hn read` | None |
 | YouTube | `youtube search`, `youtube read` (details and transcript) | `yt-dlp`, and `deno` for `youtube read` |
-| GitHub | `gh repo`, `gh search`, `gh issues` | None. A logged-in [GitHub CLI](https://cli.github.com/) adds private repositories and higher rate limits |
 | LinkedIn | `linkedin read` (public post and comments) | None |
 | Bluesky | `bluesky search`, `bluesky read`, `bluesky replies`, `bluesky timeline` | None |
 | Product Hunt | `producthunt search`, `producthunt read`, `producthunt leaderboard` | None |
@@ -52,7 +51,7 @@ Without Node.js, copy the `skills/research-sources` folder into the folder your 
 | Polymarket | `polymarket search` | None |
 | Ashby | `ashby search`, `ashby read` | None |
 
-Each command starts with `rsrc`, and `--help` lists its flags. On a Mac with Homebrew, `brew install yt-dlp deno gh` covers YouTube and GitHub. X and Reddit commands can act as your own account, so keep their volume low. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
+Each command starts with `rsrc`, and `--help` lists its flags. On a Mac with Homebrew, `brew install yt-dlp deno` covers YouTube. X and Reddit commands can act as your own account, so keep their volume low. The [source reference](docs/sources.md) has the full syntax and what each source returns and omits.
 
 ## Output
 
@@ -61,7 +60,7 @@ Every command prints one JSON object with the same fields on stdout, on success 
 ## How it compares
 
 - **Want a finished brief?** Use [last30days](https://github.com/mvanhorn/last30days-skill). It searches many sites, scores the results and writes the report.
-- **Need Chinese platforms such as Bilibili and Xiaohongshu?** Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach), which has a longer site list. It was also faster on GitHub issue search.
+- **Need Chinese platforms such as Bilibili and Xiaohongshu?** Use [Agent-Reach](https://github.com/Panniantong/Agent-Reach), which has a longer site list.
 - **Already have web search?** Use `rsrc`. It adds each site's own results in one shape and does nothing else.
 
 On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 hours apart. Agent-Reach reported success on 13 of 120 runs that returned a not-found page, a sign-up page or no text. The [full table](docs/comparisons.md#4-rsrc-agent-reach-and-last30days-on-the-same-lookups) has every result, including the four lookups a new `rsrc` install fails without a login.
@@ -71,6 +70,7 @@ On 2026-11-25 the three tools ran the same 34 lookups in two sessions about 16 h
 - **Read-only.** `rsrc` never posts, likes, follows or trades.
 - **No ranking, merging or caching.** Each list is that site's own results in that site's order, fetched again on every command.
 - **Not a web search.** Pair it with one.
+- **No GitHub.** The [GitHub CLI](https://cli.github.com/) (`gh`) already reads repositories, issues, pull requests and their comments.
 - **Unofficial routes.** `rsrc` reads X, Reddit and YouTube without their official APIs. A route can change or block without notice, and then `rsrc` fails with an error code. You are responsible for following each site's terms.
 - **Early software.** One maintainer. Live sources have been tested on macOS only.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from rsrc import cli, proc
-from rsrc.channels import appstore, ashby, bluesky, check, gh, hn, linkedin, polymarket, producthunt, reddit, x, youtube
+from rsrc.channels import appstore, ashby, bluesky, check, hn, linkedin, polymarket, producthunt, reddit, x, youtube
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
@@ -19,7 +19,6 @@ HTTP_COMMANDS = {
     bluesky: ["bluesky", "search", "q"],
     producthunt: ["producthunt", "search", "q"],
     ashby: ["ashby", "search", "quartz"],
-    gh: ["gh", "search", "q"],
 }
 NOT_HTTP = {
     x: "FxTwitter's 403 and 404 carry post states, and the signed routes report 401 and 403 as auth_failed",
@@ -35,8 +34,8 @@ def test_every_channel_is_in_the_contract():
                           "responses through rsrc.http.raise_refusal, or to NOT_HTTP with the reason it reads no JSON API")
 
 
-def no_gh(argv, timeout, **kwargs):
-    raise proc.Missing("gh not found")
+def no_programs(argv, timeout, **kwargs):
+    raise proc.Missing(f"{argv[0]} not found")
 
 
 JSON, PAGE = {"Content-Type": "application/json"}, {"Content-Type": "text/html"}
@@ -51,7 +50,7 @@ JSON, PAGE = {"Content-Type": "application/json"}, {"Content-Type": "text/html"}
 ], ids=["429", "401", "403", "200-page", "503-page"])
 @pytest.mark.parametrize("channel", HTTP_COMMANDS, ids=lambda m: m.__name__.rsplit(".", 1)[-1])
 def test_a_refusal_has_one_error_code_on_every_channel(capsys, channel, answer, expected):
-    ctx = cli.Context(environ={}, transport=lambda *request: answer, runner=no_gh, sleep=lambda s: None)
+    ctx = cli.Context(environ={}, transport=lambda *request: answer, runner=no_programs, sleep=lambda s: None)
     cli.main(HTTP_COMMANDS[channel], ctx)
     out = json.loads(capsys.readouterr().out)
     assert out["error"]["code"] == expected, (
@@ -120,7 +119,7 @@ def test_the_cap_never_hides_a_failure(capsys, tmp_path, command, cap, answer):
 
     environ = {"AUTH_TOKEN": "TOKENSENTINEL", "CT0": "CSRFSENTINEL", "XDG_CACHE_HOME": str(tmp_path),
                "RSRC_X_ENV": str(tmp_path / "missing-env")}
-    ctx = cli.Context(environ=environ, transport=transport, runner=no_gh, sleep=lambda s: None)
+    ctx = cli.Context(environ=environ, transport=transport, runner=no_programs, sleep=lambda s: None)
     cli.main([*CAPPED_COMMANDS[command], "--max-requests", str(cap)], ctx)
     out = json.loads(capsys.readouterr().out)
     assert not out["ok"] and out["meta"]["truncated"] is None, (
@@ -150,24 +149,6 @@ def mcp(name):
     return {**data, "id": 1}
 
 
-def repositories():
-    first = recorded("gh_repo.json")
-    first["owner"]["node_id"] = "O_kgDOExample1"
-    second = json.loads(json.dumps(first))
-    second["full_name"] += "-two"
-    second["html_url"] += "-two"
-    return {"total_count": 2, "incomplete_results": False, "items": [first, second]}
-
-
-def issues():
-    data = recorded("gh_public_issues.json")
-    second = json.loads(json.dumps(data["items"][0]))
-    second["number"] += 1
-    second["html_url"] = second["html_url"].rsplit("/", 1)[0] + f"/{second['number']}"
-    data["items"].append(second)
-    return data
-
-
 LIMITED_COMMANDS = {
     ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
     ("polymarket", "search"): (["polymarket", "search", "q"], lambda: [recorded("polymarket_search_p1.json")]),
@@ -177,8 +158,6 @@ LIMITED_COMMANDS = {
     ("producthunt", "search"): (["producthunt", "search", "q"], lambda: [mcp("search")]),
     ("producthunt", "leaderboard"): (["producthunt", "leaderboard", "--date", "2026-11-21"], lambda: [mcp("board")]),
     ("ashby", "search"): (["ashby", "search", "quartz"], lambda: [recorded("ashby/board.json")]),
-    ("gh", "search"): (["gh", "search", "q"], lambda: [repositories()]),
-    ("gh", "issues"): (["gh", "issues", "q", "--repo", "cli/cli"], lambda: [issues()]),
 }
 LIMIT_COUNTS_PART = {
     ("x", "search"): "unique posts across date windows; test_x_windows.py covers --limit",
@@ -205,7 +184,7 @@ def test_every_limited_command_is_in_the_contract():
 def test_limit_holds_when_the_source_sends_more(capsys, command):
     argv, answers = LIMITED_COMMANDS[command]
     replies = iter(map(answer, answers()))
-    ctx = cli.Context(environ={}, transport=lambda *request: next(replies), runner=no_gh, sleep=lambda s: None)
+    ctx = cli.Context(environ={}, transport=lambda *request: next(replies), runner=no_programs, sleep=lambda s: None)
     cli.main([*argv, "--limit", "1"], ctx)
     out = json.loads(capsys.readouterr().out)
     assert out["ok"], out["error"]

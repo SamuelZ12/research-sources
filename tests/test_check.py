@@ -1,4 +1,4 @@
-"""`rsrc check` through rsrc.cli.main with fake cookies, gh runner and transport."""
+"""`rsrc check` through rsrc.cli.main with fake cookies, runner and transport."""
 
 import json
 from pathlib import Path
@@ -11,11 +11,6 @@ from rsrc.envelope import ITEM_KEYS
 
 TOKEN = "SENTINELAUTHTOKEN0123"
 CT0 = "SENTINELCTZERO4567"
-RATE_LIMIT = json.dumps({"resources": {
-    "core": {"limit": 5000, "used": 1, "remaining": 4999, "reset": 1762400000},
-    "search": {"limit": 30, "used": 0, "remaining": 30, "reset": 1762400000}}})
-NOT_LOGGED_IN = proc.Result(1, "", "You are not logged into any GitHub hosts. "
-                                   "To log in, run: gh auth login\n")
 FX_STATUS = json.dumps({"code": 200, "message": "OK", "status": {
     "id": "20", "url": "https://x.com/jack/status/20", "text": "just setting up my twttr",
     "author": {"screen_name": "jack"}, "created_timestamp": 1142974214,
@@ -43,7 +38,7 @@ def ok(stdout: str = "") -> proc.Result:
     return proc.Result(0, stdout, "")
 
 
-class FakeGh:
+class FakeRunner:
     """Answers runner calls in order from canned Results or exceptions; records argv."""
 
     def __init__(self, *responses):
@@ -104,7 +99,7 @@ def rsrc(monkeypatch, capsys):
     monkeypatch.setattr(cli, "CHANNELS", [check])
 
     def run(argv, *, environ, runner=None, transport=None):
-        ctx = cli.Context(environ=environ, runner=runner or FakeGh(),
+        ctx = cli.Context(environ=environ, runner=runner or FakeRunner(),
                           transport=transport or FakeTransport(), sleep=lambda s: None)
         code = cli.main(["check", *argv], ctx)
         captured = capsys.readouterr()
@@ -116,14 +111,9 @@ def rsrc(monkeypatch, capsys):
     return run
 
 
-def healthy_gh() -> FakeGh:
-    return FakeGh(ok("github.com\n  Logged in to github.com\n"), ok(RATE_LIMIT))
-
-
-def healthy_runner() -> FakeGh:
-    """gh (auth status, rate_limit), then the reddit probe, then the youtube probe."""
-    return FakeGh(ok("github.com\n  Logged in to github.com\n"), ok(RATE_LIMIT), proc.Result(0, "", "RSRC_REDDIT_OK 3\n"),
-                  ok(YOUTUBE_META))
+def healthy_runner() -> FakeRunner:
+    """The reddit probe, then the youtube probe."""
+    return FakeRunner(proc.Result(0, "", "RSRC_REDDIT_OK 3\n"), ok(YOUTUBE_META))
 
 
 # all channels
@@ -139,38 +129,35 @@ def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, 
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"]) == ("check", "check")
-    assert out["input"] == {"channels": ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
+    assert out["input"] == {"channels": ["x", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
                             "live_reddit": False}
-    assert [i["id"] for i in out["items"]] == ["x", "gh", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
+    assert [i["id"] for i in out["items"]] == ["x", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
     assert all(set(i) == set(ITEM_KEYS) and i["source"] == i["id"] for i in out["items"])
-    assert out["meta"]["sources"] == {"x": "ok", "gh": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
+    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
                                       "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     assert transport.urls == [HN_PROBE_URL, POLYMARKET_PROBE_URL,
                               "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=python&sort=latest&limit=1",
                               check.producthunt.ENDPOINT,
                               "https://itunes.apple.com/search?entity=software&country=us&term=Wikipedia&limit=1",
                               "https://api.ashbyhq.com/posting-api/job-board/linear?includeCompensation=true", check.LINKEDIN_POST]
-    assert [argv[0] for argv in runner.argvs] == ["gh", "gh", "ego-browser", "yt-dlp"]  # no `uv` run
-    assert runner.argvs[:2] == [["gh", "auth", "status"], ["gh", "api", "rate_limit"]]
-    [ego, youtube_probe] = runner.argvs[2:]
+    assert [argv[0] for argv in runner.argvs] == ["ego-browser", "yt-dlp"]  # no `uv` run
+    [ego, youtube_probe] = runner.argvs
     assert youtube_probe == YOUTUBE_PROBE
     assert ego[:3] == ["ego-browser", "nodejs", "-e"] and "goto" not in ego[3] and "reddit.com" not in ego[3]
 
-    x, gh, *_ = out["items"]
+    x = out["items"][0]
     assert x["raw"]["file_mode"] == "600" and x["raw"]["env_keys"] == [] and x["raw"]["x_graphql"] == "ready"
     assert x["raw"]["live"] is None
     assert "absent" in x["raw"]["query_id_cache"]["state"]
-    assert "4999/5000" in gh["text"] and "search 30" in gh["text"]
-    assert gh["raw"]["rate_limit"]["core"]["remaining"] == 4999
-    assert [a["backend"] for a in out["meta"]["attempts"]] == ["gh", "gh", "ego-browser", "algolia", "gamma",
+    assert [a["backend"] for a in out["meta"]["attempts"]] == ["ego-browser", "algolia", "gamma",
                                                                "yt-dlp", "api.bsky.app", "producthunt-mcp", "itunes", "ashby-posting-api", "linkedin-public"]
     assert_no_secret_in_files(tmp_path, Path(environ["RSRC_X_ENV"]))
 
 
 def test_duplicate_channel_names_are_checked_once(rsrc, environ):
-    code, out = rsrc(["gh", "gh"], environ=environ, runner=healthy_gh())
-    assert code == 0 and [i["id"] for i in out["items"]] == ["gh"]
-    assert out["input"]["channels"] == ["gh"]
+    code, out = rsrc(["hn", "hn"], environ=environ, transport=FakeTransport((200, HN_FRONT_PAGE)))
+    assert code == 0 and [i["id"] for i in out["items"]] == ["hn"]
+    assert out["input"]["channels"] == ["hn"]
 
 
 def test_unknown_channel_is_a_usage_error(rsrc, environ):
@@ -181,18 +168,18 @@ def test_unknown_channel_is_a_usage_error(rsrc, environ):
 
 
 def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
-    runner, transport = FakeGh(), FakeTransport()
+    runner, transport = FakeRunner(), FakeTransport()
     code, out = rsrc(["community"], environ=environ, runner=runner, transport=transport)
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "usage" and "invalid channel 'community'" in out["error"]["message"]
-    assert out["error"]["message"].endswith("(choose from x, gh, reddit, hn, polymarket, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
+    assert out["error"]["message"].endswith("(choose from x, reddit, hn, polymarket, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
     assert runner.argvs == [] and transport.urls == []
 
 
 # x
 
 def test_live_x_reads_one_post_and_runs_one_search(rsrc, environ):
-    transport, runner = FakeTransport((200, FX_STATUS), (200, FX_SEARCH)), FakeGh()
+    transport, runner = FakeTransport((200, FX_STATUS), (200, FX_SEARCH)), FakeRunner()
     code, out = rsrc(["x", "--live-x"], environ=environ | {"RSRC_X_SEARCH": "fxtwitter"}, runner=runner, transport=transport)
 
     assert code == 0 and out["meta"]["sources"] == {"x": "ok"}
@@ -286,7 +273,7 @@ def test_missing_cookies_leave_x_ok_and_name_the_unavailable_backend(rsrc, tmp_p
                      transport=FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
 
     assert code == 0 and out["ok"] and out["error"] is None
-    assert out["meta"]["sources"] == {"x": "ok", "gh": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
+    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
                                       "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     x = out["items"][0]
     assert "x-graphql unavailable: missing AUTH_TOKEN, CT0" in x["text"]
@@ -337,43 +324,6 @@ def test_x_reports_its_default_paths_under_rsrc_names(rsrc, monkeypatch, tmp_pat
     assert raw["query_id_cache"]["path"] == str(tmp_path / ".cache" / "rsrc" / "x-query-ids.json")
 
 
-# gh
-
-@pytest.mark.parametrize("result", [NOT_LOGGED_IN, proc.Missing("gh")])
-def test_gh_public_only_is_usable(rsrc, environ, result):
-    repo = json.loads((Path(__file__).parent / "fixtures/gh_repo.json").read_text())
-    repo["full_name"] = "cli/cli"
-    transport = FakeTransport((200, json.dumps(repo).encode()))
-    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(result), transport=transport)
-    assert code == 0 and out["meta"]["sources"] == {"gh": "ok"}
-    assert out["items"][0]["raw"] == {"auth": "not logged in", "public_reads": "ok"}
-    assert transport.urls == ["https://api.github.com/repos/cli/cli"]
-
-
-def test_gh_auth_status_failure_output_is_not_echoed(rsrc, environ):
-    runner = FakeGh(proc.Result(1, "", "github.com\n  X Failed to log in using token (GH_TOKEN)\n"))
-    code, out = rsrc(["gh"], environ=environ, runner=runner)
-    assert code == 2 and out["error"]["code"] == "config"
-    assert "GH_TOKEN" not in json.dumps(out)
-
-
-def test_gh_timeout(rsrc, environ):
-    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(proc.Timeout("gh timed out")))
-    assert out["error"]["code"] == "timeout" and out["meta"]["sources"] == {"gh": "timeout"}
-
-
-def test_gh_rate_limited(rsrc, environ):
-    runner = FakeGh(ok(), proc.Result(1, "", "gh: API rate limit exceeded for user ID 1. (HTTP 403)\n"))
-    code, out = rsrc(["gh"], environ=environ, runner=runner)
-    assert code == 1 and out["error"]["code"] == "rate_limited"
-
-
-def test_gh_malformed_rate_limit_json_is_upstream_error(rsrc, environ):
-    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(ok(), ok('{"resources": {}}')))
-    assert code == 1 and out["error"]["code"] == "upstream_error"
-    assert out["meta"]["attempts"][-1]["outcome"] == "upstream_error"
-
-
 # reddit
 
 @pytest.mark.parametrize("response, code_", [
@@ -382,7 +332,7 @@ def test_gh_malformed_rate_limit_json_is_upstream_error(rsrc, environ):
     (ok("no marker\n"), "upstream_error"),
 ])
 def test_reddit_probe_failures(rsrc, environ, response, code_):
-    code, out = rsrc(["reddit"], environ=environ, runner=FakeGh(response))
+    code, out = rsrc(["reddit"], environ=environ, runner=FakeRunner(response))
     assert out["error"]["code"] == code_ and out["meta"]["sources"] == {"reddit": code_}
     assert code == (2 if code_ == "config" else 1)
 
@@ -399,7 +349,7 @@ REDDIT_POSTS = json.loads((Path(__file__).parent / "fixtures" / "reddit_search.j
 
 
 def test_live_reddit_loads_one_search_page_after_the_local_probe(rsrc, environ):
-    runner = FakeGh(REDDIT_OK, reddit_page(posts=REDDIT_POSTS))
+    runner = FakeRunner(REDDIT_OK, reddit_page(posts=REDDIT_POSTS))
     code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=runner)
     [item] = out["items"]
     assert code == 0 and out["meta"]["sources"] == {"reddit": "ok"} and out["input"]["live_reddit"] is True
@@ -416,13 +366,13 @@ def test_live_reddit_loads_one_search_page_after_the_local_probe(rsrc, environ):
     (reddit_page(), "upstream_error"),                                     # a search page with no results
 ])
 def test_live_reddit_fails_like_a_search_would(rsrc, environ, page, code_):
-    code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=FakeGh(REDDIT_OK, page))
+    code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=FakeRunner(REDDIT_OK, page))
     assert code == 1 and out["meta"]["sources"] == {"reddit": code_}
     assert out["meta"]["attempts"][-1]["outcome"] == code_
 
 
 def test_live_reddit_is_skipped_when_ego_does_not_answer(rsrc, environ):
-    runner = FakeGh(proc.Timeout("slow"))
+    runner = FakeRunner(proc.Timeout("slow"))
     code, out = rsrc(["reddit", "--live-reddit"], environ=environ, runner=runner)
     assert out["meta"]["sources"] == {"reddit": "timeout"} and len(runner.argvs) == 1
 
@@ -430,7 +380,7 @@ def test_live_reddit_is_skipped_when_ego_does_not_answer(rsrc, environ):
 # hn
 
 def test_hn_probe_makes_exactly_one_keyless_request(rsrc, environ):
-    transport, runner = FakeTransport((200, HN_FRONT_PAGE)), FakeGh()
+    transport, runner = FakeTransport((200, HN_FRONT_PAGE)), FakeRunner()
     code, out = rsrc(["hn"], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["ok"] and out["meta"]["sources"] == {"hn": "ok"}
@@ -472,7 +422,7 @@ def test_hn_probe_without_a_response_is_network_error(rsrc, environ):
 # polymarket
 
 def test_polymarket_probe_makes_exactly_one_keyless_request(rsrc, environ):
-    transport, runner = FakeTransport((200, POLYMARKET_PAGE)), FakeGh()
+    transport, runner = FakeTransport((200, POLYMARKET_PAGE)), FakeRunner()
     code, out = rsrc(["polymarket"], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["ok"] and out["meta"]["sources"] == {"polymarket": "ok"}
@@ -525,28 +475,28 @@ def test_polymarket_probe_without_a_response_is_network_error(rsrc, environ):
 
 def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
     environ = {"RSRC_X_ENV": str(cookie_file(tmp_path, mode=0o644)), "XDG_CACHE_HOME": str(tmp_path / "cache")}
-    code, out = rsrc([], environ=environ, runner=FakeGh(proc.Timeout("slow"), proc.Missing("ego-browser")),
+    code, out = rsrc([], environ=environ, runner=FakeRunner(proc.Missing("ego-browser")),
                      transport=FakeTransport(*((503, b""),) * 8))
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "config" and out["error"]["message"].startswith("x: ")
-    assert out["meta"]["sources"] == {"x": "config", "gh": "timeout", "reddit": "upstream_error",
+    assert out["meta"]["sources"] == {"x": "config", "reddit": "upstream_error",
                                       "hn": "upstream_error", "polymarket": "upstream_error", "youtube": "config",
                                       "bluesky": "upstream_error", "producthunt": "upstream_error",
                                       "appstore": "upstream_error", "ashby": "upstream_error", "linkedin": "upstream_error"}
-    assert len(out["items"]) == 11
+    assert len(out["items"]) == 10
 
 
 def test_every_checked_channel_failing_with_runtime_error_exits_1(rsrc, environ):
-    runner = FakeGh(proc.Timeout("slow"), proc.Missing("ego-browser"))
-    code, out = rsrc(["gh", "reddit"], environ=environ, runner=runner, transport=FakeTransport((503, b"")))
-    assert code == 1 and out["error"]["code"] == "timeout"
-    assert out["meta"]["sources"] == {"gh": "timeout", "reddit": "upstream_error"}
+    runner = FakeRunner(proc.Missing("ego-browser"))
+    code, out = rsrc(["hn", "reddit"], environ=environ, runner=runner, transport=FakeTransport((503, b""), (503, b"")))
+    assert code == 1 and out["error"]["code"] == "upstream_error" and out["error"]["message"].startswith("hn: ")
+    assert out["meta"]["sources"] == {"hn": "upstream_error", "reddit": "upstream_error"}
 
 
 # youtube
 
 def test_youtube_probe_is_one_metadata_run_for_a_fixed_public_video(rsrc, environ):
-    runner = FakeGh(ok(YOUTUBE_META))
+    runner = FakeRunner(ok(YOUTUBE_META))
 
     code, out = rsrc(["youtube"], environ=environ, runner=runner)
 
@@ -562,7 +512,7 @@ def test_youtube_probe_is_one_metadata_run_for_a_fixed_public_video(rsrc, enviro
 def test_youtube_probe_reports_a_missing_vidscribe_without_failing(rsrc, environ):
     Path(environ["PATH"], "vidscribe").unlink()
 
-    code, out = rsrc(["youtube"], environ=environ, runner=FakeGh(ok(YOUTUBE_META)))
+    code, out = rsrc(["youtube"], environ=environ, runner=FakeRunner(ok(YOUTUBE_META)))
 
     [item] = out["items"]
     assert code == 0 and out["meta"]["sources"] == {"youtube": "ok"}
@@ -572,7 +522,7 @@ def test_youtube_probe_reports_a_missing_vidscribe_without_failing(rsrc, environ
 def test_youtube_probe_without_a_stated_version_is_still_ok(rsrc, environ):
     meta = json.dumps({key: value for key, value in json.loads(YOUTUBE_META).items() if key != "_version"})
 
-    code, out = rsrc(["youtube"], environ=environ, runner=FakeGh(ok(meta)))
+    code, out = rsrc(["youtube"], environ=environ, runner=FakeRunner(ok(meta)))
 
     [item] = out["items"]
     assert code == 0 and out["meta"]["sources"] == {"youtube": "ok"}
@@ -582,7 +532,7 @@ def test_youtube_probe_without_a_stated_version_is_still_ok(rsrc, environ):
 @pytest.mark.parametrize("program", ["yt-dlp", "deno"])
 def test_youtube_probe_without_a_needed_program_is_config_with_no_run(rsrc, environ, program):
     Path(environ["PATH"], program).unlink()
-    runner = FakeGh()
+    runner = FakeRunner()
 
     code, out = rsrc(["youtube"], environ=environ, runner=runner)
 
@@ -596,7 +546,7 @@ def test_youtube_probe_with_a_warning_is_not_ok(rsrc, environ):
     # the state of 2026-11-11 and 2026-11-14: yt-dlp exits 0, warns, and every read would return no transcript
     warning = "WARNING: [youtube] jNQXAC9IVRw: Some web client https formats have been skipped\n"
 
-    code, out = rsrc(["youtube"], environ=environ, runner=FakeGh(proc.Result(0, YOUTUBE_META, warning)))
+    code, out = rsrc(["youtube"], environ=environ, runner=FakeRunner(proc.Result(0, YOUTUBE_META, warning)))
 
     assert code == 1 and out["meta"]["sources"] == {"youtube": "upstream_error"}
     assert "Some web client https formats have been skipped" in out["error"]["message"]
@@ -613,7 +563,7 @@ def test_youtube_probe_with_a_warning_is_not_ok(rsrc, environ):
     (ok(json.dumps({"id": "C33hJGt-ySg"})), "url_mismatch"),
 ])
 def test_youtube_probe_failures(rsrc, environ, response, code_):
-    runner = FakeGh(response)
+    runner = FakeRunner(response)
 
     code, out = rsrc(["youtube"], environ=environ, runner=runner)
 
@@ -665,15 +615,6 @@ def test_live_x_session_only_reads_the_public_post(rsrc, environ):
 def test_help_explains_default_live_probes(capsys):
     assert cli.main(["check", "--help"]) == 0
     help_text = " ".join(capsys.readouterr().out.split())
-    for probe in ("Bluesky search", "Product Hunt search", "App Store catalog", "YouTube metadata",
-                  "GitHub access"):
+    for probe in ("Bluesky search", "Product Hunt search", "App Store catalog", "YouTube metadata"):
         assert probe in help_text
-
-
-def test_public_github_probe_must_reach_the_api(rsrc, environ):
-    class Unreachable:
-        def __call__(self, *args):
-            raise OSError("offline")
-    code, out = rsrc(["gh"], environ=environ, runner=FakeGh(NOT_LOGGED_IN), transport=Unreachable())
-    assert code == 1 and out["meta"]["sources"] == {"gh": "network_error"}
-    assert out["items"][0]["text"] == "Could not read GitHub API response"
+    assert "GitHub" not in help_text

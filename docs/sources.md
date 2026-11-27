@@ -11,7 +11,6 @@ This page has the full command syntax, what each source needs, and what each sou
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID [--comments N]` (up to 1000 comments) |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
 | Polymarket | `rsrc polymarket search QUERY` |
-| GitHub | `rsrc gh repo OWNER/REPO`, `rsrc gh search QUERY`, `rsrc gh issues [QUERY] [--repo OWNER/REPO]` |
 | Bluesky | `rsrc bluesky search QUERY` or `rsrc bluesky search --url URL`, `rsrc bluesky read POST`, `rsrc bluesky replies POST`, `rsrc bluesky timeline HANDLE_OR_URL` |
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
@@ -27,7 +26,6 @@ This page has the full command syntax, what each source needs, and what each sou
 | `hn` | Nothing |
 | `polymarket` | Nothing |
 | `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
-| `gh` | Nothing for public repositories. A logged-in [GitHub CLI](https://cli.github.com/) gives access to private repositories and higher limits |
 | `bluesky` | Nothing. Bluesky may disable anonymous search |
 | `producthunt` | Nothing. The official MCP server exposes launches and selected review excerpts. Launch discussions are unavailable |
 | `ashby` | Nothing. Reads one public employer board per request |
@@ -35,7 +33,7 @@ This page has the full command syntax, what each source needs, and what each sou
 | `linkedin` | Nothing |
 | `reddit` | [Ego Lite](https://lite.ego.app/) running, with its `ego-browser` command on your `PATH`, for search, share links and live thread reads. Without it, `reddit read` uses the Arctic Shift archive and needs nothing |
 
-On a Mac with Homebrew: `brew install yt-dlp deno gh`.
+On a Mac with Homebrew: `brew install yt-dlp deno`.
 
 Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) and `ffmpeg`. The skill uses them to read the videos and GIFs attached to X posts, and `youtube read` tries `vidscribe` on a short video that has no captions at all.
 
@@ -43,7 +41,7 @@ Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) 
 
 `rsrc check hn polymarket` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0.
 
-A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear's Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, YouTube metadata through `yt-dlp`, and GitHub access (remaining allowance when logged in, a public repo read otherwise). It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear's Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 ## X
 
@@ -74,14 +72,6 @@ A comment permalink makes `reddit read` return the post and the linked comment f
 A `youtube read` transcript comes in lines of about 20 seconds, each led by its start time. YouTube search dates are approximate calendar dates inferred from the age shown in results, or null if unavailable. When results arrive without channel names, search looks each one up through YouTube's public oEmbed endpoint and reports recovered and unavailable names in `meta.notes`.
 
 A video read selects original-language captions. It may fall back to a second yt-dlp run for captions. A rate limit or bot check stops the read.
-
-## GitHub
-
-On github.com, `gh repo` and `gh issues --repo` try public REST first. With `backend: "github-rest"`, `raw.repo.permissions` and owner-only settings are absent. Pass `--backend gh` to use your login directly for private reads, permissions or signed search rankings.
-
-`gh issues --repo OWNER/REPO` lists the repository's open issues. Add `is:pr` to the query to search pull requests. `is:pr is:merged` searches merged pull requests without adding the default open-state filter.
-
-A failed public read or empty scoped search restarts through the CLI when a login is available. Unscoped searches, queries naming another repository, team or project, and viewer-relative queries such as `assignee:@me` use the login first. Anonymous access shares 60 core requests per hour per IP and 10 searches per minute. A repo read normally needs three calls. `rsrc check gh` reports the remaining allowance when logged in and verifies public access otherwise.
 
 ## Bluesky
 
