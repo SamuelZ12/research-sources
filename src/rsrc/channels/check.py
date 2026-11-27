@@ -9,7 +9,6 @@ from rsrc import envelope as env
 from rsrc.channels import appstore, ashby, linkedin
 from rsrc.channels import bluesky
 from rsrc.channels import hn as hnc
-from rsrc.channels import polymarket as pmc
 from rsrc.channels import producthunt
 from rsrc.channels import reddit as rc
 from rsrc.channels import reddit_archive
@@ -19,19 +18,18 @@ from rsrc.channels.x import auth, connection, fx, search
 from rsrc.http import CapReached, Client, HttpError
 
 CHANNEL = "check"
-NAMES = ("x", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin")
+NAMES = ("x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin")
 LIVE_X_POST = "20"  # jack's first post ("just setting up my twttr"), public since 2006
 LIVE_X_QUERY = "hello"
 LIVE_REDDIT_QUERY = "python"
 ARCHIVE_REDDIT_POST = "1641krf"
 HN_PROBE = "search?tags=front_page&hitsPerPage=1"
-POLYMARKET_QUERY = "bitcoin"
 YOUTUBE_VIDEO = "jNQXAC9IVRw"  # "Me at the zoo", the first video uploaded to YouTube: 19 s, public since 2005
 
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser("check", help=f"probe each channel's setup ({', '.join(NAMES)})",
-                                   description="By default check all ten channels. Probe HN, Polymarket, Bluesky search, "
+                                   description="By default check all nine channels. Probe HN, Bluesky search, "
                                                "Product Hunt search, the App Store catalog and an Ashby board, and read YouTube "
                                                "metadata with yt-dlp. X setup and Ego Lite "
                                                "are checked locally unless their live flag is set. Without Ego Lite, "
@@ -72,7 +70,6 @@ def run(args, ctx) -> dict:
               "appstore": lambda attempts: probe_appstore(ctx, attempts),
               "reddit": lambda attempts: probe_reddit(ctx, args.live_reddit, attempts),
               "hn": lambda attempts: probe_hn(ctx, attempts),
-              "polymarket": lambda attempts: probe_polymarket(ctx, attempts),
               "youtube": lambda attempts: probe_youtube(ctx, attempts),
               "producthunt": lambda attempts: probe_producthunt(ctx, attempts)}
     items, sources, attempts, failures = [], {}, [], []
@@ -290,21 +287,6 @@ def probe_hn(ctx, attempts: list) -> tuple[str, dict]:
         attempts[-1]["outcome"] = "upstream_error"
         raise _Failed("upstream_error", "Hacker News API answered with an empty front page")
     return "Algolia HN API answered (1 request, no key)", {"front_page_story": hits[0]["objectID"]}
-
-
-# --- polymarket --------------------------------------------------------------------
-
-def probe_polymarket(ctx, attempts: list) -> tuple[str, dict]:
-    """One request to the gamma API: the first page of a fixed search. Any list of events will do."""
-    client = Client(min_interval=1, transport=ctx.transport, sleep=ctx.sleep)
-    started = time.monotonic()
-    try:
-        events, _ = pmc.fetch_page(client, POLYMARKET_QUERY, 1)
-    except HttpError as e:
-        attempts.append(env.attempt(pmc.BACKEND, e.code, client.requests_made, env.elapsed_ms(started)))
-        raise _Failed(e.code, str(e)) from None
-    attempts.append(env.attempt(pmc.BACKEND, "ok", client.requests_made, env.elapsed_ms(started)))
-    return "Polymarket gamma API answered (1 request, no key)", {"events": len(events)}
 
 
 # --- youtube -----------------------------------------------------------------------

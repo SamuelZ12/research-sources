@@ -133,6 +133,6 @@ def test_community_is_an_unknown_channel_and_nothing_runs(capsys, monkeypatch):
     assert "invalid choice: 'community'" in message
     listed = message.split("choose from", 1)[1]
     assert "community" not in listed
-    assert all(name in listed for name in ("x", "reddit", "hn", "polymarket", "youtube", "check"))
+    assert all(name in listed for name in ("x", "reddit", "hn", "youtube", "check"))
     assert "gh" not in listed.replace(",", " ").split()
     assert calls == []

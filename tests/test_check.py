@@ -19,10 +19,7 @@ FX_SEARCH = (Path(__file__).parent / "fixtures" / "x_fx_search_latest.json").rea
 HN_PROBE_URL = "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=1"
 HN_FRONT_PAGE = json.dumps({"hits": json.loads(
     (Path(__file__).parent / "fixtures" / "hn_search.json").read_text())["hits"][:1]}).encode()
-POLYMARKET_PROBE_URL = ("https://gamma-api.polymarket.com/public-search"
-                        "?q=bitcoin&page=1&events_status=active&keep_closed_markets=0")
 APPLE_APP = (Path(__file__).parent / "fixtures/appstore/wiki.json").read_bytes()
-POLYMARKET_PAGE = (Path(__file__).parent / "fixtures" / "polymarket_search_p1.json").read_bytes()  # 5 events
 BLUESKY_PAGE = (Path(__file__).parent / "fixtures" / "bluesky_search.json").read_bytes()
 YOUTUBE_PROBE = ["yt-dlp", "--ignore-config", "--no-cookies-from-browser", "--retries", "0", "--extractor-retries", "0",
                  "--no-playlist", "--dump-single-json", "--skip-download",
@@ -124,18 +121,18 @@ PH_RESPONSE = (200, (PH_FIX / "search.json").read_bytes())
 
 
 def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, environ, tmp_path):
-    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST))
+    runner, transport = healthy_runner(), FakeTransport((200, HN_FRONT_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST))
     code, out = rsrc([], environ=environ, runner=runner, transport=transport)
 
     assert code == 0 and out["ok"] and out["error"] is None
     assert (out["channel"], out["action"]) == ("check", "check")
-    assert out["input"] == {"channels": ["x", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
+    assert out["input"] == {"channels": ["x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"], "live_x": False,
                             "live_reddit": False}
-    assert [i["id"] for i in out["items"]] == ["x", "reddit", "hn", "polymarket", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
+    assert [i["id"] for i in out["items"]] == ["x", "reddit", "hn", "youtube", "bluesky", "producthunt", "appstore", "ashby", "linkedin"]
     assert all(set(i) == set(ITEM_KEYS) and i["source"] == i["id"] for i in out["items"])
-    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
+    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok",
                                       "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
-    assert transport.urls == [HN_PROBE_URL, POLYMARKET_PROBE_URL,
+    assert transport.urls == [HN_PROBE_URL,
                               "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=python&sort=latest&limit=1",
                               check.producthunt.ENDPOINT,
                               "https://itunes.apple.com/search?entity=software&country=us&term=Wikipedia&limit=1",
@@ -149,7 +146,7 @@ def test_all_healthy_checks_every_channel_without_any_x_or_reddit_request(rsrc, 
     assert x["raw"]["file_mode"] == "600" and x["raw"]["env_keys"] == [] and x["raw"]["x_graphql"] == "ready"
     assert x["raw"]["live"] is None
     assert "absent" in x["raw"]["query_id_cache"]["state"]
-    assert [a["backend"] for a in out["meta"]["attempts"]] == ["ego-browser", "algolia", "gamma",
+    assert [a["backend"] for a in out["meta"]["attempts"]] == ["ego-browser", "algolia",
                                                                "yt-dlp", "api.bsky.app", "producthunt-mcp", "itunes", "ashby-posting-api", "linkedin-public"]
     assert_no_secret_in_files(tmp_path, Path(environ["RSRC_X_ENV"]))
 
@@ -172,7 +169,7 @@ def test_community_is_not_a_channel_and_nothing_runs(rsrc, environ):
     code, out = rsrc(["community"], environ=environ, runner=runner, transport=transport)
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "usage" and "invalid channel 'community'" in out["error"]["message"]
-    assert out["error"]["message"].endswith("(choose from x, reddit, hn, polymarket, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
+    assert out["error"]["message"].endswith("(choose from x, reddit, hn, youtube, bluesky, producthunt, appstore, ashby, linkedin)")
     assert runner.argvs == [] and transport.urls == []
 
 
@@ -270,10 +267,10 @@ def test_missing_cookies_leave_x_ok_and_name_the_unavailable_backend(rsrc, tmp_p
     environ = {"RSRC_X_ENV": str(tmp_path / "absent"), "XDG_CACHE_HOME": str(tmp_path / "cache"),
                "PATH": programs(tmp_path, "yt-dlp", "deno")}
     code, out = rsrc([], environ=environ, runner=healthy_runner(),
-                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, POLYMARKET_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
+                     transport=FakeTransport((200, HN_FRONT_PAGE), (200, BLUESKY_PAGE), PH_RESPONSE, (200, APPLE_APP), (200, b'{"jobs":[]}'), (200, LINKEDIN_POST)))
 
     assert code == 0 and out["ok"] and out["error"] is None
-    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok", "polymarket": "ok",
+    assert out["meta"]["sources"] == {"x": "ok", "reddit": "ok", "hn": "ok",
                                       "youtube": "ok", "bluesky": "ok", "producthunt": "ok", "appstore": "ok", "ashby": "ok", "linkedin": "ok"}
     x = out["items"][0]
     assert "x-graphql unavailable: missing AUTH_TOKEN, CT0" in x["text"]
@@ -419,58 +416,6 @@ def test_hn_probe_without_a_response_is_network_error(rsrc, environ):
     assert out["meta"]["sources"] == {"hn": "network_error"}
 
 
-# polymarket
-
-def test_polymarket_probe_makes_exactly_one_keyless_request(rsrc, environ):
-    transport, runner = FakeTransport((200, POLYMARKET_PAGE)), FakeRunner()
-    code, out = rsrc(["polymarket"], environ=environ, runner=runner, transport=transport)
-
-    assert code == 0 and out["ok"] and out["meta"]["sources"] == {"polymarket": "ok"}
-    assert transport.urls == [POLYMARKET_PROBE_URL]
-    assert runner.argvs == []
-    [item] = out["items"]
-    assert set(item) == set(ITEM_KEYS) and item["id"] == item["source"] == "polymarket"
-    assert "1 request" in item["text"]
-    assert item["raw"] == {"events": 5}
-    [attempt] = out["meta"]["attempts"]
-    assert (attempt["backend"], attempt["outcome"], attempt["requests"]) == ("gamma", "ok", 1)
-
-
-@pytest.mark.parametrize("body", [
-    (Path(__file__).parent / "fixtures" / "polymarket_search_empty.json").read_bytes(),  # recorded: no `events` key
-    b'{"events": [], "pagination": {"hasMore": false, "totalResults": 0}}',
-])
-def test_polymarket_probe_is_ok_when_the_search_matches_nothing(rsrc, environ, body):
-    code, out = rsrc(["polymarket"], environ=environ, transport=FakeTransport((200, body)))
-    assert code == 0 and out["meta"]["sources"] == {"polymarket": "ok"}
-    assert out["items"][0]["raw"] == {"events": 0}
-
-
-@pytest.mark.parametrize("response, code_", [
-    ((429, b"Too Many Requests"), "rate_limited"),
-    ((503, b""), "upstream_error"),
-    ((200, b"<html>maintenance</html>"), "blocked"),
-    ((200, b'{"pagination": {"hasMore": false}}'), "upstream_error"),
-])
-def test_polymarket_probe_failures(rsrc, environ, response, code_):
-    transport = FakeTransport(response, (200, POLYMARKET_PAGE))
-    code, out = rsrc(["polymarket"], environ=environ, transport=transport)
-
-    assert code == 1 and out["error"]["code"] == code_ and out["error"]["message"].startswith("polymarket: ")
-    assert out["meta"]["sources"] == {"polymarket": code_}
-    assert [a["outcome"] for a in out["meta"]["attempts"]] == [code_]
-    assert len(transport.urls) == 1
-
-
-def test_polymarket_probe_without_a_response_is_network_error(rsrc, environ):
-    def refused(method, url, headers, body):
-        raise ConnectionRefusedError("refused")
-
-    code, out = rsrc(["polymarket"], environ=environ, transport=refused)
-    assert code == 1 and out["error"]["code"] == "network_error"
-    assert out["meta"]["sources"] == {"polymarket": "network_error"}
-
-
 # every channel failing
 
 def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
@@ -480,10 +425,10 @@ def test_every_channel_failing_reports_the_first_failure(rsrc, tmp_path):
     assert code == 2 and not out["ok"]
     assert out["error"]["code"] == "config" and out["error"]["message"].startswith("x: ")
     assert out["meta"]["sources"] == {"x": "config", "reddit": "upstream_error",
-                                      "hn": "upstream_error", "polymarket": "upstream_error", "youtube": "config",
+                                      "hn": "upstream_error", "youtube": "config",
                                       "bluesky": "upstream_error", "producthunt": "upstream_error",
                                       "appstore": "upstream_error", "ashby": "upstream_error", "linkedin": "upstream_error"}
-    assert len(out["items"]) == 10
+    assert len(out["items"]) == 9
 
 
 def test_every_checked_channel_failing_with_runtime_error_exits_1(rsrc, environ):

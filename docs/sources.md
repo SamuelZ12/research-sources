@@ -10,7 +10,6 @@ This page has the full command syntax, what each source needs, and what each sou
 | Reddit | `rsrc reddit search QUERY [--with-comments [N]]`, `rsrc reddit read URL_OR_ID [--backend ego-browser\|arctic-shift]` |
 | Hacker News | `rsrc hn search QUERY`, `rsrc hn read URL_OR_ID [--comments N]` (up to 1000 comments) |
 | YouTube | `rsrc youtube search QUERY`, `rsrc youtube read URL_OR_ID` (details and transcript) |
-| Polymarket | `rsrc polymarket search QUERY` |
 | Bluesky | `rsrc bluesky search QUERY` or `rsrc bluesky search --url URL`, `rsrc bluesky read POST`, `rsrc bluesky replies POST`, `rsrc bluesky timeline HANDLE_OR_URL` |
 | Product Hunt | `rsrc producthunt search QUERY`, `rsrc producthunt read URL_OR_SLUG`, `rsrc producthunt leaderboard [--date PERIOD]` |
 | App Store | `rsrc appstore search NAME [--country CC]`, `rsrc appstore read ID_OR_URL_OR_NAME [--country CC] [--sort helpful] [--limit N] [--max-requests N]` |
@@ -24,7 +23,6 @@ This page has the full command syntax, what each source needs, and what each sou
 |---|---|
 | `x` | Nothing for public reads. Search with Ego Lite, a cookie pair, or Google Chrome (`rsrc x connect`, experimental) while public search is unavailable |
 | `hn` | Nothing |
-| `polymarket` | Nothing |
 | `youtube` | `yt-dlp`, installed with its `yt-dlp-ejs` scripts (Homebrew's `yt-dlp` has them). `youtube read` and `check youtube` also need `deno` 2.3.0 or newer |
 | `bluesky` | Nothing. Bluesky may disable anonymous search |
 | `producthunt` | Nothing. The official MCP server exposes launches and selected review excerpts. Launch discussions are unavailable |
@@ -39,9 +37,9 @@ Optional: [`vidscribe`](https://github.com/SamuelZ12/vidscribe) (Apple Silicon) 
 
 ## `check`
 
-`rsrc check hn polymarket` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0.
+`rsrc check hn bluesky` makes one request to each of the two channels. Read `meta.sources` for each outcome, even on exit 0.
 
-A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear's Ashby board, HN's front page, Polymarket search, Bluesky search, Product Hunt search, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
+A bare `rsrc check` probes the default channels: a public LinkedIn post, Linear's Ashby board, HN's front page, Bluesky search, Product Hunt search, Apple's app catalog, and YouTube metadata through `yt-dlp`. It checks X configuration and the local Ego Lite connection without visiting X or Reddit. `--live-x` adds a public post read and, if configured in the search order, a FxTwitter search. `--live-reddit` adds one Reddit search page in Ego Lite.
 
 ## X
 

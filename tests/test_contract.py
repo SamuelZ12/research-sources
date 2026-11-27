@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from rsrc import cli, proc
-from rsrc.channels import appstore, ashby, bluesky, check, hn, linkedin, polymarket, producthunt, reddit, x, youtube
+from rsrc.channels import appstore, ashby, bluesky, check, hn, linkedin, producthunt, reddit, x, youtube
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
@@ -14,7 +14,6 @@ LOGIN_WALL = (FIXTURES / "login_wall.html").read_bytes()
 HTTP_COMMANDS = {
     linkedin: ["linkedin", "read", check.LINKEDIN_POST],
     hn: ["hn", "search", "q"],
-    polymarket: ["polymarket", "search", "q"],
     appstore: ["appstore", "search", "q"],
     bluesky: ["bluesky", "search", "q"],
     producthunt: ["producthunt", "search", "q"],
@@ -151,7 +150,6 @@ def mcp(name):
 
 LIMITED_COMMANDS = {
     ("hn", "search"): (["hn", "search", "q"], lambda: [recorded("hn_search.json")]),
-    ("polymarket", "search"): (["polymarket", "search", "q"], lambda: [recorded("polymarket_search_p1.json")]),
     ("appstore", "search"): (["appstore", "search", "q"],
                              lambda: [{**twice(recorded("appstore/wiki.json"), "results"), "resultCount": 2}]),
     ("bluesky", "search"): (["bluesky", "search", "q"], lambda: [twice(recorded("bluesky_search.json"), "posts")]),

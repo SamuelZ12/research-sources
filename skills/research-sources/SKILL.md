@@ -1,6 +1,6 @@
 ---
 name: research-sources
-description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, Polymarket odds, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
+description: Use for direct reads or searches web search misses on X/Twitter, LinkedIn posts, Bluesky, Reddit and Hacker News, YouTube videos and transcripts, Product Hunt launches and rankings, Apple App Store reviews, or current roles on Ashby job boards. Also checks which sources work.
 ---
 
 # research-sources (`rsrc`)
@@ -24,7 +24,6 @@ Before your first command on a channel, read that channel's file. The files are 
 | One Reddit thread or focused comment | `rsrc reddit read URL_OR_ID [--sort top\|best\|new\|controversial\|old\|qa] [--comments 50] [--backend ego-browser\|arctic-shift]` | `references/reddit.md` |
 | Hacker News stories on a topic | `rsrc hn search QUERY --since YYYY-MM-DD [--until YYYY-MM-DD] [--sort relevance\|date] [--limit 30]` | `references/hn.md` |
 | One Hacker News thread, with up to 1000 comments | `rsrc hn read URL_OR_ID [--comments 50]` | `references/hn.md` |
-| Prediction markets on a topic, with current prices | `rsrc polymarket search QUERY [--limit 10]` | `references/polymarket.md` |
 | YouTube videos on a topic | `rsrc youtube search QUERY [--limit 10]` | `references/youtube.md` |
 | One YouTube video: its details and its transcript | `rsrc youtube read URL_OR_ID [--words 5000]` | `references/youtube.md` |
 | Bluesky posts about a topic or linking to a page | `rsrc bluesky search QUERY [--author HANDLE] [--domain DOMAIN] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--top]` or `rsrc bluesky search --url URL` | `references/bluesky.md` |
@@ -36,7 +35,7 @@ Before your first command on a channel, read that channel's file. The files are 
 | A public LinkedIn post and its comments | `rsrc linkedin read URL` | `references/linkedin.md` |
 | Which channels work right now | `rsrc check [CHANNEL …]` | "Act on the result" below |
 
-No command searches several sites at once. For "what are people saying about TOPIC lately", choose channels by question from the table. Use `polymarket` only when the question is about odds. Nothing merges, ranks or filters across channels: each list is that site's own results in that site's order. For "A vs B", search each side.
+No command searches several sites at once. For "what are people saying about TOPIC lately", choose channels by question from the table. Nothing merges, ranks or filters across channels: each list is that site's own results in that site's order. For "A vs B", search each side.
 
 ## Read the envelope
 
@@ -83,6 +82,6 @@ The channel's file lists the messages that change an action below. Check it befo
 - **YouTube.** `rate_limited` or `blocked` stops all `rsrc youtube`, search and `check youtube` included. A `source_blocked` transcript status counts as `blocked`.
 - **LinkedIn.** `blocked`, `rate_limited` or `auth_failed` stops LinkedIn access, including `check linkedin` and a bare `rsrc check`, which read a public post.
 - **Ashby.** `blocked` or `rate_limited` stops board reads and `check ashby`.
-- **Hacker News, Polymarket, Bluesky, Product Hunt and the App Store.** `rate_limited` stops the whole channel.
+- **Hacker News, Bluesky, Product Hunt and the App Store.** `rate_limited` stops the whole channel.
 
-**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, public searches on Bluesky, Product Hunt, App Store and Polymarket, the HN front page, YouTube metadata through yt-dlp, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.
+**Check.** After an unexpected failure, check the affected channel by name. Skip channels already stopped. A bare `rsrc check` probes a public LinkedIn post, Linear's Ashby board, public searches on Bluesky, Product Hunt and App Store, the HN front page, YouTube metadata through yt-dlp, local X settings and the local Ego Lite connection. `--live-x` adds a public post read, and a FxTwitter search if FxTwitter is in the search order. It never proves signed-in X search. `--live-reddit` adds a Reddit search page in Ego Lite.
