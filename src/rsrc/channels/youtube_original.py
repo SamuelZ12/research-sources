@@ -147,25 +147,48 @@ def caption_cues(text: str, *, scrolling: bool = True) -> list[tuple[float, str]
     repeated line keeps its first timestamp while its cues touch or overlap. After a gap it is
     counted as speech again."""
     cues: list[tuple[float, str]] = []
-    start = None
-    end = last_line_end = -1.0
+    previous, last_end = [], -1.0
+    for start, end, lines in _caption_blocks(text):
+        overlap = _rolling_overlap(previous, lines) if scrolling and start <= last_end else 0
+        cues.extend((start, line) for line in lines[overlap:])
+        last_end = max(last_end, end) if overlap == len(lines) else end
+        previous = lines
+    return cues
+
+
+def _rolling_overlap(previous, current):
+    """Length of the longest suffix of the old cue that starts the new one."""
+    size = min(len(previous), len(current))
+    if size == 1:
+        return int(previous[-1] == current[0])
+    lines = current[:size] + [None] + previous[-size:]
+    prefix = [0] * len(lines)
+    for i in range(1, len(lines)):
+        n = prefix[i - 1]
+        while n and lines[n] != lines[i]:
+            n = prefix[n - 1]
+        prefix[i] = n + (lines[n] == lines[i])
+    return prefix[-1]
+
+
+def _caption_blocks(text):
+    start, end, lines = None, None, []
     for raw in text.splitlines():
         timing = _TIMING.match(raw.lstrip(" \t"))
-        if timing:
-            fields = timing.groups()
-            start, end = _seconds(*fields[:4]), _seconds(*fields[4:])
-        elif not raw:
-            start = None
+        if timing or not raw:
+            if start is not None and lines:
+                yield start, end, lines
+            start, lines = None, []
+            if timing:
+                fields = timing.groups()
+                start, end = _seconds(*fields[:4]), _seconds(*fields[4:])
         elif start is not None:
             line = _VOICE.sub(lambda m: " " + m[1].strip() + ": ", raw)
             line = " ".join(html.unescape(_TAG.sub("", line)).split())
             if line:
-                if scrolling and start <= last_line_end and cues and cues[-1][1] == line:
-                    last_line_end = max(last_line_end, end)
-                else:
-                    cues.append((start, line))
-                    last_line_end = end
-    return cues
+                lines.append(line)
+    if start is not None and lines:
+        yield start, end, lines
 
 
 def timed_transcript(cues: list[tuple[float, str]], words: int) -> tuple[str, int]:

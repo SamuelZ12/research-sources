@@ -138,6 +138,18 @@ def test_terminal_search_page_preserves_earlier_posts(run):
     assert code == 0 and env["error"] is None and len(env["items"]) == 20
 
 
+def test_terminal_instruction_wins_over_cursor_and_reads_added_module_items(run):
+    data = page(tweet("10"))
+    ops = data["data"]["search_by_raw_query"]["search_timeline"]["timeline"]["instructions"]
+    ops.insert(0, {"type": "TimelineTerminateTimeline", "direction": "Bottom"})
+    ops.extend([{"type": "TimelineAddToModule", "moduleItems": [
+        {"item": {"itemContent": {"tweet_results": {"result": tweet("11")}}}}]},
+        {"type": "TimelineReplaceEntry", "entry": {"content": {"cursorType": "Bottom", "value": "next"}}}])
+    fake = FakeTransport(x=[(200, data)])
+    code, env, _ = run([*GQL, "q"], fake)
+    assert code == 0 and [item["id"] for item in env["items"]] == ["10", "11"] and len(fake.urls) == 1
+
+
 def test_missing_search_page_preserves_earlier_posts(run):
     fake = FakeTransport(x=[(200, load("x_graphql_latest.json")), (200, {})])
     code, env, _ = run([*GQL, "q", "--per-window", "40"], fake)

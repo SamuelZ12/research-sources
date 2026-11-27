@@ -284,19 +284,22 @@ def parse_page(data) -> tuple[list[dict], str | None]:
     if not isinstance(instructions, list):
         raise SearchError("X returned invalid search instructions")
     records, seen, cursor = [], set(), None
-    empty_page = False
+    empty_page = terminated = False
     saw_non_cursor = False
     for instruction in instructions:
         if not isinstance(instruction, dict):
             raise SearchError("X returned an invalid search instruction")
         kind = instruction.get("type")
-        if ((kind == "TimelineAddEntries" and instruction.get("entries") == []) or
-                (kind == "TimelineTerminateTimeline" and instruction.get("direction") == "Bottom")):
+        if kind == "TimelineTerminateTimeline" and instruction.get("direction") == "Bottom":
+            terminated = True
+        if kind == "TimelineAddEntries" and instruction.get("entries") == []:
             empty_page = True
         # Later pages may deliver the Bottom cursor in a TimelineReplaceEntry's single `entry`.
         entries = (instruction.get("entries") or []) + ([instruction["entry"]] if instruction.get("entry") else [])
-        for entry in entries:
-            content = entry.get("content") or {}
+        contents = [entry.get("content") or {} for entry in entries]
+        if kind == "TimelineAddToModule" and instruction.get("moduleItems"):
+            contents.append({"items": instruction["moduleItems"]})
+        for content in contents:
             if content.get("cursorType") in ("Top", "Bottom"):
                 value = content.get("value")
                 if value is not None and not isinstance(value, str):
@@ -312,9 +315,9 @@ def parse_page(data) -> tuple[list[dict], str | None]:
                 if record and record["id"] not in seen:
                     seen.add(record["id"])
                     records.append(record)
-    if not records and (not empty_page or saw_non_cursor):
+    if not records and (not (empty_page or terminated) or saw_non_cursor):
         raise SearchError("X returned no recognizable search results page")
-    return records, cursor
+    return records, None if terminated else cursor
 
 
 SHORT_LINK = re.compile(r"https?://t\.co/[A-Za-z0-9_-]+")

@@ -83,6 +83,14 @@ def test_a_line_said_again_later_is_kept_and_cue_numbers_are_dropped():
     assert caption_cues(vtt) == [(1.0, "Yes."), (2.0, "No."), (3.0, "Yes.")]
 
 
+def test_multiline_rolling_captions_only_add_new_speech():
+    vtt = ("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nA\nB\n\n"
+           "00:00:02.000 --> 00:00:03.000\nA\nB\nC\n\n"
+           "00:00:03.000 --> 00:00:04.000\nB\nC\nD\n\n"
+           "00:00:32.000 --> 00:00:33.000\nC\nD\n")
+    assert transcript(vtt) == "[00:01] A B C D\n[00:32] C D"
+
+
 def test_a_line_repeated_by_the_next_cue_is_kept_once_with_its_first_time():
     vtt = ("WEBVTT\n\n"
            "00:00:01.000 --> 00:00:02.000\nfirst line\n\n"
