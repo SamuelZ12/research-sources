@@ -5,11 +5,11 @@ import json
 import re
 import time
 from datetime import date, datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from rsrc import envelope as env
 from rsrc.http import CapReached, Client, HttpError, raise_refusal
-from rsrc.html_markdown import link
+from rsrc.html_markdown import label as escape_label, link
 
 PUBLIC = "public.api.bsky.app"
 SEARCH = "api.bsky.app"
@@ -87,38 +87,47 @@ def fetch(client, host, method, **params):
 def linked_text(label, uri, *, after_bang=False):
     if not isinstance(uri, str):
         raise HttpError("invalid Bluesky link URI")
-    if not re.fullmatch(r"https?://[^\s<>\\]+", uri, re.I):
+    if re.search(r"[\s\x00-\x1f\x7f<>\\]", uri):
+        return label
+    try:
+        parsed = urlsplit(uri)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            return label
+    except ValueError:
         return label
     text = label.strip()
     if not text:
-        return label + uri
-    bare = uri.removeprefix("https://").removeprefix("http://")
+        return f"{label}<{uri}>"
+    bare = uri.split("://", 1)[1]
     prefix = text.removesuffix("…").removesuffix("...")
-    shortened = (prefix != text and ("." in prefix or prefix.startswith(("https://", "http://")))
-                 and (bare.startswith(prefix) or uri.startswith(prefix)))
+    scheme, separator, rest = prefix.partition("://")
+    shortened = prefix != text and (bare.startswith(prefix) and "." in prefix or
+                                    separator and scheme.lower() == parsed.scheme and bare.startswith(rest))
     if shortened or text in (uri, bare):
         shown = uri
     elif after_bang:
-        shown = f"{text} (<{uri}>)"
+        shown = escape_label(text.replace("\\", "\\\\")) + f" (<{uri}>)"
     else:
-        shown = link(text, uri)
+        shown = link(text.replace("\\", "\\\\"), uri)
     return label[:len(label) - len(label.lstrip())] + shown + label[len(label.rstrip()):]
 
 
 def expanded_text(record):
     data = record["text"].encode()
-    end = len(data)
-    for facet in sorted(record.get("facets", []), key=lambda f: f["index"]["byteStart"], reverse=True):
+    pieces, end = [], 0
+    for facet in sorted(record.get("facets", []), key=lambda f: f["index"]["byteStart"]):
         for feature in facet["features"]:
             if feature["$type"] == "app.bsky.richtext.facet#link":
                 start, stop = facet["index"]["byteStart"], facet["index"]["byteEnd"]
-                if not 0 <= start < stop <= end:
+                if not end <= start < stop <= len(data):
                     raise HttpError("invalid Bluesky link facet")
-                replacement = linked_text(data[start:stop].decode(), feature["uri"], after_bang=data[start-1:start] == b"!")
-                data = data[:start] + replacement.encode() + data[stop:]
-                end = start
+                if start > end:
+                    pieces.append(data[end:start].decode())
+                after_bang = bool(pieces and pieces[-1].endswith("!"))
+                pieces.append(linked_text(data[start:stop].decode(), feature["uri"], after_bang=after_bang))
+                end = stop
                 break
-    return data.decode()
+    return "".join(pieces) + data[end:].decode()
 
 
 def post_item(post):

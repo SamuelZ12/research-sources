@@ -137,7 +137,10 @@ def test_read_keeps_linked_words_and_original_post_text(run):
 
 @pytest.mark.parametrize("before,label,uri,shown", [
     ("!", "important", "https://example.org", "!important (<https://example.org>)"),
-    ("", " ", "https://example.org", " https://example.org"),
+    ("", " ", "https://example.org", " <https://example.org>"),
+    ("", "docs", "https://?q=1", "docs"),
+    ("", "docs", "httpſ://example.org/", "docs"),
+    ("", "HTTPS://long-host…", "HTTPS://long-host.example.org", "HTTPS://long-host.example.org"),
     ("", "https://long-host…", "https://long-host.example.org", "https://long-host.example.org"),
     ("", "read", "data:text/plain,hello", "read"),
     ("", "path\\", "https://example.org", r"[path\\](https://example.org)"),

@@ -33,7 +33,7 @@ def destination(url: str) -> str:
 
 def label(text: str) -> str:
     """`text` safe inside a link or image label."""
-    return text.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+    return text.replace("[", "\\[").replace("]", "\\]")
 
 
 def link(text: str, url: str) -> str:

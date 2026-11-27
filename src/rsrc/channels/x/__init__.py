@@ -434,7 +434,7 @@ def _votes(count: int) -> str:
 
 def poll_text(poll: dict) -> str:
     details = []
-    if status := poll.get("time_left_en"):
+    if status := (poll.get("time_left_en") or "").strip():
         details.append(status)
     if (total := poll.get("total_votes")) is not None:
         details.append(_votes(total))
@@ -442,7 +442,7 @@ def poll_text(poll: dict) -> str:
     if not poll["choices"]:
         return lines[0] + "\nChoices unavailable."
     for choice in poll["choices"]:
-        if not choice.get("label"):
+        if not (choice.get("label") or "").strip():
             lines.append("- Choice unavailable.")
             continue
         percentage, count = choice.get("percentage"), choice.get("count")
