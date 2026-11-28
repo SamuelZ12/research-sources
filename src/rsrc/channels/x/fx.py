@@ -227,12 +227,16 @@ class Mismatch(HttpError):
 
 
 def replies(client, post_id, rank="likes", limit=100):
-    """Yield up to `limit` replies to a post, following FxTwitter's conversation cursor.
+    """Yield up to `limit` direct replies to a post, following FxTwitter's conversation cursor.
+
+    FxTwitter lists reply chains inline: a reply to a reply follows its parent. Those are skipped,
+    as is a reply whose parent is missing from the listing (for example, deleted). A page of new
+    replies none of which reaches the post through an earlier reply raises Mismatch.
 
     Stops on a missing or repeated cursor or a page with no new replies. A 404 that outlasts the
     retries raises NotFound: no such post.
     """
-    seen, cursor = {post_id}, None
+    seen, cursor, returned = {post_id}, None, 0
     while True:
         params = {"ranking_mode": rank} | ({"cursor": cursor} if cursor else {})
         data, failure = fx_json(client, f"{FX_API}/conversation/{post_id}?{urlencode(params)}", "replies")
@@ -240,17 +244,24 @@ def replies(client, post_id, rank="likes", limit=100):
             raise failure.error(f"fxtwitter conversation {post_id}", missing=True)
         if "status" in data and (not isinstance(data["status"], dict) or data["status"].get("id") != post_id):
             raise Mismatch(f"FxTwitter returned a different conversation from {post_id}")
-        added = 0
+        page, linked = {}, set(seen)
         for status in data["replies"]:
             record = status_record(status)
-            if record["id"] in seen:
+            if record["id"] in seen or record["id"] in page:
                 continue
+            page[record["id"]] = record
+            if record["reply_to_id"] in linked:
+                linked.add(record["id"])
+        if page and len(linked) == len(seen):
+            raise Mismatch(f"FxTwitter returned replies that do not identify {post_id} as their parent")
+        added = len(page)
+        seen.update(page)
+        for record in page.values():
             if record["reply_to_id"] != post_id:
-                raise Mismatch(f"FxTwitter returned a reply that does not identify {post_id} as its parent")
-            seen.add(record["id"])
-            added += 1
+                continue
+            returned += 1
             yield record
-            if len(seen) - 1 >= limit:
+            if returned >= limit:
                 return
         next_cursor = (data.get("cursor") or {}).get("bottom")
         if not next_cursor or next_cursor == cursor or added == 0:

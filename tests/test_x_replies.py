@@ -57,6 +57,20 @@ def test_rejects_another_conversation_even_when_no_replies(run):
         assert code == 1 and env["error"]["code"] == "url_mismatch" and not lines
 
 
+def test_reply_chains_are_skipped_and_do_not_use_the_limit(run):
+    page = extra_page("101", "102", "103", "106")
+    page["replies"][1]["replying_to"]["status"] = "101"
+    page["replies"][2]["replying_to"]["status"] = "102"
+    page["replies"][3]["replying_to"]["status"] = "777"  # a reply to a deleted reply
+    later = extra_page("104")
+    later["replies"].insert(0, {"id": "105", "text": "reply 105", "author": {"screen_name": "r"},
+                                "replying_to": {"status": "103"}})
+    page["cursor"] = {"bottom": "more"}
+    code, lines, _ = run([ROOT, "--limit", "2"], FakeFx([(200, page), (200, later)]))
+    assert code == 0
+    assert [r["id"] for r in lines] == ["101", "104"]
+
+
 def test_wrong_parent_on_a_later_page_keeps_only_verified_replies(run):
     first = extra_page("101", cursor="more")
     second = extra_page("102")
